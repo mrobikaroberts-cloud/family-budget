@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(export PATH=\"/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin:$PATH\")",
+      "Bash(npm --version)",
+      "Bash(/opt/homebrew/bin/npm install:*)",
+      "Read(//opt/homebrew/Cellar/node/25.8.1_1/bin/**)",
+      "Bash(/opt/homebrew/bin/node /opt/homebrew/bin/npm install)",
+      "Bash(PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin /opt/homebrew/bin/npm install)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin /opt/homebrew/bin/npm run build)"
+    ]
+  }
+}
