@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { PieChart, Pie, Cell, BarChart, Bar, ComposedChart, AreaChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 // ── Palette & helpers ─────────────────────────────────────────────────────────
 const COLORS = {
   bg: "#0f0f14",
@@ -511,6 +512,28 @@ export default function App() {
   const fileRef = useRef();
   const advisorFileRef = useRef();
   const [advisorFile, setAdvisorFile] = useState(null);
+  // ── Dashboard extra state ──
+  const [budgetStartDate, setBudgetStartDate] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10));
+  const [budgetEndDate, setBudgetEndDate] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10));
+  const [startingBalance, setStartingBalance] = useState(0);
+  const [showIncomeInCharts, setShowIncomeInCharts] = useState(true);
+  const [bills, setBills] = useState([
+    { id: 1, label: "Mortgage", dueDate: "2026-03-25", budget: 600, actual: 0, paid: false },
+    { id: 2, label: "Car", dueDate: "2026-03-01", budget: 100, actual: 0, paid: false },
+    { id: 3, label: "Credit Card", dueDate: "2026-03-07", budget: 50, actual: 0, paid: false },
+    { id: 4, label: "Gas", dueDate: "2026-03-12", budget: 50, actual: 50, paid: true },
+    { id: 5, label: "Home Insurance", dueDate: "2026-03-15", budget: 25, actual: 0, paid: false },
+    { id: 6, label: "Internet", dueDate: "2026-03-21", budget: 25, actual: 0, paid: false },
+  ]);
+  const [savingsItems, setSavingsItems] = useState([
+    { id: 1, label: "House", expected: 300, actual: 400 },
+    { id: 2, label: "Holiday", expected: 25, actual: 0 },
+    { id: 3, label: "Emergency Fund", expected: 20, actual: 0 },
+  ]);
+  const [expenseBudgets, setExpenseBudgets] = useState({
+    Housing: 1800, Food: 500, Utilities: 300, Transport: 500,
+    Health: 100, Entertainment: 150, Personal: 200, Education: 50, Other: 120,
+  });
   // ── Monthly insights state ──
   const todayKey = monthKey(new Date().getFullYear(), new Date().getMonth());
   const [startMonthKey, setStartMonthKey] = useState("2025-01");
@@ -595,6 +618,59 @@ Return plain text bullet points only, no headers.` }]
   CATEGORIES.forEach(c => { catTotals[c] = expenses.filter(e => e.category === c).reduce((s,e)=>s+e.amount,0); });
   // weekly report helper
   const weeklyData = CATEGORIES.map(c => ({ name: c, amount: catTotals[c] })).filter(c => c.amount > 0);
+  // ── Dashboard derived ──
+  const billsBudgetTotal = bills.reduce((s, b) => s + b.budget, 0);
+  const billsActualTotal = bills.reduce((s, b) => s + b.actual, 0);
+  const savingsExpectedTotal = savingsItems.reduce((s, i) => s + i.expected, 0);
+  const savingsActualTotal = savingsItems.reduce((s, i) => s + i.actual, 0);
+  const expenseBudgetTotal = Object.values(expenseBudgets).reduce((s, v) => s + v, 0);
+  const totalBudgeted = expenseBudgetTotal + billsBudgetTotal + savingsExpectedTotal;
+  const totalSpent = totalExpenses + billsActualTotal + savingsActualTotal;
+  const leftForBudgeting = totalIncome - totalBudgeted;
+  const leftToSpend2 = totalBudgeted - totalSpent;
+  const endingBalance = startingBalance + totalIncome - totalSpent;
+  const CHART_COLORS = ["#f472b6","#60a5fa","#a78bfa","#fbbf24","#34d399","#fb923c","#4ade80","#c084fc","#38bdf8","#f97316"];
+  const cashFlowData = [
+    ...(showIncomeInCharts ? [{ name: "Income", value: totalIncome, color: "#4ade80" }] : []),
+    { name: "Expenses", value: totalExpenses, color: "#f472b6" },
+    { name: "Bills", value: billsActualTotal, color: "#c084fc" },
+    { name: "Debt", value: debtPayments, color: "#facc15" },
+    { name: "Savings", value: savingsActualTotal, color: "#34d399" },
+  ].filter(d => d.value > 0);
+  const budgetVsActualData = CATEGORIES.filter(c => (expenseBudgets[c] || 0) > 0 || catTotals[c] > 0).map(c => ({
+    name: c.slice(0, 5), Budget: expenseBudgets[c] || 0, Actual: catTotals[c] || 0,
+  }));
+  const expBreakdownData = CATEGORIES.filter(c => catTotals[c] > 0).map((c, i) => ({
+    name: c, value: catTotals[c], color: CHART_COLORS[i % CHART_COLORS.length],
+  }));
+  const dailyExpenseData = (() => {
+    const map = {};
+    expenses.forEach(e => { map[e.date] = (map[e.date] || 0) + e.amount; });
+    const start = new Date(budgetStartDate), end = new Date(budgetEndDate);
+    const days = Math.ceil((end - start) / 86400000) + 1;
+    const dailyBudgetAmt = Math.round(totalIncome / days);
+    const result = []; let d = new Date(start);
+    while (d <= end) {
+      const key = d.toISOString().slice(0, 10);
+      result.push({ date: key.slice(5), Expenses: map[key] || 0, "Daily Budget": dailyBudgetAmt });
+      d = new Date(d.getTime() + 86400000);
+    }
+    return result;
+  })();
+  const balanceOverviewData = (() => {
+    const expMap = {}, incMap = {};
+    expenses.forEach(e => { expMap[e.date] = (expMap[e.date] || 0) + e.amount; });
+    income.forEach(i => { incMap[i.date] = (incMap[i.date] || 0) + i.amount; });
+    const start = new Date(budgetStartDate), end = new Date(budgetEndDate);
+    const result = []; let d = new Date(start), running = startingBalance;
+    while (d <= end) {
+      const key = d.toISOString().slice(0, 10);
+      running += (incMap[key] || 0) - (expMap[key] || 0);
+      result.push({ date: key.slice(8), Balance: running });
+      d = new Date(d.getTime() + 86400000);
+    }
+    return result;
+  })();
   // ── Add forms state ──
   const [newExp, setNewExp] = useState({ label: "", amount: "", category: "Food", date: new Date().toISOString().slice(0,10), fixed: false });
   const [newInc, setNewInc] = useState({ label: "", amount: "", date: new Date().toISOString().slice(0,10), recurring: false });
@@ -809,66 +885,421 @@ If the request doesn't map to a clear category goal, still return JSON with newG
       <main style={{ padding: "24px 28px", maxWidth: 1100, margin: "0 auto" }}>
         {/* ── DASHBOARD TAB ── */}
         {tab === "dashboard" && (
-          <div>
-            {/* KPI row */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 24 }}>
+          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 12 }}>
+            {/* Title */}
+            <div style={{ textAlign: "center", marginBottom: 14 }}>
+              <h2 style={{ fontSize: 22, fontWeight: 800, letterSpacing: 3, color: COLORS.text, fontFamily: "'Syne', sans-serif" }}>
+                {MONTH_FULL[new Date().getMonth()].toUpperCase()} {new Date().getFullYear()}
+              </h2>
+            </div>
+            {/* Date / Balance settings */}
+            <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "10px 16px", marginBottom: 16, display: "flex", gap: 20, alignItems: "flex-end", flexWrap: "wrap" }}>
+              <p style={{ fontSize: 10, color: COLORS.muted, maxWidth: 200, lineHeight: 1.5 }}>To get started, set your start date, end date and starting balance</p>
               {[
-                { label: "Monthly Income", value: fmt(totalIncome), color: COLORS.accent, sub: `${income.length} sources` },
-                { label: "Total Expenses", value: fmt(totalExpenses), color: COLORS.accentWarm, sub: `${expenses.length} items` },
-                { label: "Leftover / Savings", value: fmt(leftover), color: leftover >= 0 ? COLORS.success : COLORS.danger, sub: leftover >= 0 ? "Looking good!" : "Over budget" },
-                { label: "Total Debt", value: fmt(totalDebt), color: COLORS.danger, sub: `Min. payments ${fmt(debtPayments)}/mo` },
+                { label: "Start Date", val: budgetStartDate, set: setBudgetStartDate, type: "date", w: 140 },
+                { label: "End Date (Max 31 Days Apart)", val: budgetEndDate, set: setBudgetEndDate, type: "date", w: 140 },
+                { label: "Starting Balance", val: startingBalance, set: v => setStartingBalance(parseFloat(v)||0), type: "number", w: 110 },
+              ].map(f => (
+                <label key={f.label} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <span style={{ fontSize: 10, color: COLORS.muted }}>{f.label}</span>
+                  <input type={f.type} value={f.val} onChange={e => f.set(e.target.value)} style={{ ...inputStyle, padding: "5px 8px", fontSize: 11, width: f.w }} />
+                </label>
+              ))}
+            </div>
+            {/* KPI Row */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10, marginBottom: 18 }}>
+              {[
+                { label: "LEFT FOR BUDGETING", value: fmt(leftForBudgeting), color: leftForBudgeting >= 0 ? "#4ade80" : COLORS.danger, border: "#4ade80" },
+                { label: "TOTAL BUDGETED", value: fmt(totalBudgeted), color: COLORS.accentPurple, border: COLORS.accentPurple },
+                { label: "LEFT TO SPEND", value: fmt(leftToSpend2), color: COLORS.accentBlue, border: COLORS.accentBlue },
+                { label: "TOTAL SPENT", value: fmt(totalSpent), color: COLORS.accentWarm, border: COLORS.accentWarm },
+                { label: "ENDING BALANCE", value: fmt(endingBalance), color: endingBalance >= 0 ? "#4ade80" : COLORS.danger, border: "#4ade80" },
+                { label: "CURRENCY SYMBOL", value: "$", color: COLORS.muted, border: COLORS.border },
               ].map(k => (
-                <div key={k.label} style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: "20px 20px 16px" }}>
-                  <p style={{ fontSize: 11, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 1, fontFamily: "'DM Mono', monospace", marginBottom: 8 }}>{k.label}</p>
-                  <p style={{ fontSize: 26, fontWeight: 800, color: k.color, letterSpacing: -1 }}>{k.value}</p>
-                  <p style={{ fontSize: 12, color: COLORS.muted, marginTop: 4, fontFamily: "'DM Mono', monospace" }}>{k.sub}</p>
+                <div key={k.label} style={{ background: COLORS.card, border: `1px solid ${k.border}55`, borderRadius: 8, padding: "10px 12px" }}>
+                  <div style={{ fontSize: 9, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>{k.label}</div>
+                  <div style={{ fontSize: 17, fontWeight: 800, color: k.color, fontFamily: "'Syne', sans-serif" }}>{k.value}</div>
                 </div>
               ))}
             </div>
-            {/* 50/30/20 */}
-            <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 24, marginBottom: 24 }}>
-              <h3 style={{ fontWeight: 700, marginBottom: 18, fontSize: 16 }}>50 / 30 / 20 Allocation</h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-                {[
-                  { label: "Needs (50%)", actual: needs, target: totalIncome * 0.5, color: COLORS.accentBlue, cats: "Housing, Utilities, Transport, Health" },
-                  { label: "Wants (30%)", actual: wants, target: totalIncome * 0.3, color: COLORS.accentPurple, cats: "Food, Entertainment, Personal…" },
-                  { label: "Savings (20%)", actual: savings, target: totalIncome * 0.2, color: COLORS.accent, cats: "What's left over" },
-                ].map(b => (
-                  <div key={b.label} style={{ background: COLORS.surface, borderRadius: 12, padding: 16 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: b.color }}>{b.label}</span>
-                      <span style={{ fontSize: 13, fontFamily: "'DM Mono', monospace", color: COLORS.text }}>{fmt(b.actual)}</span>
+            {/* Charts Row */}
+            <div style={{ display: "grid", gridTemplateColumns: "200px 200px 1fr 1fr", gap: 12, marginBottom: 18 }}>
+              {/* Summary Table */}
+              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, overflow: "hidden" }}>
+                <div style={{ padding: "7px 10px", borderBottom: `1px solid ${COLORS.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: COLORS.text }}>SUMMARY</span>
+                  <label style={{ fontSize: 10, color: COLORS.muted, display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }}>
+                    <input type="checkbox" checked={showIncomeInCharts} onChange={e => setShowIncomeInCharts(e.target.checked)} />
+                    Show Income
+                  </label>
+                </div>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead><tr style={{ background: COLORS.surface }}>
+                    <th style={{ padding: "4px 8px", textAlign: "left", fontSize: 9, color: COLORS.muted, fontWeight: 600 }}></th>
+                    <th style={{ padding: "4px 8px", textAlign: "right", fontSize: 9, color: COLORS.muted, fontWeight: 600 }}>BUDGET</th>
+                    <th style={{ padding: "4px 8px", textAlign: "right", fontSize: 9, color: COLORS.muted, fontWeight: 600 }}>ACTUAL</th>
+                  </tr></thead>
+                  <tbody>
+                    {[
+                      { label: "Expenses", budget: expenseBudgetTotal, actual: totalExpenses },
+                      { label: "Bills", budget: billsBudgetTotal, actual: billsActualTotal },
+                      { label: "Debt", budget: debtPayments, actual: debtPayments },
+                      { label: "Savings", budget: savingsExpectedTotal, actual: savingsActualTotal },
+                      { label: "Income", budget: totalIncome, actual: totalIncome },
+                    ].map((row, i) => (
+                      <tr key={row.label} style={{ borderTop: `1px solid ${COLORS.border}`, background: i % 2 ? COLORS.surface + "44" : "transparent" }}>
+                        <td style={{ padding: "5px 8px", color: COLORS.text, fontSize: 11 }}>{row.label}</td>
+                        <td style={{ padding: "5px 8px", textAlign: "right", color: COLORS.muted, fontSize: 11 }}>{fmt(row.budget)}</td>
+                        <td style={{ padding: "5px 8px", textAlign: "right", fontSize: 11, color: row.actual > row.budget && row.label !== "Income" ? COLORS.danger : "#4ade80" }}>{fmt(row.actual)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {/* Cash Flow Donut */}
+              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 10 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.text, marginBottom: 6 }}>CASH FLOW SUMMARY</div>
+                <PieChart width={180} height={130}>
+                  <Pie data={cashFlowData} cx={90} cy={65} innerRadius={38} outerRadius={58} paddingAngle={2} dataKey="value" startAngle={90} endAngle={-270}>
+                    {cashFlowData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                  </Pie>
+                  <Tooltip formatter={v => fmt(v)} contentStyle={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, fontSize: 10 }} />
+                </PieChart>
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  {cashFlowData.map(d => {
+                    const total2 = cashFlowData.reduce((s, x) => s + x.value, 0);
+                    return (
+                      <div key={d.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <div style={{ width: 7, height: 7, borderRadius: 2, background: d.color }} />
+                          <span style={{ fontSize: 9, color: COLORS.muted }}>{d.name}</span>
+                        </div>
+                        <span style={{ fontSize: 9, color: COLORS.text }}>{total2 > 0 ? (d.value / total2 * 100).toFixed(1) : 0}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              {/* Budget vs Actual Bar */}
+              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 10 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>BUDGET VS ACTUAL</div>
+                <ResponsiveContainer width="100%" height={180}>
+                  <BarChart data={budgetVsActualData} margin={{ top: 4, right: 4, bottom: 4, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} />
+                    <XAxis dataKey="name" tick={{ fontSize: 8, fill: COLORS.muted }} />
+                    <YAxis tick={{ fontSize: 8, fill: COLORS.muted }} tickFormatter={v => `$${v}`} width={45} />
+                    <Tooltip formatter={v => fmt(v)} contentStyle={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, fontSize: 10 }} />
+                    <Legend iconSize={7} wrapperStyle={{ fontSize: 9 }} />
+                    <Bar dataKey="Budget" fill={COLORS.accentBlue + "99"} radius={[2,2,0,0]} />
+                    <Bar dataKey="Actual" fill="#4ade8099" radius={[2,2,0,0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Balance Overview */}
+              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 10 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>BALANCE OVERVIEW</div>
+                <ResponsiveContainer width="100%" height={180}>
+                  <AreaChart data={balanceOverviewData} margin={{ top: 4, right: 4, bottom: 4, left: 0 }}>
+                    <defs>
+                      <linearGradient id="balGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={COLORS.success} stopOpacity={0.35} />
+                        <stop offset="95%" stopColor={COLORS.success} stopOpacity={0.03} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} />
+                    <XAxis dataKey="date" tick={{ fontSize: 7, fill: COLORS.muted }} interval={Math.floor(balanceOverviewData.length / 6)} />
+                    <YAxis tick={{ fontSize: 8, fill: COLORS.muted }} tickFormatter={v => `$${v}`} width={45} />
+                    <Tooltip formatter={v => fmt(v)} contentStyle={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, fontSize: 10 }} />
+                    <Area type="monotone" dataKey="Balance" stroke={COLORS.success} fill="url(#balGrad)" strokeWidth={2} dot={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            {/* Helper text */}
+            <p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 10 }}>Add / edit subcategories in the tables below.</p>
+            {/* Data Tables Row */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 18 }}>
+              {/* INCOME */}
+              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, overflow: "hidden" }}>
+                <div style={{ padding: "7px 10px", background: "#4ade8018", borderBottom: `1px solid #4ade8033` }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: "#4ade80", letterSpacing: 1 }}>INCOME</span>
+                </div>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead><tr style={{ background: COLORS.surface }}>
+                    <th style={{ padding: "4px 8px", textAlign: "left", fontSize: 9, color: COLORS.muted }}></th>
+                    <th style={{ padding: "4px 8px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>EXPECTED</th>
+                    <th style={{ padding: "4px 8px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>ACTUAL</th>
+                  </tr></thead>
+                  <tbody>
+                    {income.map((item, i) => (
+                      <tr key={item.id} style={{ borderTop: `1px solid ${COLORS.border}`, background: i % 2 ? COLORS.surface + "44" : "transparent" }}>
+                        <td style={{ padding: "5px 8px", color: COLORS.text, fontSize: 11 }}>{item.label}</td>
+                        <td style={{ padding: "5px 8px", textAlign: "right", color: COLORS.muted, fontSize: 11 }}>{fmt(item.amount)}</td>
+                        <td style={{ padding: "5px 8px", textAlign: "right", color: "#4ade80", fontSize: 11 }}>{fmt(item.amount)}</td>
+                      </tr>
+                    ))}
+                    {Array(Math.max(0, 3 - income.length)).fill(0).map((_, i) => (
+                      <tr key={`ei-${i}`} style={{ borderTop: `1px solid ${COLORS.border}` }}>
+                        <td style={{ padding: "5px 8px", color: COLORS.border, fontSize: 10 }}>—</td>
+                        <td style={{ padding: "5px 8px", textAlign: "right", color: COLORS.border, fontSize: 10 }}>$</td>
+                        <td style={{ padding: "5px 8px", textAlign: "right", color: COLORS.border, fontSize: 10 }}>$</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot><tr style={{ borderTop: `2px solid ${COLORS.border}`, background: COLORS.surface }}>
+                    <td style={{ padding: "5px 8px", fontWeight: 700, color: COLORS.text, fontSize: 11 }}>TOTAL</td>
+                    <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: COLORS.muted, fontSize: 11 }}>{fmt(totalIncome)}</td>
+                    <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: "#4ade80", fontSize: 11 }}>{fmt(totalIncome)}</td>
+                  </tr></tfoot>
+                </table>
+              </div>
+              {/* EXPENSES */}
+              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, overflow: "hidden" }}>
+                <div style={{ padding: "7px 10px", background: "#f472b618", borderBottom: `1px solid #f472b633` }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: "#f472b6", letterSpacing: 1 }}>EXPENSES</span>
+                </div>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead><tr style={{ background: COLORS.surface }}>
+                    <th style={{ padding: "4px 6px", textAlign: "left", fontSize: 9, color: COLORS.muted }}></th>
+                    <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>BUDGET</th>
+                    <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>ACTUAL</th>
+                    <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>LEFT</th>
+                  </tr></thead>
+                  <tbody>
+                    {CATEGORIES.filter(c => (expenseBudgets[c] || 0) > 0 || catTotals[c] > 0).map((cat, i) => {
+                      const budget = expenseBudgets[cat] || 0, actual = catTotals[cat] || 0, left = budget - actual;
+                      return (
+                        <tr key={cat} style={{ borderTop: `1px solid ${COLORS.border}`, background: i % 2 ? COLORS.surface + "44" : "transparent" }}>
+                          <td style={{ padding: "4px 6px", color: COLORS.text, fontSize: 10 }}>{cat}</td>
+                          <td style={{ padding: "4px 6px", textAlign: "right", color: COLORS.muted, fontSize: 10 }}>{budget > 0 ? fmt(budget) : <span style={{ color: COLORS.border }}>$</span>}</td>
+                          <td style={{ padding: "4px 6px", textAlign: "right", fontSize: 10, color: actual > budget ? COLORS.danger : COLORS.text }}>{actual > 0 ? fmt(actual) : <span style={{ color: COLORS.border }}>$</span>}</td>
+                          <td style={{ padding: "4px 6px", textAlign: "right", fontSize: 10, color: left < 0 ? COLORS.danger : COLORS.success }}>{(budget > 0 || actual > 0) ? fmt(left) : <span style={{ color: COLORS.border }}>$</span>}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot><tr style={{ borderTop: `2px solid ${COLORS.border}`, background: COLORS.surface }}>
+                    <td style={{ padding: "5px 6px", fontWeight: 700, color: COLORS.text, fontSize: 10 }}>TOTAL</td>
+                    <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 700, color: COLORS.muted, fontSize: 10 }}>{fmt(expenseBudgetTotal)}</td>
+                    <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 700, color: COLORS.text, fontSize: 10 }}>{fmt(totalExpenses)}</td>
+                    <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 700, fontSize: 10, color: expenseBudgetTotal - totalExpenses < 0 ? COLORS.danger : COLORS.success }}>{fmt(expenseBudgetTotal - totalExpenses)}</td>
+                  </tr></tfoot>
+                </table>
+              </div>
+              {/* BILLS */}
+              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, overflow: "hidden" }}>
+                <div style={{ padding: "7px 10px", background: "#c084fc18", borderBottom: `1px solid #c084fc33` }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: "#c084fc", letterSpacing: 1 }}>BILLS</span>
+                </div>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead><tr style={{ background: COLORS.surface }}>
+                    <th style={{ padding: "4px 4px", width: 20 }}></th>
+                    <th style={{ padding: "4px 6px", textAlign: "left", fontSize: 9, color: COLORS.muted }}></th>
+                    <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>DUE</th>
+                    <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>BUDGET</th>
+                    <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>ACTUAL</th>
+                  </tr></thead>
+                  <tbody>
+                    {bills.map((bill, i) => (
+                      <tr key={bill.id} style={{ borderTop: `1px solid ${COLORS.border}`, background: bill.paid ? COLORS.success + "11" : i % 2 ? COLORS.surface + "44" : "transparent" }}>
+                        <td style={{ padding: "4px 4px", textAlign: "center" }}>
+                          <input type="checkbox" checked={bill.paid} style={{ cursor: "pointer" }} onChange={e => setBills(p => p.map(b => b.id === bill.id ? { ...b, paid: e.target.checked, actual: e.target.checked ? b.budget : 0 } : b))} />
+                        </td>
+                        <td style={{ padding: "4px 6px", color: bill.paid ? COLORS.muted : COLORS.text, fontSize: 10, textDecoration: bill.paid ? "line-through" : "none" }}>{bill.label}</td>
+                        <td style={{ padding: "4px 6px", textAlign: "right", color: COLORS.muted, fontSize: 9 }}>{bill.dueDate.slice(5)}</td>
+                        <td style={{ padding: "4px 6px", textAlign: "right", color: COLORS.muted, fontSize: 10 }}>{fmt(bill.budget)}</td>
+                        <td style={{ padding: "4px 6px", textAlign: "right", fontSize: 10, color: bill.paid ? COLORS.success : COLORS.border }}>{bill.paid ? fmt(bill.actual) : "$"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot><tr style={{ borderTop: `2px solid ${COLORS.border}`, background: COLORS.surface }}>
+                    <td colSpan={2} style={{ padding: "5px 6px", fontWeight: 700, color: COLORS.text, fontSize: 10 }}>TOTAL</td>
+                    <td></td>
+                    <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 700, color: COLORS.muted, fontSize: 10 }}>{fmt(billsBudgetTotal)}</td>
+                    <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 700, color: COLORS.text, fontSize: 10 }}>{fmt(billsActualTotal)}</td>
+                  </tr></tfoot>
+                </table>
+              </div>
+              {/* DEBTS */}
+              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, overflow: "hidden" }}>
+                <div style={{ padding: "7px 10px", background: "#facc1518", borderBottom: `1px solid #facc1533` }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: "#facc15", letterSpacing: 1 }}>DEBTS</span>
+                </div>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead><tr style={{ background: COLORS.surface }}>
+                    <th style={{ padding: "4px 4px", width: 20 }}></th>
+                    <th style={{ padding: "4px 6px", textAlign: "left", fontSize: 9, color: COLORS.muted }}></th>
+                    <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>DUE</th>
+                    <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>BUDGET</th>
+                    <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>ACTUAL</th>
+                  </tr></thead>
+                  <tbody>
+                    {debts.map((debt, i) => (
+                      <tr key={debt.id} style={{ borderTop: `1px solid ${COLORS.border}`, background: i % 2 ? COLORS.surface + "44" : "transparent" }}>
+                        <td style={{ padding: "4px 4px", textAlign: "center" }}><input type="checkbox" style={{ cursor: "pointer" }} /></td>
+                        <td style={{ padding: "4px 6px", color: COLORS.text, fontSize: 10 }}>{debt.label}</td>
+                        <td style={{ padding: "4px 6px", textAlign: "right", color: COLORS.muted, fontSize: 9 }}>—</td>
+                        <td style={{ padding: "4px 6px", textAlign: "right", color: COLORS.muted, fontSize: 10 }}>{fmt(debt.minPayment)}</td>
+                        <td style={{ padding: "4px 6px", textAlign: "right", color: COLORS.border, fontSize: 10 }}>$</td>
+                      </tr>
+                    ))}
+                    {Array(Math.max(0, 3 - debts.length)).fill(0).map((_, i) => (
+                      <tr key={`ed-${i}`} style={{ borderTop: `1px solid ${COLORS.border}` }}>
+                        <td colSpan={5} style={{ padding: "5px 6px", color: COLORS.border, fontSize: 10 }}>—</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot><tr style={{ borderTop: `2px solid ${COLORS.border}`, background: COLORS.surface }}>
+                    <td colSpan={2} style={{ padding: "5px 6px", fontWeight: 700, color: COLORS.text, fontSize: 10 }}>TOTAL</td>
+                    <td></td>
+                    <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 700, color: COLORS.muted, fontSize: 10 }}>{fmt(debtPayments)}</td>
+                    <td style={{ padding: "5px 6px", textAlign: "right", color: COLORS.border, fontSize: 10 }}>$</td>
+                  </tr></tfoot>
+                </table>
+              </div>
+            </div>
+            {/* Savings Row */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 3fr", gap: 12, marginBottom: 18 }}>
+              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, overflow: "hidden" }}>
+                <div style={{ padding: "7px 10px", background: "#34d39918", borderBottom: `1px solid #34d39933` }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: "#34d399", letterSpacing: 1 }}>SAVINGS</span>
+                </div>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead><tr style={{ background: COLORS.surface }}>
+                    <th style={{ padding: "4px 8px", textAlign: "left", fontSize: 9, color: COLORS.muted }}></th>
+                    <th style={{ padding: "4px 8px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>EXPECTED</th>
+                    <th style={{ padding: "4px 8px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>ACTUAL</th>
+                  </tr></thead>
+                  <tbody>
+                    {savingsItems.map((item, i) => (
+                      <tr key={item.id} style={{ borderTop: `1px solid ${COLORS.border}`, background: i % 2 ? COLORS.surface + "44" : "transparent" }}>
+                        <td style={{ padding: "5px 8px", color: COLORS.text, fontSize: 11 }}>{item.label}</td>
+                        <td style={{ padding: "5px 8px", textAlign: "right", color: COLORS.muted, fontSize: 11 }}>{fmt(item.expected)}</td>
+                        <td style={{ padding: "5px 8px", textAlign: "right", color: COLORS.success, fontSize: 11 }}>{fmt(item.actual)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot><tr style={{ borderTop: `2px solid ${COLORS.border}`, background: COLORS.surface }}>
+                    <td style={{ padding: "5px 8px", fontWeight: 700, color: COLORS.text, fontSize: 11 }}>TOTAL</td>
+                    <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: COLORS.muted, fontSize: 11 }}>{fmt(savingsExpectedTotal)}</td>
+                    <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: COLORS.success, fontSize: 11 }}>{fmt(savingsActualTotal)}</td>
+                  </tr></tfoot>
+                </table>
+              </div>
+            </div>
+            {/* Bottom Charts */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: 12, marginBottom: 18 }}>
+              {/* Debt vs Savings */}
+              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 10 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.text, marginBottom: 6 }}>DEBT VS SAVINGS</div>
+                <ResponsiveContainer width="100%" height={140}>
+                  <BarChart data={[{ name: "Savings", value: savingsActualTotal }, { name: "Debt", value: debtPayments }]} margin={{ top: 4, right: 4, bottom: 4, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} />
+                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: COLORS.muted }} />
+                    <YAxis tick={{ fontSize: 8, fill: COLORS.muted }} tickFormatter={v => `$${v}`} width={40} />
+                    <Tooltip formatter={v => fmt(v)} contentStyle={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, fontSize: 10 }} />
+                    <Bar dataKey="value" radius={[3,3,0,0]}>
+                      <Cell fill={COLORS.accentBlue} />
+                      <Cell fill={COLORS.accentWarm} />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+                <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 4 }}>
+                  {[{ label: "Savings", color: COLORS.accentBlue }, { label: "Debt", color: COLORS.accentWarm }].map(l => (
+                    <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <div style={{ width: 8, height: 8, background: l.color }} />
+                      <span style={{ fontSize: 9, color: COLORS.muted }}>{l.label}</span>
                     </div>
-                    <ProgressBar value={b.actual} max={b.target} color={b.color} />
-                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-                      <span style={{ fontSize: 11, color: COLORS.muted, fontFamily: "'DM Mono', monospace" }}>{b.cats}</span>
-                      <span style={{ fontSize: 11, color: COLORS.muted, fontFamily: "'DM Mono', monospace" }}>Target: {fmt(b.target)}</span>
-                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Daily Expenses Overview */}
+              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: COLORS.text }}>DAILY EXPENSES OVERVIEW</span>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    {[{ label: "Expenses", color: "#f472b6" }, { label: "Daily Budget", color: COLORS.success }].map(l => (
+                      <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <div style={{ width: 12, height: 2, background: l.color }} />
+                        <span style={{ fontSize: 8, color: COLORS.muted }}>{l.label}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
+                <ResponsiveContainer width="100%" height={160}>
+                  <ComposedChart data={dailyExpenseData} margin={{ top: 4, right: 4, bottom: 4, left: 0 }}>
+                    <defs>
+                      <linearGradient id="expGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#f472b6" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="#f472b6" stopOpacity={0.03} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} />
+                    <XAxis dataKey="date" tick={{ fontSize: 7, fill: COLORS.muted }} interval={Math.floor(dailyExpenseData.length / 8)} />
+                    <YAxis tick={{ fontSize: 8, fill: COLORS.muted }} tickFormatter={v => `$${v}`} width={40} />
+                    <Tooltip formatter={v => fmt(v)} contentStyle={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, fontSize: 10 }} />
+                    <Area type="monotone" dataKey="Expenses" stroke="#f472b6" fill="url(#expGrad)" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="Daily Budget" stroke={COLORS.success} strokeWidth={1.5} strokeDasharray="4 2" dot={false} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+                <div style={{ textAlign: "right", marginTop: 4 }}>
+                  <span style={{ fontSize: 9, color: COLORS.muted }}>DAILY BUDGET </span>
+                  <span style={{ fontSize: 10, color: COLORS.success, fontWeight: 700 }}>{fmt(totalIncome / 30)}</span>
+                </div>
+              </div>
+              {/* Expenses Breakdown */}
+              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 10 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>EXPENSES BREAK DOWN</div>
+                <PieChart width={170} height={130}>
+                  <Pie data={expBreakdownData} cx={85} cy={65} innerRadius={32} outerRadius={60} paddingAngle={2} dataKey="value">
+                    {expBreakdownData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                  </Pie>
+                  <Tooltip formatter={v => fmt(v)} contentStyle={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, fontSize: 10 }} />
+                </PieChart>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 4 }}>
+                  {expBreakdownData.slice(0, 5).map(d => (
+                    <div key={d.name} style={{ display: "flex", justifyContent: "space-between" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <div style={{ width: 6, height: 6, borderRadius: 1, background: d.color }} />
+                        <span style={{ fontSize: 9, color: COLORS.muted }}>{d.name}</span>
+                      </div>
+                      <span style={{ fontSize: 9, color: COLORS.text }}>{totalExpenses > 0 ? (d.value / totalExpenses * 100).toFixed(1) : 0}%</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-            {/* Non-fixed leftover */}
-            <div style={{ background: COLORS.card, border: `1.5px solid ${leftover > 0 ? COLORS.accent : COLORS.danger}`, borderRadius: 16, padding: 20, marginBottom: 24, boxShadow: `0 0 20px ${leftover > 0 ? COLORS.accent : COLORS.danger}22` }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <p style={{ fontSize: 12, color: COLORS.muted, fontFamily: "'DM Mono', monospace", textTransform: "uppercase", letterSpacing: 1 }}>Available for Variable Spending</p>
-                  <p style={{ fontSize: 32, fontWeight: 800, color: leftover >= 0 ? COLORS.accent : COLORS.danger, letterSpacing: -1, marginTop: 4 }}>{fmt(Math.max(0, totalIncome - fixedExpenses - debtPayments))}</p>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <p style={{ fontSize: 12, color: COLORS.muted, fontFamily: "'DM Mono', monospace" }}>Income: {fmt(totalIncome)}</p>
-                  <p style={{ fontSize: 12, color: COLORS.muted, fontFamily: "'DM Mono', monospace" }}>Fixed expenses: −{fmt(fixedExpenses)}</p>
-                  <p style={{ fontSize: 12, color: COLORS.muted, fontFamily: "'DM Mono', monospace" }}>Debt payments: −{fmt(debtPayments)}</p>
-                </div>
+            {/* Transaction Log */}
+            <p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 8 }}>Add your transactions via the + button. They appear here automatically.</p>
+            <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, overflow: "hidden" }}>
+              <div style={{ padding: "8px 14px", borderBottom: `1px solid ${COLORS.border}`, display: "flex", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: COLORS.text }}>TRANSACTION LOG</span>
+                <span style={{ fontSize: 10, color: COLORS.muted }}>{expenses.length} transactions</span>
               </div>
-            </div>
-            {/* Category grid */}
-            <h3 style={{ fontWeight: 700, marginBottom: 14, fontSize: 16 }}>Spending by Category</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 12 }}>
-              {CATEGORIES.filter(c => catTotals[c] > 0).map(c => {
-                const goal = goals.find(g => g.category === c);
-                return <CategoryCard key={c} name={c} spent={catTotals[c]} goal={goal?.limit} color={COLORS.accentBlue} />;
-              })}
+              <div style={{ maxHeight: 280, overflowY: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead style={{ position: "sticky", top: 0, background: COLORS.surface }}>
+                    <tr>
+                      <th style={{ padding: "6px 10px", textAlign: "left", fontSize: 9, color: COLORS.muted, fontWeight: 600 }}>DATE</th>
+                      <th style={{ padding: "6px 10px", textAlign: "left", fontSize: 9, color: COLORS.muted, fontWeight: 600 }}>DESCRIPTION</th>
+                      <th style={{ padding: "6px 10px", textAlign: "left", fontSize: 9, color: COLORS.muted, fontWeight: 600 }}>CATEGORY</th>
+                      <th style={{ padding: "6px 10px", textAlign: "right", fontSize: 9, color: COLORS.muted, fontWeight: 600 }}>AMOUNT</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...expenses].sort((a, b) => new Date(b.date) - new Date(a.date)).map((e, i) => (
+                      <tr key={e.id} style={{ borderTop: `1px solid ${COLORS.border}`, background: i % 2 ? COLORS.surface + "44" : "transparent" }}>
+                        <td style={{ padding: "6px 10px", color: COLORS.muted, fontSize: 10 }}>{e.date}</td>
+                        <td style={{ padding: "6px 10px", color: COLORS.text, fontSize: 11 }}>{e.label}</td>
+                        <td style={{ padding: "6px 10px", fontSize: 10 }}>
+                          <span style={{ background: COLORS.accentBlue + "22", color: COLORS.accentBlue, padding: "2px 6px", borderRadius: 4, fontSize: 9 }}>{e.category}</span>
+                        </td>
+                        <td style={{ padding: "6px 10px", textAlign: "right", color: COLORS.accentWarm, fontWeight: 600, fontSize: 11 }}>{fmt(e.amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}

@@ -9,7 +9,8 @@
       "Bash(/opt/homebrew/bin/node /opt/homebrew/bin/npm install)",
       "Bash(PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin /opt/homebrew/bin/npm install)",
       "mcp__Claude_Preview__preview_start",
-      "Bash(PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin /opt/homebrew/bin/npm run build)"
+      "Bash(PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin /opt/homebrew/bin/npm run build)",
+      "Bash(PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin /opt/homebrew/bin/npm install recharts)"
     ]
   }
 }
