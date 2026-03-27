@@ -1,21 +1,51 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, ComposedChart, AreaChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 // ── Palette & helpers ─────────────────────────────────────────────────────────
+// Design System: "The Modern Hearth" — Roberts Family Finance
 const COLORS = {
-  bg: "#0f0f14",
-  surface: "#16161f",
-  card: "#1c1c28",
-  border: "#2a2a3a",
-  accent: "#6ee7b7",        // mint green
-  accentWarm: "#fbbf24",    // amber
-  accentBlue: "#60a5fa",    // sky blue
-  accentPurple: "#a78bfa",  // violet
-  danger: "#f87171",
-  warning: "#fb923c",
-  success: "#34d399",
-  text: "#f0f0f5",
-  muted: "#8888aa",
-  inputBg: "#12121a",
+  // Surface hierarchy (tonal layering — no harsh borders)
+  bg: "#f8fafb",
+  surface: "#f8fafb",
+  card: "#ffffff",                 // surface-container-lowest
+  containerLow: "#f1f4f5",         // surface-container-low
+  container: "#eaeef0",            // surface-container
+  containerHigh: "#e4e9eb",        // surface-container-high
+  containerHighest: "#dde4e6",     // surface-container-highest
+  // Brand — Deep Teal primary
+  primary: "#006788",
+  primaryDim: "#005a77",
+  primaryContainer: "#61cdfd",
+  primaryFixed: "#51bfef",
+  // Secondary — Coral / light blue container
+  secondary: "#176684",
+  secondaryContainer: "#c0e8ff",   // Next Bill Due card bg
+  onSecondaryContainer: "#005975",
+  // Tertiary — Indigo / mint (Shared Goal)
+  tertiary: "#555b93",
+  tertiaryContainer: "#babfff",
+  onTertiaryContainer: "#33396f",
+  // Sidebar — light with deep slate active
+  sidebarBg: "#f8fafb",
+  sidebarActive: "#4f6174",        // deep slate
+  sidebarText: "#4f6174",
+  // Semantic
+  accent: "#006788",
+  accentWarm: "#f59e0b",
+  accentBlue: "#006788",
+  accentPurple: "#555b93",
+  danger: "#ac3149",
+  warning: "#f97316",
+  success: "#006788",
+  // Typography
+  text: "#2d3435",                 // on-surface
+  subtext: "#596062",              // on-surface-variant
+  muted: "#757c7e",                // outline
+  // Inputs
+  inputBg: "#f1f4f5",
+  border: "rgba(172,179,181,0.15)", // ghost border (outline-variant @15%)
+  // Shadows — long-soft ambient
+  shadow: "0 12px 24px rgba(79,97,116,0.06)",
+  shadowSm: "0 4px 12px rgba(79,97,116,0.04)",
 };
 const fmt = (n) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
@@ -109,20 +139,17 @@ function CategoryCard({ name, spent, goal, color }) {
 function Modal({ title, onClose, children }) {
   return (
     <div style={{
-      position: "fixed", inset: 0, background: "#00000099", zIndex: 1000,
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1000,
       display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
-    }}
-      onClick={onClose}
-    >
+    }} onClick={onClose}>
       <div style={{
-        background: COLORS.card, borderRadius: 20, border: `1px solid ${COLORS.border}`,
-        padding: 28, width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto",
-      }}
-        onClick={e => e.stopPropagation()}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
-          <h2 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, color: COLORS.text, fontSize: 20, margin: 0 }}>{title}</h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: COLORS.muted, fontSize: 22, cursor: "pointer" }}>×</button>
+        background: COLORS.card, borderRadius: 24, padding: 32, width: "100%",
+        maxWidth: 480, maxHeight: "90vh", overflowY: "auto",
+        boxShadow: "0 24px 48px rgba(0,0,0,0.12)",
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+          <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, color: COLORS.text, fontSize: 20, margin: 0 }}>{title}</h2>
+          <button onClick={onClose} style={{ background: COLORS.containerHigh, border: "none", color: COLORS.subtext, borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, lineHeight: 1 }}>×</button>
         </div>
         {children}
       </div>
@@ -133,24 +160,24 @@ function Modal({ title, onClose, children }) {
 function Field({ label, children }) {
   return (
     <div style={{ marginBottom: 16 }}>
-      <label style={{ display: "block", fontSize: 12, color: COLORS.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.8, fontFamily: "'DM Mono', monospace" }}>{label}</label>
+      <label style={{ display: "block", fontSize: 11, color: COLORS.subtext, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700 }}>{label}</label>
       {children}
     </div>
   );
 }
 const inputStyle = {
-  width: "100%", background: COLORS.inputBg, border: `1px solid ${COLORS.border}`,
-  borderRadius: 10, padding: "10px 14px", color: COLORS.text, fontSize: 14,
-  fontFamily: "'DM Mono', monospace", outline: "none", boxSizing: "border-box",
+  width: "100%", background: COLORS.containerLow, border: "none",
+  borderRadius: 12, padding: "12px 16px", color: COLORS.text, fontSize: 14,
+  fontFamily: "'Plus Jakarta Sans', sans-serif", outline: "none", boxSizing: "border-box",
 };
-const selectStyle = { ...inputStyle };
+const selectStyle = { ...inputStyle, appearance: "none" };
 const btnPrimary = {
-  background: COLORS.accent, color: "#0a0a10", border: "none", borderRadius: 10,
-  padding: "11px 22px", fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 14,
-  cursor: "pointer", width: "100%",
+  width: "100%", background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`,
+  color: "#fff", border: "none", borderRadius: 12, padding: "14px",
+  fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif",
 };
 // ── SmartAddModal ─────────────────────────────────────────────────────────────
-function SmartAddModal({ onClose, onManualExpense, onManualIncome, onManualDebt, onImportExpenses, onImportIncome }) {
+function SmartAddModal({ onClose, onManualExpense, onManualIncome, onImportExpenses, onImportIncome }) {
   const [step, setStep] = useState("home"); // home | nl | upload | preview
   const [nlInput, setNlInput] = useState("");
   const [nlLoading, setNlLoading] = useState(false);
@@ -296,89 +323,96 @@ If date not visible, use today. If unsure of category, use Other.`
   // ── Render ──
   return (
     <div style={{ position: "fixed", inset: 0, background: "#00000099", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={step === "home" ? onClose : undefined}>
-      <div style={{ background: COLORS.card, borderRadius: 22, border: `1px solid ${COLORS.border}`, width: "100%", maxWidth: 520, maxHeight: "92vh", overflowY: "auto", boxShadow: `0 0 60px #00000088` }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: COLORS.card, borderRadius: 24, width: "100%", maxWidth: 520, maxHeight: "92vh", overflowY: "auto", boxShadow: "0 24px 48px rgba(0,0,0,0.14)" }} onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "22px 24px 0" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "28px 28px 0" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {step !== "home" && (
               <button onClick={() => { setStep("home"); setNlInput(""); setNlError(""); setUploadError(""); setPreviewItems([]); }}
-                style={{ background: COLORS.border, border: "none", color: COLORS.muted, borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontSize: 14 }}>←</button>
+                style={{ background: COLORS.containerHigh, border: "none", color: COLORS.subtext, borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontSize: 14 }}>←</button>
             )}
-            <h2 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, color: COLORS.text, fontSize: 19, margin: 0 }}>
-              {step === "home" && "✦ Add Entry"}
-              {step === "nl" && "💬 Describe It"}
-              {step === "upload" && "📄 Upload Document"}
-              {step === "preview" && "✓ Review & Import"}
+            <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, color: COLORS.text, fontSize: 20, margin: 0 }}>
+              {step === "home" && "Add Transaction"}
+              {step === "nl" && "Describe It"}
+              {step === "upload" && "Upload Document"}
+              {step === "preview" && "Review & Import"}
             </h2>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: COLORS.muted, fontSize: 22, cursor: "pointer", lineHeight: 1 }}>×</button>
+          <button onClick={onClose} style={{ background: COLORS.containerHigh, border: "none", color: COLORS.subtext, borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>×</button>
         </div>
-        <div style={{ padding: "20px 24px 28px" }}>
+        <div style={{ padding: "20px 28px 32px" }}>
           {/* ── HOME ── */}
           {step === "home" && (
             <div>
-              <p style={{ fontSize: 12, color: COLORS.muted, fontFamily: "'DM Mono', monospace", marginBottom: 18, lineHeight: 1.6 }}>
+              <p style={{ fontSize: 14, color: COLORS.subtext, marginBottom: 20, lineHeight: 1.6 }}>
                 How would you like to add entries?
               </p>
-              {/* Smart input options */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
-                <button onClick={() => setStep("nl")} style={{
-                  background: `linear-gradient(135deg, ${COLORS.accentPurple}22, ${COLORS.accentBlue}18)`,
-                  border: `1px solid ${COLORS.accentPurple}66`, borderRadius: 16, padding: "20px 16px",
-                  cursor: "pointer", textAlign: "left", transition: "all .2s",
+              {/* Action tiles */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
+                <button onClick={onManualExpense} style={{
+                  background: COLORS.containerLow, border: "none", borderRadius: 16, padding: "20px 12px",
+                  cursor: "pointer", textAlign: "center", transition: "background .2s",
                 }}>
-                  <div style={{ fontSize: 28, marginBottom: 10 }}>💬</div>
-                  <p style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 14, color: COLORS.accentPurple, marginBottom: 4 }}>Natural Language</p>
-                  <p style={{ fontSize: 11, color: COLORS.muted, fontFamily: "'DM Mono', monospace", lineHeight: 1.5 }}>"Spent $85 on groceries and $40 on gas today"</p>
+                  <div style={{ width: 44, height: 44, borderRadius: 14, background: `rgba(0,103,136,0.1)`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 22, color: COLORS.primary }}>shopping_bag</span>
+                  </div>
+                  <p style={{ fontWeight: 700, fontSize: 13, color: COLORS.text, marginBottom: 2 }}>Expense</p>
+                  <p style={{ fontSize: 11, color: COLORS.subtext, lineHeight: 1.4 }}>Add a cost</p>
+                </button>
+                <button onClick={onManualIncome} style={{
+                  background: "rgba(192,232,255,0.4)", border: "none", borderRadius: 16, padding: "20px 12px",
+                  cursor: "pointer", textAlign: "center", transition: "background .2s",
+                }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 14, background: `rgba(23,102,132,0.12)`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 22, color: COLORS.secondary }}>trending_up</span>
+                  </div>
+                  <p style={{ fontWeight: 700, fontSize: 13, color: COLORS.text, marginBottom: 2 }}>Income</p>
+                  <p style={{ fontSize: 11, color: COLORS.subtext, lineHeight: 1.4 }}>Add earnings</p>
                 </button>
                 <button onClick={() => { setStep("upload"); setTimeout(() => fileRef.current?.click(), 100); }} style={{
-                  background: `linear-gradient(135deg, ${COLORS.accent}22, ${COLORS.accentWarm}18)`,
-                  border: `1px solid ${COLORS.accent}66`, borderRadius: 16, padding: "20px 16px",
-                  cursor: "pointer", textAlign: "left", transition: "all .2s",
+                  background: "rgba(186,191,255,0.3)", border: "none", borderRadius: 16, padding: "20px 12px",
+                  cursor: "pointer", textAlign: "center", transition: "background .2s",
                 }}>
-                  <div style={{ fontSize: 28, marginBottom: 10 }}>📄</div>
-                  <p style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 14, color: COLORS.accent, marginBottom: 4 }}>Upload Document</p>
-                  <p style={{ fontSize: 11, color: COLORS.muted, fontFamily: "'DM Mono', monospace", lineHeight: 1.5 }}>Receipt, bill, bank statement, payslip…</p>
+                  <div style={{ width: 44, height: 44, borderRadius: 14, background: `rgba(85,91,147,0.12)`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 22, color: COLORS.tertiary }}>receipt_long</span>
+                  </div>
+                  <p style={{ fontWeight: 700, fontSize: 13, color: COLORS.text, marginBottom: 2 }}>Receipt</p>
+                  <p style={{ fontSize: 11, color: COLORS.subtext, lineHeight: 1.4 }}>Scan a doc</p>
                 </button>
               </div>
               {/* Divider */}
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-                <div style={{ flex: 1, height: 1, background: COLORS.border }} />
-                <span style={{ fontSize: 11, color: COLORS.muted, fontFamily: "'DM Mono', monospace" }}>or add manually</span>
-                <div style={{ flex: 1, height: 1, background: COLORS.border }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                <div style={{ flex: 1, height: 1, background: COLORS.containerHighest }} />
+                <span style={{ fontSize: 11, color: COLORS.muted }}>or describe in words</span>
+                <div style={{ flex: 1, height: 1, background: COLORS.containerHighest }} />
               </div>
-              {/* Manual options */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {[
-                  { label: "💸  Add Expense", action: onManualExpense, color: COLORS.accentWarm },
-                  { label: "💰  Add Income", action: onManualIncome, color: COLORS.accent },
-                  { label: "💳  Add Debt", action: onManualDebt, color: COLORS.danger },
-                ].map(o => (
-                  <button key={o.label} onClick={o.action} style={{
-                    background: o.color + "12", border: `1px solid ${o.color}33`,
-                    color: o.color, borderRadius: 12, padding: "12px 18px",
-                    fontSize: 14, fontWeight: 700, cursor: "pointer", textAlign: "left",
-                    fontFamily: "'Syne', sans-serif",
-                  }}>{o.label}</button>
-                ))}
-              </div>
+              <button onClick={() => setStep("nl")} style={{
+                width: "100%", background: COLORS.containerLow, border: "none", borderRadius: 12, padding: "14px 16px",
+                cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 12,
+              }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.primary }}>chat</span>
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: 14, color: COLORS.text, marginBottom: 2 }}>Natural Language</p>
+                  <p style={{ fontSize: 12, color: COLORS.subtext }}>"Spent $85 on groceries and $40 on gas today"</p>
+                </div>
+              </button>
             </div>
           )}
           {/* ── NATURAL LANGUAGE ── */}
           {step === "nl" && (
             <div>
-              <p style={{ fontSize: 12, color: COLORS.muted, fontFamily: "'DM Mono', monospace", marginBottom: 16, lineHeight: 1.7 }}>
+              <p style={{ fontSize: 14, color: COLORS.subtext, marginBottom: 16, lineHeight: 1.7 }}>
                 Describe any transaction in plain English. Claude will extract and categorize everything automatically.
               </p>
-              <div style={{ background: COLORS.surface, borderRadius: 14, padding: 16, marginBottom: 14, border: `1px solid ${COLORS.border}` }}>
-                <p style={{ fontSize: 11, color: COLORS.muted, fontFamily: "'DM Mono', monospace", marginBottom: 8 }}>EXAMPLES</p>
+              <div style={{ background: COLORS.containerLow, borderRadius: 14, padding: 16, marginBottom: 14 }}>
+                <p style={{ fontSize: 11, color: COLORS.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>EXAMPLES</p>
                 {[
                   "Spent $85 on groceries and $60 on gas today",
                   "Paid $1,200 rent and $110 electricity this week",
                   "Got $2,500 salary deposit yesterday",
                   "Netflix $18, Spotify $10, gym $45 this month",
                 ].map((ex, i) => (
-                  <p key={i} onClick={() => setNlInput(ex)} style={{ fontSize: 12, color: COLORS.accentBlue, fontFamily: "'DM Mono', monospace", cursor: "pointer", marginBottom: 4, lineHeight: 1.5 }}>→ {ex}</p>
+                  <p key={i} onClick={() => setNlInput(ex)} style={{ fontSize: 12, color: COLORS.primary, cursor: "pointer", marginBottom: 4, lineHeight: 1.5 }}>→ {ex}</p>
                 ))}
               </div>
               <textarea
@@ -390,7 +424,11 @@ If date not visible, use today. If unsure of category, use Other.`
                 rows={4}
                 style={{ ...inputStyle, resize: "none", lineHeight: 1.6, marginBottom: 12, fontSize: 14 }}
               />
-              {nlError && <p style={{ color: COLORS.danger, fontSize: 12, fontFamily: "'DM Mono', monospace", marginBottom: 12 }}>{nlError}</p>}
+              {nlError && (
+                <div style={{ background: `rgba(172,49,73,0.08)`, border: `1px solid rgba(172,49,73,0.2)`, borderRadius: 10, padding: "10px 14px", marginBottom: 12 }}>
+                  <p style={{ color: COLORS.danger, fontSize: 12 }}>{nlError}</p>
+                </div>
+              )}
               <button onClick={handleNL} disabled={nlLoading || !nlInput.trim()} style={{ ...btnPrimary, background: nlLoading ? COLORS.border : COLORS.accentPurple, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 {nlLoading ? (
                   <>
@@ -512,7 +550,10 @@ export default function App() {
   const fileRef = useRef();
   const advisorFileRef = useRef();
   const [advisorFile, setAdvisorFile] = useState(null);
+  const pendingAdvisorSend = useRef(false);
   // ── Dashboard extra state ──
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [viewMonthKey, setViewMonthKey] = useState(() => monthKey(new Date().getFullYear(), new Date().getMonth()));
   const [budgetStartDate, setBudgetStartDate] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10));
   const [budgetEndDate, setBudgetEndDate] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10));
   const [startingBalance, setStartingBalance] = useState(0);
@@ -534,6 +575,8 @@ export default function App() {
     Housing: 1800, Food: 500, Utilities: 300, Transport: 500,
     Health: 100, Entertainment: 150, Personal: 200, Education: 50, Other: 120,
   });
+  const [familyName, setFamilyName] = useState("Roberts Family");
+  const [expenseCardPage, setExpenseCardPage] = useState(0);
   // ── Monthly insights state ──
   const todayKey = monthKey(new Date().getFullYear(), new Date().getMonth());
   const [startMonthKey, setStartMonthKey] = useState("2025-01");
@@ -554,6 +597,15 @@ export default function App() {
       [todayKey]: { ...(prev[todayKey] || { notes: "" }), income, expenses },
     }));
   }, [income, expenses]);
+  // Reset expense card pagination when viewing a different month
+  useEffect(() => { setExpenseCardPage(0); }, [viewMonthKey]);
+  // Auto-send when navigating to advisor tab from header search
+  useEffect(() => {
+    if (pendingAdvisorSend.current && tab === "advisor" && advisorMsg) {
+      pendingAdvisorSend.current = false;
+      handleAdvisor();
+    }
+  });
   const twelveMonths = build12Months(startMonthKey);
   // Get snapshot for a key (fallback empty)
   const getSnap = (key) => monthlySnapshots[key] || { income: [], expenses: [], notes: "" };
@@ -671,6 +723,34 @@ Return plain text bullet points only, no headers.` }]
     }
     return result;
   })();
+  // ── Dashboard derived ──
+  const today0 = new Date(); today0.setHours(0, 0, 0, 0);
+  const unpaidSorted = bills.filter(b => !b.paid);
+  const futureBills = unpaidSorted.filter(b => { const d = new Date(b.dueDate); d.setHours(0,0,0,0); return d >= today0; });
+  const nextBill = futureBills.length > 0
+    ? futureBills.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0]
+    : unpaidSorted.sort((a, b) => new Date(b.dueDate) - new Date(a.dueDate))[0];
+  const daysUntilBill = nextBill ? Math.round((new Date(nextBill.dueDate).setHours(0,0,0,0) - today0.getTime()) / 86400000) : null;
+  const billsDueIn7Days = bills.filter(b => { if (b.paid) return false; const d = new Date(b.dueDate); d.setHours(0,0,0,0); const diff = Math.round((d - today0) / 86400000); return diff >= 0 && diff <= 7; }).length;
+  const catExpenseCards = Object.entries(catTotals).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+  const totalBills = bills.reduce((s, b) => s + (b.budget || 0), 0);
+  const totalDebtPayments = debts.reduce((s, d) => s + parseFloat(d.minPayment || 0), 0);
+  const totalDebtBalance = debts.reduce((s, d) => s + parseFloat(d.balance || 0), 0);
+  const spentPct = Math.round(pct(totalExpenses, totalIncome));
+  const CATEGORY_ICONS = { Housing: "home", Food: "restaurant", Transport: "directions_car", Utilities: "bolt", Health: "medication", Entertainment: "movie", Personal: "person", Education: "school", Kids: "child_care", Other: "category" };
+  const CATEGORY_ICON_BG = { Housing: "rgba(97,205,253,0.2)", Food: "rgba(192,232,255,0.3)", Transport: "rgba(186,191,255,0.3)", Utilities: "rgba(192,232,255,0.3)", Health: "rgba(186,191,255,0.3)", Entertainment: "rgba(186,191,255,0.3)", Personal: "rgba(186,191,255,0.3)", Education: "rgba(97,205,253,0.2)", Kids: "rgba(192,232,255,0.3)", Other: "#eaeef0" };
+  const CATEGORY_ICON_COLOR = { Housing: COLORS.primary, Food: COLORS.secondary, Transport: COLORS.tertiary, Utilities: COLORS.secondary, Health: COLORS.tertiary, Entertainment: COLORS.tertiary, Personal: COLORS.tertiary, Education: COLORS.primary, Kids: COLORS.secondary, Other: COLORS.subtext };
+  // ── View-month derived values (dashboard month picker) ──
+  const viewSnap = viewMonthKey === todayKey
+    ? { income, expenses }
+    : (monthlySnapshots[viewMonthKey] || { income: [], expenses: [] });
+  const viewExpenses = viewSnap.expenses;
+  const viewIncome = viewSnap.income;
+  const viewTotalExpenses = viewExpenses.reduce((s, e) => s + e.amount, 0);
+  const viewTotalIncome = viewIncome.reduce((s, i) => s + i.amount, 0);
+  const viewSpentPct = Math.round(pct(viewTotalExpenses, viewTotalIncome || 1));
+  const viewCatTotals = CATEGORIES.reduce((acc, c) => ({ ...acc, [c]: viewExpenses.filter(e => e.category === c).reduce((s, e) => s + e.amount, 0) }), {});
+  const viewCatExpenseCards = Object.entries(viewCatTotals).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
   // ── Add forms state ──
   const [newExp, setNewExp] = useState({ label: "", amount: "", category: "Food", date: new Date().toISOString().slice(0,10), fixed: false });
   const [newInc, setNewInc] = useState({ label: "", amount: "", date: new Date().toISOString().slice(0,10), recurring: false });
@@ -692,6 +772,20 @@ Return plain text bullet points only, no headers.` }]
     setDebts(prev => [...prev, { ...newDebt, id: Date.now(), balance: parseFloat(newDebt.balance), minPayment: parseFloat(newDebt.minPayment)||0, interest: parseFloat(newDebt.interest)||0 }]);
     setNewDebt({ label: "", balance: "", minPayment: "", interest: "" });
     setModal(null);
+  };
+  const deleteExpenseFromView = (id) => {
+    if (viewMonthKey === todayKey) {
+      setExpenses(prev => prev.filter(x => x.id !== id));
+    } else {
+      setMonthlySnapshots(prev => ({ ...prev, [viewMonthKey]: { ...getSnap(viewMonthKey), expenses: getSnap(viewMonthKey).expenses.filter(x => x.id !== id) } }));
+    }
+  };
+  const deleteIncomeFromView = (id) => {
+    if (viewMonthKey === todayKey) {
+      setIncome(prev => prev.filter(x => x.id !== id));
+    } else {
+      setMonthlySnapshots(prev => ({ ...prev, [viewMonthKey]: { ...getSnap(viewMonthKey), income: getSnap(viewMonthKey).income.filter(x => x.id !== id) } }));
+    }
   };
   // ── Claude: parse receipt/bill ──
   const handleFileUpload = async (e) => {
@@ -790,7 +884,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
     if (!advisorMsg.trim() && !advisorFile) return;
     const userMsg = advisorMsg.trim();
     setAdvisorLoading(true);
-    const summary = `Income: ${fmt(totalIncome)}/mo. Expenses: ${fmt(totalExpenses)}/mo. Fixed: ${fmt(fixedExpenses)}. Variable: ${fmt(variableExpenses)}. Leftover: ${fmt(leftover)}. Debts: ${JSON.stringify(debts)}. Category breakdown: ${JSON.stringify(catTotals)}. Goals: ${JSON.stringify(goals)}.`;
+    const { month0, year } = parseKey(viewMonthKey);
+    const summary = `Family: ${familyName}. Month: ${MONTH_FULL[month0]} ${year}. Income: ${fmt(viewTotalIncome)}/mo. Expenses: ${fmt(viewTotalExpenses)}/mo. Net: ${fmt(viewTotalIncome - viewTotalExpenses)}. Category breakdown: ${JSON.stringify(viewCatTotals)}. Bills: ${JSON.stringify(bills.map(b => ({ label: b.label, due: b.dueDate, amount: b.budget, paid: b.paid })))}. Debts: ${JSON.stringify(debts.map(d => ({ label: d.label, balance: d.balance, apr: d.interest })))}. Savings goals: ${JSON.stringify(savingsItems)}. Budget goals: ${JSON.stringify(goals)}.`;
 
     let contentBlocks = [];
     if (advisorFile) {
@@ -801,13 +896,16 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         contentBlocks.push({ type: "image", source: { type: "base64", media_type: advisorFile.type, data: base64 } });
       }
     }
-    contentBlocks.push({ type: "text", text: `You are a friendly household financial advisor. Here is the user's current budget: ${summary}\n\nUser question: ${userMsg || "Please review this document and give me advice."}` });
+    contentBlocks.push({ type: "text", text: `You are a friendly household financial advisor for the ${familyName}. Current budget data: ${summary}\n\nUser: ${userMsg || "Please review this document and give me advice."}` });
     const newHistory = [...advisorHistory, { role: "user", content: userMsg || "Review attached file" }];
     setAdvisorHistory(newHistory);
     setAdvisorMsg("");
     setAdvisorFile(null);
     try {
+      // Preserve last 10 turns of conversation history
+      const historyTurns = advisorHistory.slice(-10);
       const messages = [
+        ...historyTurns.map(h => ({ role: h.role, content: h.content })),
         { role: "user", content: contentBlocks }
       ];
       const res = await fetch("/.netlify/functions/claude", {
@@ -843,591 +941,666 @@ If the request doesn't map to a clear category goal, still return JSON with newG
     { id: "advisor", label: "AI Advisor" },
   ];
   return (
-    <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text, fontFamily: "'Syne', sans-serif" }}>
+    <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: COLORS.bg, color: COLORS.text, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
-        input, select, textarea { outline: none; }
-        input::placeholder, textarea::placeholder { color: #555570; }
+        ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #dde4e6; border-radius: 4px; }
+        input, select, textarea { outline: none; font-family: 'Plus Jakarta Sans', sans-serif; }
+        input::placeholder, textarea::placeholder { color: #757c7e; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; font-family: 'Material Symbols Outlined'; }
+        .nav-item:hover { background: #f1f4f5 !important; opacity: 1 !important; }
+        .exp-card:hover { transform: translateY(-2px); transition: transform 0.15s ease; }
       `}</style>
-      {/* Header */}
-      <header style={{ borderBottom: `1px solid ${COLORS.border}`, padding: "16px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", background: COLORS.surface, position: "sticky", top: 0, zIndex: 100 }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.5 }}>
-            <span style={{ color: COLORS.accent }}>$</span> FamilyFinance
-          </h1>
-          <p style={{ fontSize: 11, color: COLORS.muted, fontFamily: "'DM Mono', monospace" }}>{MONTH_FULL[new Date().getMonth()]} {new Date().getFullYear()} · Household Budget</p>
+
+      {/* ── SIDEBAR — light, rounded-r-3xl ── */}
+      <aside style={{ width: 288, background: COLORS.sidebarBg, display: "flex", flexDirection: "column", flexShrink: 0, height: "100vh", borderRadius: "0 24px 24px 0" }}>
+        {/* Family branding */}
+        <div style={{ padding: "24px 24px 40px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg, #006788, #005a77)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 800, color: "#fff", flexShrink: 0, boxShadow: COLORS.shadowSm }}>
+              {familyName.split(" ").map(w => w[0]).join("").slice(0, 2)}
+            </div>
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: COLORS.sidebarText, letterSpacing: "-0.02em", lineHeight: 1.2 }}>{familyName}</h1>
+          </div>
         </div>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          {/* Goal button */}
-          <button onClick={() => setModal("goal")} style={{ background: COLORS.accentPurple + "22", border: `1px solid ${COLORS.accentPurple}`, color: COLORS.accentPurple, borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-            🎯 Goal
-          </button>
-          {/* Green Add button */}
-          <button onClick={() => setModal("addMenu")} style={{ background: COLORS.accent, color: "#0a0a10", border: "none", borderRadius: 50, width: 42, height: 42, fontSize: 26, fontWeight: 900, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 20px ${COLORS.accent}55` }}>
-            +
+        {/* Nav */}
+        <nav style={{ flex: 1, padding: "0 12px", display: "flex", flexDirection: "column", gap: 4 }}>
+          {[
+            { id: "dashboard",    label: "Overview",            icon: "dashboard" },
+            { id: "transactions", label: "Family Budget",        icon: "payments" },
+            { id: "weekly",       label: "Bill Calendar",        icon: "calendar_month" },
+            { id: "insights",     label: "Monthly Insights",     icon: "bar_chart" },
+            { id: "advisor",      label: "AI Assistant",         icon: "smart_toy" },
+          ].map(item => (
+            <button key={item.id} className="nav-item" onClick={() => setTab(item.id)} style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "11px 14px",
+              background: tab === item.id ? COLORS.sidebarActive : "transparent",
+              border: "none", borderRadius: 12,
+              color: tab === item.id ? "#ffffff" : COLORS.sidebarText,
+              fontSize: 14, fontWeight: 500,
+              cursor: "pointer", textAlign: "left", width: "100%",
+              opacity: tab === item.id ? 1 : 0.8,
+              transition: "all 0.15s",
+            }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 20, color: "inherit" }}>{item.icon}</span>
+              {item.label}
+            </button>
+          ))}
+        </nav>
+        {/* Add Transaction CTA */}
+        <div style={{ padding: "20px 16px 28px" }}>
+          <button onClick={() => setModal("addMenu")} style={{
+            width: "100%", background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`,
+            border: "none", borderRadius: 12, color: "#fff", fontSize: 14, fontWeight: 600,
+            padding: "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            boxShadow: COLORS.shadow,
+          }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>add</span>
+            Add Transaction
           </button>
         </div>
-      </header>
-      {/* Nav Tabs */}
-      <nav style={{ display: "flex", gap: 4, padding: "12px 28px", borderBottom: `1px solid ${COLORS.border}`, overflowX: "auto" }}>
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            background: tab === t.id ? COLORS.accent + "18" : "none",
-            border: `1px solid ${tab === t.id ? COLORS.accent : "transparent"}`,
-            color: tab === t.id ? COLORS.accent : COLORS.muted,
-            borderRadius: 8, padding: "7px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
-          }}>{t.label}</button>
-        ))}
-      </nav>
-      {/* Content */}
-      <main style={{ padding: "24px 28px", maxWidth: 1100, margin: "0 auto" }}>
+      </aside>
+
+      {/* ── MAIN COLUMN ── */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
+        {/* TOP HEADER */}
+        <header style={{ background: COLORS.bg, padding: "20px 32px 16px", display: "flex", alignItems: "center", gap: 24, flexShrink: 0 }}>
+          {/* Month picker */}
+          <div style={{ position: "relative" }}>
+            <button onClick={() => setShowMonthPicker(p => !p)} style={{ display: "flex", alignItems: "center", gap: 8, background: COLORS.card, border: "none", borderRadius: 10, padding: "9px 16px", fontSize: 14, fontWeight: 600, color: COLORS.text, cursor: "pointer", boxShadow: COLORS.shadowSm, flexShrink: 0 }}>
+              {(() => { const { month0, year } = parseKey(viewMonthKey); return `${MONTH_FULL[month0]} ${year}`; })()}
+              <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.subtext }}>expand_more</span>
+            </button>
+            {showMonthPicker && (
+              <div style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, background: COLORS.card, borderRadius: 16, boxShadow: "0 12px 32px rgba(0,0,0,0.12)", zIndex: 200, padding: 8, minWidth: 200, maxHeight: 320, overflowY: "auto" }}>
+                {(() => {
+                  const months2026 = Array.from({ length: 12 }, (_, i) => monthKey(2026, i));
+                  const snapshotMonths = Object.keys(monthlySnapshots).filter(k => !k.startsWith("2026-"));
+                  const allMonths = [...new Set([...months2026, ...snapshotMonths])].sort().reverse();
+                  return allMonths.map(key => {
+                    const { month0, year } = parseKey(key);
+                    const isView = key === viewMonthKey;
+                    const isCurrent = key === todayKey;
+                    const snap = monthlySnapshots[key];
+                    const hasData = snap && (snap.income.length > 0 || snap.expenses.length > 0);
+                    return (
+                      <button key={key} onClick={() => { setViewMonthKey(key); setShowMonthPicker(false); }} style={{
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                        width: "100%", padding: "10px 14px", border: "none", borderRadius: 10,
+                        background: isView ? `rgba(0,103,136,0.08)` : "transparent",
+                        color: isView ? COLORS.primary : COLORS.text,
+                        fontWeight: isView ? 700 : 500, fontSize: 14, cursor: "pointer",
+                        fontFamily: "'Plus Jakarta Sans', sans-serif",
+                      }}>
+                        <span>{MONTH_FULL[month0]} {year}{isCurrent ? " (now)" : ""}</span>
+                        {hasData && <div style={{ width: 6, height: 6, borderRadius: "50%", background: COLORS.primary, flexShrink: 0 }} />}
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
+            )}
+          </div>
+          {/* AI Search bar */}
+          <div style={{ flex: 1, maxWidth: 600, position: "relative" }}>
+            <span className="material-symbols-outlined" style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 20, color: COLORS.primary }}>smart_toy</span>
+            <input
+              placeholder="Ask AI Financial Assistant..."
+              style={{ width: "100%", background: COLORS.containerLow, border: `2px solid rgba(0,103,136,0.1)`, borderRadius: 9999, padding: "10px 48px 10px 44px", fontSize: 14, color: COLORS.text }}
+              onKeyDown={e => { if (e.key === "Enter" && e.target.value.trim()) { setAdvisorMsg(e.target.value.trim()); pendingAdvisorSend.current = true; setTab("advisor"); e.target.value = ""; } }}
+            />
+            <button style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 6, borderRadius: "50%" }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.primary }}>send</span>
+            </button>
+          </div>
+          {/* Icons */}
+          <div style={{ display: "flex", gap: 14, alignItems: "center", marginLeft: "auto" }}>
+            <button onClick={() => setModal("notifications")} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, position: "relative" }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 24, color: COLORS.sidebarText }}>notifications</span>
+              {billsDueIn7Days > 0 && (
+                <span style={{ position: "absolute", top: 0, right: 0, width: 16, height: 16, borderRadius: "50%", background: COLORS.danger, color: "#fff", fontSize: 9, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{billsDueIn7Days}</span>
+              )}
+            </button>
+            <button onClick={() => setModal("settings")} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 24, color: COLORS.sidebarText }}>settings</span>
+            </button>
+          </div>
+        </header>
+
+        {/* SCROLLABLE CONTENT */}
+        <main style={{ flex: 1, overflowY: "auto", padding: "24px 32px" }}>
         {/* ── DASHBOARD TAB ── */}
         {tab === "dashboard" && (
-          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 12 }}>
-            {/* Title */}
-            <div style={{ textAlign: "center", marginBottom: 14 }}>
-              <h2 style={{ fontSize: 22, fontWeight: 800, letterSpacing: 3, color: COLORS.text, fontFamily: "'Syne', sans-serif" }}>
-                {MONTH_FULL[new Date().getMonth()].toUpperCase()} {new Date().getFullYear()}
-              </h2>
-            </div>
-            {/* Date / Balance settings */}
-            <div style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "10px 16px", marginBottom: 16, display: "flex", gap: 20, alignItems: "flex-end", flexWrap: "wrap" }}>
-              <p style={{ fontSize: 10, color: COLORS.muted, maxWidth: 200, lineHeight: 1.5 }}>To get started, set your start date, end date and starting balance</p>
-              {[
-                { label: "Start Date", val: budgetStartDate, set: setBudgetStartDate, type: "date", w: 140 },
-                { label: "End Date (Max 31 Days Apart)", val: budgetEndDate, set: setBudgetEndDate, type: "date", w: 140 },
-                { label: "Starting Balance", val: startingBalance, set: v => setStartingBalance(parseFloat(v)||0), type: "number", w: 110 },
-              ].map(f => (
-                <label key={f.label} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                  <span style={{ fontSize: 10, color: COLORS.muted }}>{f.label}</span>
-                  <input type={f.type} value={f.val} onChange={e => f.set(e.target.value)} style={{ ...inputStyle, padding: "5px 8px", fontSize: 11, width: f.w }} />
-                </label>
-              ))}
-            </div>
-            {/* KPI Row */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10, marginBottom: 18 }}>
-              {[
-                { label: "LEFT FOR BUDGETING", value: fmt(leftForBudgeting), color: leftForBudgeting >= 0 ? "#4ade80" : COLORS.danger, border: "#4ade80" },
-                { label: "TOTAL BUDGETED", value: fmt(totalBudgeted), color: COLORS.accentPurple, border: COLORS.accentPurple },
-                { label: "LEFT TO SPEND", value: fmt(leftToSpend2), color: COLORS.accentBlue, border: COLORS.accentBlue },
-                { label: "TOTAL SPENT", value: fmt(totalSpent), color: COLORS.accentWarm, border: COLORS.accentWarm },
-                { label: "ENDING BALANCE", value: fmt(endingBalance), color: endingBalance >= 0 ? "#4ade80" : COLORS.danger, border: "#4ade80" },
-                { label: "CURRENCY SYMBOL", value: "$", color: COLORS.muted, border: COLORS.border },
-              ].map(k => (
-                <div key={k.label} style={{ background: COLORS.card, border: `1px solid ${k.border}55`, borderRadius: 8, padding: "10px 12px" }}>
-                  <div style={{ fontSize: 9, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>{k.label}</div>
-                  <div style={{ fontSize: 17, fontWeight: 800, color: k.color, fontFamily: "'Syne', sans-serif" }}>{k.value}</div>
+          <div style={{ fontSize: 14, color: COLORS.text }}>
+            {/* ── "Show me the Money!" spending capacity section ── */}
+            <div style={{ background: COLORS.card, borderRadius: 12, padding: "32px", boxShadow: COLORS.shadow, marginBottom: 28 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+                <div>
+                  <h2 style={{ fontSize: 24, fontWeight: 800, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 4 }}>Show me the Money!</h2>
+                  <p style={{ fontSize: 14, color: COLORS.subtext }}>Your overall spending capacity for {(() => { const { month0, year } = parseKey(viewMonthKey); return `${MONTH_FULL[month0]} ${year}`; })()}</p>
                 </div>
-              ))}
-            </div>
-            {/* Charts Row */}
-            <div style={{ display: "grid", gridTemplateColumns: "200px 200px 1fr 1fr", gap: 12, marginBottom: 18 }}>
-              {/* Summary Table */}
-              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, overflow: "hidden" }}>
-                <div style={{ padding: "7px 10px", borderBottom: `1px solid ${COLORS.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: COLORS.text }}>SUMMARY</span>
-                  <label style={{ fontSize: 10, color: COLORS.muted, display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }}>
-                    <input type="checkbox" checked={showIncomeInCharts} onChange={e => setShowIncomeInCharts(e.target.checked)} />
-                    Show Income
-                  </label>
+                <div style={{ textAlign: "right" }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: COLORS.subtext, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Total Spending Power</p>
+                  <p style={{ fontSize: 30, fontWeight: 800, color: COLORS.primary, letterSpacing: "-0.02em" }}>{fmt(viewTotalIncome)}</p>
                 </div>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead><tr style={{ background: COLORS.surface }}>
-                    <th style={{ padding: "4px 8px", textAlign: "left", fontSize: 9, color: COLORS.muted, fontWeight: 600 }}></th>
-                    <th style={{ padding: "4px 8px", textAlign: "right", fontSize: 9, color: COLORS.muted, fontWeight: 600 }}>BUDGET</th>
-                    <th style={{ padding: "4px 8px", textAlign: "right", fontSize: 9, color: COLORS.muted, fontWeight: 600 }}>ACTUAL</th>
-                  </tr></thead>
-                  <tbody>
-                    {[
-                      { label: "Expenses", budget: expenseBudgetTotal, actual: totalExpenses },
-                      { label: "Bills", budget: billsBudgetTotal, actual: billsActualTotal },
-                      { label: "Debt", budget: debtPayments, actual: debtPayments },
-                      { label: "Savings", budget: savingsExpectedTotal, actual: savingsActualTotal },
-                      { label: "Income", budget: totalIncome, actual: totalIncome },
-                    ].map((row, i) => (
-                      <tr key={row.label} style={{ borderTop: `1px solid ${COLORS.border}`, background: i % 2 ? COLORS.surface + "44" : "transparent" }}>
-                        <td style={{ padding: "5px 8px", color: COLORS.text, fontSize: 11 }}>{row.label}</td>
-                        <td style={{ padding: "5px 8px", textAlign: "right", color: COLORS.muted, fontSize: 11 }}>{fmt(row.budget)}</td>
-                        <td style={{ padding: "5px 8px", textAlign: "right", fontSize: 11, color: row.actual > row.budget && row.label !== "Income" ? COLORS.danger : "#4ade80" }}>{fmt(row.actual)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
               </div>
-              {/* Cash Flow Donut */}
-              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 10 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.text, marginBottom: 6 }}>CASH FLOW SUMMARY</div>
-                <PieChart width={180} height={130}>
-                  <Pie data={cashFlowData} cx={90} cy={65} innerRadius={38} outerRadius={58} paddingAngle={2} dataKey="value" startAngle={90} endAngle={-270}>
-                    {cashFlowData.map((e, i) => <Cell key={i} fill={e.color} />)}
-                  </Pie>
-                  <Tooltip formatter={v => fmt(v)} contentStyle={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, fontSize: 10 }} />
-                </PieChart>
-                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                  {cashFlowData.map(d => {
-                    const total2 = cashFlowData.reduce((s, x) => s + x.value, 0);
-                    return (
-                      <div key={d.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <div style={{ width: 7, height: 7, borderRadius: 2, background: d.color }} />
-                          <span style={{ fontSize: 9, color: COLORS.muted }}>{d.name}</span>
+              <div style={{ height: 16, background: COLORS.container, borderRadius: 9999, overflow: "hidden", marginBottom: 16 }}>
+                <div style={{ width: `${viewSpentPct}%`, height: "100%", background: COLORS.primary, borderRadius: 9999, transition: "width 0.5s" }} />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                  <span style={{ fontSize: 22, fontWeight: 700, color: COLORS.text }}>{fmt(viewTotalExpenses)}</span>
+                  <span style={{ fontSize: 14, color: COLORS.subtext }}>of {fmt(viewTotalIncome)}</span>
+                </div>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: `rgba(0,103,136,0.1)`, borderRadius: 9999, padding: "6px 14px", fontSize: 13, fontWeight: 700, color: COLORS.primary }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>trending_up</span>
+                  {viewSpentPct}% spent
+                </span>
+              </div>
+            </div>
+
+            {/* This week vs last week comparison */}
+            {(() => {
+              const now = new Date(); now.setHours(0,0,0,0);
+              const dow = now.getDay();
+              const startThis = new Date(now.getTime() - dow * 86400000);
+              const startLast = new Date(startThis.getTime() - 7 * 86400000);
+              const thisWeekAmt = viewExpenses.filter(e => { const d = new Date(e.date); d.setHours(0,0,0,0); return d >= startThis && d <= now; }).reduce((s,e) => s+e.amount, 0);
+              const lastWeekAmt = viewExpenses.filter(e => { const d = new Date(e.date); d.setHours(0,0,0,0); return d >= startLast && d < startThis; }).reduce((s,e) => s+e.amount, 0);
+              const diff = thisWeekAmt - lastWeekAmt;
+              const pctChg = lastWeekAmt > 0 ? Math.round(Math.abs(diff) / lastWeekAmt * 100) : null;
+              return (
+                <div style={{ display: "flex", alignItems: "center", gap: 14, background: COLORS.card, borderRadius: 12, padding: "12px 20px", marginBottom: 20, boxShadow: COLORS.shadowSm }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 22, color: diff < 0 ? COLORS.success : diff > 0 ? COLORS.danger : COLORS.subtext }}>
+                    {diff < 0 ? "trending_down" : diff > 0 ? "trending_up" : "trending_flat"}
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>This week: {fmt(thisWeekAmt)}</span>
+                  <span style={{ fontSize: 13, color: COLORS.subtext }}>vs last week: {fmt(lastWeekAmt)}</span>
+                  {pctChg !== null && diff !== 0 && (
+                    <span style={{ fontSize: 12, fontWeight: 700, color: diff < 0 ? COLORS.success : COLORS.danger }}>
+                      {diff < 0 ? "▼" : "▲"} {pctChg}% {diff < 0 ? "less" : "more"}
+                    </span>
+                  )}
+                  {thisWeekAmt === 0 && lastWeekAmt === 0 && (
+                    <span style={{ fontSize: 12, color: COLORS.muted }}>No spending data for this month</span>
+                  )}
+                </div>
+              );
+            })()}
+            {/* Bento grid — 12 columns */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 28, paddingBottom: 48 }}>
+              {/* ── ROW 1, COL 1–4: Next Bill Due ── */}
+              <div style={{ gridColumn: "span 4", background: COLORS.secondaryContainer, borderRadius: 12, padding: "32px", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 320 }}>
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                    <div style={{ padding: 10, background: `rgba(0,89,117,0.1)`, borderRadius: 16 }}>
+                      <span className="material-symbols-outlined" style={{ color: COLORS.onSecondaryContainer, fontSize: 28 }}>event_upcoming</span>
+                    </div>
+                    {daysUntilBill !== null && (
+                      <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: COLORS.onSecondaryContainer, opacity: 0.6 }}>
+                        {daysUntilBill < 0 ? `OVERDUE ${Math.abs(daysUntilBill)}D` : daysUntilBill === 0 ? "DUE TODAY" : `DUE IN ${daysUntilBill} ${daysUntilBill === 1 ? "DAY" : "DAYS"}`}
+                      </span>
+                    )}
+                  </div>
+                  {nextBill ? (
+                    <>
+                      <p style={{ fontSize: 14, fontWeight: 500, color: COLORS.onSecondaryContainer, marginBottom: 4 }}>Next Bill Due</p>
+                      <h4 style={{ fontSize: 24, fontWeight: 700, color: COLORS.onSecondaryContainer, marginBottom: 8, lineHeight: 1.2 }}>{nextBill.label}</h4>
+                      <p style={{ fontSize: 13, color: COLORS.onSecondaryContainer, opacity: 0.7, lineHeight: 1.5 }}>Ensure funds are available in your primary checking account.</p>
+                    </>
+                  ) : (
+                    <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.onSecondaryContainer }}>All bills paid! 🎉</p>
+                  )}
+                </div>
+                {nextBill && (
+                  <div>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: COLORS.onSecondaryContainer, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Amount Due</p>
+                    <p style={{ fontSize: 36, fontWeight: 800, color: COLORS.onSecondaryContainer, marginBottom: 20, letterSpacing: "-0.02em" }}>{fmt(nextBill.budget)}</p>
+                    <button onClick={() => setBills(p => p.map(b => b.id === nextBill.id ? { ...b, paid: true, actual: b.budget } : b))}
+                      style={{ width: "100%", background: COLORS.onSecondaryContainer, color: "#fff", border: "none", borderRadius: 9999, padding: "14px", fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: COLORS.shadowSm }}>
+                      Pay Now
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* ── ROW 1, COL 5–12: Cash Flow Summary ── */}
+              <div style={{ gridColumn: "span 8", position: "relative", overflow: "hidden", background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, borderRadius: 12, padding: "40px", color: "#fff", boxShadow: COLORS.shadow, minHeight: 320 }}>
+                <div style={{ position: "relative", zIndex: 1, height: "100%", display: "flex", flexDirection: "column" }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.8)", marginBottom: 28 }}>Cash Flow Summary</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 20, flex: 1 }}>
+                    {[
+                      { label: "Expenses", amount: fmt(viewTotalExpenses), pctVal: pct(viewTotalExpenses, viewTotalIncome), badge: `${viewSpentPct}% of budget`, barColor: "#4ade80" },
+                      { label: "Bills", amount: fmt(totalBills), pctVal: 100, badge: "100% committed", barColor: "rgba(255,255,255,0.9)" },
+                      { label: "Debt", amount: fmt(totalDebtPayments), pctVal: pct(totalDebtPayments, totalDebtBalance || 1), badge: `${Math.round(pct(totalDebtPayments, totalDebtBalance || 1))}% of target`, barColor: "rgba(255,255,255,0.9)" },
+                      { label: "Savings", amount: fmt(savingsActualTotal), pctVal: pct(savingsActualTotal, savingsExpectedTotal || 1), badge: `${Math.round(pct(savingsActualTotal, savingsExpectedTotal || 1))}% to goal`, barColor: "rgba(255,255,255,0.9)" },
+                      { label: "Income", amount: fmt(viewTotalIncome), pctVal: 100, badge: null, barColor: "#4ade80" },
+                    ].map(row => (
+                      <div key={row.label}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 6 }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.9)" }}>
+                            {row.label}
+                            {row.badge && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, opacity: 0.8, textTransform: "uppercase", letterSpacing: "0.04em" }}>{row.badge}</span>}
+                          </span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{row.amount}</span>
                         </div>
-                        <span style={{ fontSize: 9, color: COLORS.text }}>{total2 > 0 ? (d.value / total2 * 100).toFixed(1) : 0}%</span>
+                        <div style={{ height: 6, background: "rgba(255,255,255,0.2)", borderRadius: 9999, overflow: "hidden" }}>
+                          <div style={{ width: `${Math.min(100, row.pctVal)}%`, height: "100%", background: row.barColor, borderRadius: 9999 }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* ── ROW 2: Spending by Category (full width) ── */}
+              <div style={{ gridColumn: "span 12", background: COLORS.containerLow, borderRadius: 12, padding: "40px", position: "relative" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 32 }}>
+                  <div>
+                    <h4 style={{ fontSize: 22, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>Spending by Category</h4>
+                    <p style={{ fontSize: 14, color: COLORS.subtext }}>Track where our money goes as a family</p>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {[
+                        { dir: "prev", icon: "chevron_left", fn: () => setExpenseCardPage(p => Math.max(0, p - 1)) },
+                        { dir: "next", icon: "chevron_right", fn: () => setExpenseCardPage(p => Math.min(Math.max(0, Math.ceil(viewCatExpenseCards.length / 3) - 1), p + 1)) },
+                      ].map(btn => (
+                        <button key={btn.dir} onClick={btn.fn} style={{ width: 40, height: 40, borderRadius: "50%", background: COLORS.card, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: COLORS.shadowSm, color: COLORS.primary }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>{btn.icon}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <button onClick={() => setTab("transactions")} style={{ background: COLORS.card, border: "none", borderRadius: 9999, padding: "9px 20px", fontSize: 13, fontWeight: 700, color: COLORS.primary, cursor: "pointer", boxShadow: COLORS.shadowSm }}>
+                      View All Transactions
+                    </button>
+                  </div>
+                </div>
+                {viewCatExpenseCards.length === 0 ? (
+                  <p style={{ fontSize: 14, color: COLORS.muted }}>No expenses yet. Add a transaction to get started.</p>
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24 }}>
+                    {viewCatExpenseCards.slice(expenseCardPage * 3, expenseCardPage * 3 + 3).map(([cat, amt]) => {
+                      const topExpense = [...viewExpenses].filter(e => e.category === cat).sort((a, b) => b.amount - a.amount)[0];
+                      const budgetPct = expenseBudgets[cat] ? Math.round(pct(amt, expenseBudgets[cat])) : null;
+                      return (
+                        <div key={cat} className="exp-card" style={{ background: COLORS.card, borderRadius: 12, padding: "24px", boxShadow: COLORS.shadowSm, cursor: "default" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
+                            <div style={{ width: 48, height: 48, borderRadius: 14, background: CATEGORY_ICON_BG[cat] || "#eaeef0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: 24, color: CATEGORY_ICON_COLOR[cat] || COLORS.subtext }}>{CATEGORY_ICONS[cat] || "category"}</span>
+                            </div>
+                            <div>
+                              <p style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>{cat}</p>
+                              <p style={{ fontSize: 12, color: COLORS.subtext }}>{topExpense ? topExpense.label : "—"}</p>
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                            <span style={{ fontSize: 24, fontWeight: 700, color: COLORS.text, letterSpacing: "-0.02em" }}>{fmt(amt)}</span>
+                            <div style={{ textAlign: "right" }}>
+                              {budgetPct !== null && (
+                                <p style={{ fontSize: 10, fontWeight: 700, color: COLORS.secondary, textTransform: "uppercase", letterSpacing: "0.05em" }}>{budgetPct}% of budget</p>
+                              )}
+                              <p style={{ fontSize: 12, fontWeight: 500, color: COLORS.subtext }}>{topExpense ? topExpense.date : ""}</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* ── ROW 3, COL 1–6: Shared Goal ── */}
+              {(() => {
+                const goal = savingsItems[0];
+                const goalPct = goal ? pct(goal.actual, goal.expected) : 0;
+                const label = goal ? goal.label.toLowerCase() : "";
+                const goalIcon = label.includes("holiday") || label.includes("travel") || label.includes("trip") || label.includes("vacation") ? "flight" : label.includes("house") || label.includes("home") ? "home" : label.includes("car") || label.includes("vehicle") ? "directions_car" : label.includes("school") || label.includes("college") || label.includes("education") ? "school" : "savings";
+                return (
+                  <div style={{ gridColumn: "span 6", background: "rgba(186,191,255,0.3)", borderRadius: 12, padding: "32px", position: "relative", overflow: "hidden" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+                      <div>
+                        <h4 style={{ fontSize: 22, fontWeight: 700, color: COLORS.onTertiaryContainer, marginBottom: 4 }}>
+                          Shared Goal: {goal ? goal.label : "Savings Goal"}
+                        </h4>
+                        <p style={{ fontSize: 13, color: `${COLORS.onTertiaryContainer}b3` }}>Saving for the family's future</p>
+                      </div>
+                      <span className="material-symbols-outlined" style={{ fontSize: 44, color: COLORS.onTertiaryContainer, opacity: 0.4 }}>{goalIcon}</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 8 }}>
+                      <span style={{ fontSize: 44, fontWeight: 900, color: COLORS.onTertiaryContainer, letterSpacing: "-0.02em" }}>{fmt(goal ? goal.actual : 0)}</span>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: `${COLORS.onTertiaryContainer}99` }}>/ {fmt(goal ? goal.expected : 0)}</span>
+                    </div>
+                    <div style={{ width: "100%", height: 24, background: "rgba(255,255,255,0.5)", borderRadius: 9999, overflow: "hidden", marginBottom: 12 }}>
+                      <div style={{ width: `${goalPct}%`, height: "100%", background: COLORS.primary, borderRadius: 9999, transition: "width 0.4s" }} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 700, color: COLORS.onTertiaryContainer, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                      <span>Just Started</span>
+                      <span style={{ fontSize: 14 }}>{Math.round(goalPct)}% Saved!</span>
+                      <span>Goal Reached</span>
+                    </div>
+                    <div style={{ position: "absolute", right: -20, top: "50%", transform: "translateY(-50%)", width: 120, height: 120, background: "rgba(255,255,255,0.15)", borderRadius: "50%", filter: "blur(30px)" }} />
+                  </div>
+                );
+              })()}
+
+              {/* ── ROW 3, COL 7–12: Savings & Investments ── */}
+              <div style={{ gridColumn: "span 6", background: "rgba(97,205,253,0.2)", borderRadius: 12, padding: "32px", position: "relative", overflow: "hidden" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+                  <div>
+                    <h4 style={{ fontSize: 22, fontWeight: 700, color: COLORS.onSecondaryContainer, marginBottom: 4 }}>Savings &amp; Investments</h4>
+                    <p style={{ fontSize: 13, color: `${COLORS.onSecondaryContainer}b3` }}>Monthly wealth building target</p>
+                  </div>
+                  <span className="material-symbols-outlined" style={{ fontSize: 44, color: COLORS.primary, opacity: 0.4 }}>show_chart</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 8 }}>
+                  <span style={{ fontSize: 44, fontWeight: 900, color: COLORS.onSecondaryContainer, letterSpacing: "-0.02em" }}>{fmt(savingsActualTotal)}</span>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: `${COLORS.onSecondaryContainer}99` }}>/ {fmt(savingsExpectedTotal)}</span>
+                </div>
+                <div style={{ width: "100%", height: 24, background: "rgba(255,255,255,0.5)", borderRadius: 9999, overflow: "hidden", marginBottom: 12 }}>
+                  <div style={{ width: `${pct(savingsActualTotal, savingsExpectedTotal || 1)}%`, height: "100%", background: COLORS.primary, borderRadius: 9999, transition: "width 0.4s" }} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 700, color: COLORS.onSecondaryContainer, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  <span>Base</span>
+                  <span style={{ fontSize: 14 }}>{Math.round(pct(savingsActualTotal, savingsExpectedTotal || 1))}% of Target</span>
+                  <span>Maxed Out</span>
+                </div>
+                <div style={{ position: "absolute", right: -20, top: "50%", transform: "translateY(-50%)", width: 120, height: 120, background: "rgba(255,255,255,0.2)", borderRadius: "50%", filter: "blur(30px)" }} />
+              </div>
+            </div>{/* end bento grid */}
+          </div>
+        )}
+        {/* ── FAMILY BUDGET TAB ── */}
+        {tab === "transactions" && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 24, paddingBottom: 48 }}>
+            {/* ── Expenses Table (col-8) ── */}
+            <div style={{ gridColumn: "span 8", background: COLORS.card, borderRadius: 20, padding: 28, boxShadow: COLORS.shadowSm }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ padding: "8px 10px", background: "rgba(192,232,255,0.3)", borderRadius: 12 }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.secondary }}>shopping_bag</span>
+                  </div>
+                  <h3 style={{ fontSize: 17, fontWeight: 700, color: COLORS.text }}>Expenses</h3>
+                </div>
+                <button onClick={() => setModal("addExpense")} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 24, color: COLORS.primary }}>add_circle</span>
+                </button>
+              </div>
+              <div style={{ borderRadius: 12, overflow: "hidden", border: `1px solid ${COLORS.containerLow}` }}>
+                <div style={{ display: "grid", gridTemplateColumns: "2fr 1.2fr 1fr 1fr 40px", gap: 0, padding: "10px 16px", background: COLORS.containerLow }}>
+                  {["Merchant", "Category", "Date", "Amount", ""].map(h => (
+                    <span key={h} style={{ fontSize: 11, fontWeight: 700, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</span>
+                  ))}
+                </div>
+                {viewExpenses.length === 0 ? (
+                  <p style={{ padding: "20px 16px", color: COLORS.muted, fontSize: 14 }}>No expenses yet.</p>
+                ) : viewExpenses.map((e, idx) => (
+                  <div key={e.id} style={{ display: "grid", gridTemplateColumns: "2fr 1.2fr 1fr 1fr 40px", gap: 0, padding: "14px 16px", alignItems: "center", borderTop: idx === 0 ? "none" : `1px solid ${COLORS.containerLow}` }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>{e.label}</span>
+                    <span style={{ display: "inline-flex" }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.subtext, background: COLORS.containerHighest, borderRadius: 9999, padding: "3px 10px" }}>{e.category}</span>
+                    </span>
+                    <span style={{ fontSize: 12, color: COLORS.subtext }}>{e.date?.slice(5)}</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.danger }}>−{fmt(e.amount)}</span>
+                    <button onClick={() => deleteExpenseFromView(e.id)} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 16 }}>×</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Right column (col-4): Bills, Debts, Savings, Income ── */}
+            <div style={{ gridColumn: "span 4", display: "flex", flexDirection: "column", gap: 24 }}>
+              {/* Bills */}
+              <div style={{ background: COLORS.card, borderRadius: 20, padding: 24, boxShadow: COLORS.shadowSm }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ padding: "6px 8px", background: "rgba(97,205,253,0.2)", borderRadius: 10 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 18, color: COLORS.primary }}>receipt_long</span>
+                    </div>
+                    <h3 style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>Bills</h3>
+                  </div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {bills.map(b => {
+                    const isOverdue = !b.paid && new Date(b.dueDate) < new Date();
+                    return (
+                      <div key={b.id} style={{ background: COLORS.containerLow, borderRadius: 12, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", borderLeft: isOverdue ? `3px solid ${COLORS.danger}` : "3px solid transparent" }}>
+                        <div>
+                          <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>{b.label}</p>
+                          <p style={{ fontSize: 11, color: isOverdue ? COLORS.danger : COLORS.subtext }}>{b.dueDate?.slice(5)}</p>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>{fmt(b.budget)}</p>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: b.paid ? COLORS.success : COLORS.muted }}>{b.paid ? "Paid" : "Due"}</span>
+                        </div>
                       </div>
                     );
                   })}
                 </div>
               </div>
-              {/* Budget vs Actual Bar */}
-              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 10 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>BUDGET VS ACTUAL</div>
-                <ResponsiveContainer width="100%" height={180}>
-                  <BarChart data={budgetVsActualData} margin={{ top: 4, right: 4, bottom: 4, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} />
-                    <XAxis dataKey="name" tick={{ fontSize: 8, fill: COLORS.muted }} />
-                    <YAxis tick={{ fontSize: 8, fill: COLORS.muted }} tickFormatter={v => `$${v}`} width={45} />
-                    <Tooltip formatter={v => fmt(v)} contentStyle={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, fontSize: 10 }} />
-                    <Legend iconSize={7} wrapperStyle={{ fontSize: 9 }} />
-                    <Bar dataKey="Budget" fill={COLORS.accentBlue + "99"} radius={[2,2,0,0]} />
-                    <Bar dataKey="Actual" fill="#4ade8099" radius={[2,2,0,0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              {/* Balance Overview */}
-              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 10 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>BALANCE OVERVIEW</div>
-                <ResponsiveContainer width="100%" height={180}>
-                  <AreaChart data={balanceOverviewData} margin={{ top: 4, right: 4, bottom: 4, left: 0 }}>
-                    <defs>
-                      <linearGradient id="balGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={COLORS.success} stopOpacity={0.35} />
-                        <stop offset="95%" stopColor={COLORS.success} stopOpacity={0.03} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} />
-                    <XAxis dataKey="date" tick={{ fontSize: 7, fill: COLORS.muted }} interval={Math.floor(balanceOverviewData.length / 6)} />
-                    <YAxis tick={{ fontSize: 8, fill: COLORS.muted }} tickFormatter={v => `$${v}`} width={45} />
-                    <Tooltip formatter={v => fmt(v)} contentStyle={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, fontSize: 10 }} />
-                    <Area type="monotone" dataKey="Balance" stroke={COLORS.success} fill="url(#balGrad)" strokeWidth={2} dot={false} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-            {/* Helper text */}
-            <p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 10 }}>Add / edit subcategories in the tables below.</p>
-            {/* Data Tables Row */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 18 }}>
-              {/* INCOME */}
-              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, overflow: "hidden" }}>
-                <div style={{ padding: "7px 10px", background: "#4ade8018", borderBottom: `1px solid #4ade8033` }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: "#4ade80", letterSpacing: 1 }}>INCOME</span>
+
+              {/* Debts */}
+              <div style={{ background: COLORS.card, borderRadius: 20, padding: 24, boxShadow: COLORS.shadowSm }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ padding: "6px 8px", background: `rgba(172,49,73,0.1)`, borderRadius: 10 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 18, color: COLORS.danger }}>account_balance</span>
+                    </div>
+                    <h3 style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>Debts</h3>
+                  </div>
+                  <button onClick={() => setModal("addDebt")} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 22, color: COLORS.primary }}>add_circle</span>
+                  </button>
                 </div>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead><tr style={{ background: COLORS.surface }}>
-                    <th style={{ padding: "4px 8px", textAlign: "left", fontSize: 9, color: COLORS.muted }}></th>
-                    <th style={{ padding: "4px 8px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>EXPECTED</th>
-                    <th style={{ padding: "4px 8px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>ACTUAL</th>
-                  </tr></thead>
-                  <tbody>
-                    {income.map((item, i) => (
-                      <tr key={item.id} style={{ borderTop: `1px solid ${COLORS.border}`, background: i % 2 ? COLORS.surface + "44" : "transparent" }}>
-                        <td style={{ padding: "5px 8px", color: COLORS.text, fontSize: 11 }}>{item.label}</td>
-                        <td style={{ padding: "5px 8px", textAlign: "right", color: COLORS.muted, fontSize: 11 }}>{fmt(item.amount)}</td>
-                        <td style={{ padding: "5px 8px", textAlign: "right", color: "#4ade80", fontSize: 11 }}>{fmt(item.amount)}</td>
-                      </tr>
-                    ))}
-                    {Array(Math.max(0, 3 - income.length)).fill(0).map((_, i) => (
-                      <tr key={`ei-${i}`} style={{ borderTop: `1px solid ${COLORS.border}` }}>
-                        <td style={{ padding: "5px 8px", color: COLORS.border, fontSize: 10 }}>—</td>
-                        <td style={{ padding: "5px 8px", textAlign: "right", color: COLORS.border, fontSize: 10 }}>$</td>
-                        <td style={{ padding: "5px 8px", textAlign: "right", color: COLORS.border, fontSize: 10 }}>$</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot><tr style={{ borderTop: `2px solid ${COLORS.border}`, background: COLORS.surface }}>
-                    <td style={{ padding: "5px 8px", fontWeight: 700, color: COLORS.text, fontSize: 11 }}>TOTAL</td>
-                    <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: COLORS.muted, fontSize: 11 }}>{fmt(totalIncome)}</td>
-                    <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: "#4ade80", fontSize: 11 }}>{fmt(totalIncome)}</td>
-                  </tr></tfoot>
-                </table>
-              </div>
-              {/* EXPENSES */}
-              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, overflow: "hidden" }}>
-                <div style={{ padding: "7px 10px", background: "#f472b618", borderBottom: `1px solid #f472b633` }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: "#f472b6", letterSpacing: 1 }}>EXPENSES</span>
-                </div>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead><tr style={{ background: COLORS.surface }}>
-                    <th style={{ padding: "4px 6px", textAlign: "left", fontSize: 9, color: COLORS.muted }}></th>
-                    <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>BUDGET</th>
-                    <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>ACTUAL</th>
-                    <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>LEFT</th>
-                  </tr></thead>
-                  <tbody>
-                    {CATEGORIES.filter(c => (expenseBudgets[c] || 0) > 0 || catTotals[c] > 0).map((cat, i) => {
-                      const budget = expenseBudgets[cat] || 0, actual = catTotals[cat] || 0, left = budget - actual;
-                      return (
-                        <tr key={cat} style={{ borderTop: `1px solid ${COLORS.border}`, background: i % 2 ? COLORS.surface + "44" : "transparent" }}>
-                          <td style={{ padding: "4px 6px", color: COLORS.text, fontSize: 10 }}>{cat}</td>
-                          <td style={{ padding: "4px 6px", textAlign: "right", color: COLORS.muted, fontSize: 10 }}>{budget > 0 ? fmt(budget) : <span style={{ color: COLORS.border }}>$</span>}</td>
-                          <td style={{ padding: "4px 6px", textAlign: "right", fontSize: 10, color: actual > budget ? COLORS.danger : COLORS.text }}>{actual > 0 ? fmt(actual) : <span style={{ color: COLORS.border }}>$</span>}</td>
-                          <td style={{ padding: "4px 6px", textAlign: "right", fontSize: 10, color: left < 0 ? COLORS.danger : COLORS.success }}>{(budget > 0 || actual > 0) ? fmt(left) : <span style={{ color: COLORS.border }}>$</span>}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                  <tfoot><tr style={{ borderTop: `2px solid ${COLORS.border}`, background: COLORS.surface }}>
-                    <td style={{ padding: "5px 6px", fontWeight: 700, color: COLORS.text, fontSize: 10 }}>TOTAL</td>
-                    <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 700, color: COLORS.muted, fontSize: 10 }}>{fmt(expenseBudgetTotal)}</td>
-                    <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 700, color: COLORS.text, fontSize: 10 }}>{fmt(totalExpenses)}</td>
-                    <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 700, fontSize: 10, color: expenseBudgetTotal - totalExpenses < 0 ? COLORS.danger : COLORS.success }}>{fmt(expenseBudgetTotal - totalExpenses)}</td>
-                  </tr></tfoot>
-                </table>
-              </div>
-              {/* BILLS */}
-              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, overflow: "hidden" }}>
-                <div style={{ padding: "7px 10px", background: "#c084fc18", borderBottom: `1px solid #c084fc33` }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: "#c084fc", letterSpacing: 1 }}>BILLS</span>
-                </div>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead><tr style={{ background: COLORS.surface }}>
-                    <th style={{ padding: "4px 4px", width: 20 }}></th>
-                    <th style={{ padding: "4px 6px", textAlign: "left", fontSize: 9, color: COLORS.muted }}></th>
-                    <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>DUE</th>
-                    <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>BUDGET</th>
-                    <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>ACTUAL</th>
-                  </tr></thead>
-                  <tbody>
-                    {bills.map((bill, i) => (
-                      <tr key={bill.id} style={{ borderTop: `1px solid ${COLORS.border}`, background: bill.paid ? COLORS.success + "11" : i % 2 ? COLORS.surface + "44" : "transparent" }}>
-                        <td style={{ padding: "4px 4px", textAlign: "center" }}>
-                          <input type="checkbox" checked={bill.paid} style={{ cursor: "pointer" }} onChange={e => setBills(p => p.map(b => b.id === bill.id ? { ...b, paid: e.target.checked, actual: e.target.checked ? b.budget : 0 } : b))} />
-                        </td>
-                        <td style={{ padding: "4px 6px", color: bill.paid ? COLORS.muted : COLORS.text, fontSize: 10, textDecoration: bill.paid ? "line-through" : "none" }}>{bill.label}</td>
-                        <td style={{ padding: "4px 6px", textAlign: "right", color: COLORS.muted, fontSize: 9 }}>{bill.dueDate.slice(5)}</td>
-                        <td style={{ padding: "4px 6px", textAlign: "right", color: COLORS.muted, fontSize: 10 }}>{fmt(bill.budget)}</td>
-                        <td style={{ padding: "4px 6px", textAlign: "right", fontSize: 10, color: bill.paid ? COLORS.success : COLORS.border }}>{bill.paid ? fmt(bill.actual) : "$"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot><tr style={{ borderTop: `2px solid ${COLORS.border}`, background: COLORS.surface }}>
-                    <td colSpan={2} style={{ padding: "5px 6px", fontWeight: 700, color: COLORS.text, fontSize: 10 }}>TOTAL</td>
-                    <td></td>
-                    <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 700, color: COLORS.muted, fontSize: 10 }}>{fmt(billsBudgetTotal)}</td>
-                    <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 700, color: COLORS.text, fontSize: 10 }}>{fmt(billsActualTotal)}</td>
-                  </tr></tfoot>
-                </table>
-              </div>
-              {/* DEBTS */}
-              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, overflow: "hidden" }}>
-                <div style={{ padding: "7px 10px", background: "#facc1518", borderBottom: `1px solid #facc1533` }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: "#facc15", letterSpacing: 1 }}>DEBTS</span>
-                </div>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead><tr style={{ background: COLORS.surface }}>
-                    <th style={{ padding: "4px 4px", width: 20 }}></th>
-                    <th style={{ padding: "4px 6px", textAlign: "left", fontSize: 9, color: COLORS.muted }}></th>
-                    <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>DUE</th>
-                    <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>BUDGET</th>
-                    <th style={{ padding: "4px 6px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>ACTUAL</th>
-                  </tr></thead>
-                  <tbody>
-                    {debts.map((debt, i) => (
-                      <tr key={debt.id} style={{ borderTop: `1px solid ${COLORS.border}`, background: i % 2 ? COLORS.surface + "44" : "transparent" }}>
-                        <td style={{ padding: "4px 4px", textAlign: "center" }}><input type="checkbox" style={{ cursor: "pointer" }} /></td>
-                        <td style={{ padding: "4px 6px", color: COLORS.text, fontSize: 10 }}>{debt.label}</td>
-                        <td style={{ padding: "4px 6px", textAlign: "right", color: COLORS.muted, fontSize: 9 }}>—</td>
-                        <td style={{ padding: "4px 6px", textAlign: "right", color: COLORS.muted, fontSize: 10 }}>{fmt(debt.minPayment)}</td>
-                        <td style={{ padding: "4px 6px", textAlign: "right", color: COLORS.border, fontSize: 10 }}>$</td>
-                      </tr>
-                    ))}
-                    {Array(Math.max(0, 3 - debts.length)).fill(0).map((_, i) => (
-                      <tr key={`ed-${i}`} style={{ borderTop: `1px solid ${COLORS.border}` }}>
-                        <td colSpan={5} style={{ padding: "5px 6px", color: COLORS.border, fontSize: 10 }}>—</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot><tr style={{ borderTop: `2px solid ${COLORS.border}`, background: COLORS.surface }}>
-                    <td colSpan={2} style={{ padding: "5px 6px", fontWeight: 700, color: COLORS.text, fontSize: 10 }}>TOTAL</td>
-                    <td></td>
-                    <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 700, color: COLORS.muted, fontSize: 10 }}>{fmt(debtPayments)}</td>
-                    <td style={{ padding: "5px 6px", textAlign: "right", color: COLORS.border, fontSize: 10 }}>$</td>
-                  </tr></tfoot>
-                </table>
-              </div>
-            </div>
-            {/* Savings Row */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 3fr", gap: 12, marginBottom: 18 }}>
-              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, overflow: "hidden" }}>
-                <div style={{ padding: "7px 10px", background: "#34d39918", borderBottom: `1px solid #34d39933` }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: "#34d399", letterSpacing: 1 }}>SAVINGS</span>
-                </div>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead><tr style={{ background: COLORS.surface }}>
-                    <th style={{ padding: "4px 8px", textAlign: "left", fontSize: 9, color: COLORS.muted }}></th>
-                    <th style={{ padding: "4px 8px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>EXPECTED</th>
-                    <th style={{ padding: "4px 8px", textAlign: "right", fontSize: 9, color: COLORS.muted }}>ACTUAL</th>
-                  </tr></thead>
-                  <tbody>
-                    {savingsItems.map((item, i) => (
-                      <tr key={item.id} style={{ borderTop: `1px solid ${COLORS.border}`, background: i % 2 ? COLORS.surface + "44" : "transparent" }}>
-                        <td style={{ padding: "5px 8px", color: COLORS.text, fontSize: 11 }}>{item.label}</td>
-                        <td style={{ padding: "5px 8px", textAlign: "right", color: COLORS.muted, fontSize: 11 }}>{fmt(item.expected)}</td>
-                        <td style={{ padding: "5px 8px", textAlign: "right", color: COLORS.success, fontSize: 11 }}>{fmt(item.actual)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot><tr style={{ borderTop: `2px solid ${COLORS.border}`, background: COLORS.surface }}>
-                    <td style={{ padding: "5px 8px", fontWeight: 700, color: COLORS.text, fontSize: 11 }}>TOTAL</td>
-                    <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: COLORS.muted, fontSize: 11 }}>{fmt(savingsExpectedTotal)}</td>
-                    <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: COLORS.success, fontSize: 11 }}>{fmt(savingsActualTotal)}</td>
-                  </tr></tfoot>
-                </table>
-              </div>
-            </div>
-            {/* Bottom Charts */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: 12, marginBottom: 18 }}>
-              {/* Debt vs Savings */}
-              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 10 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.text, marginBottom: 6 }}>DEBT VS SAVINGS</div>
-                <ResponsiveContainer width="100%" height={140}>
-                  <BarChart data={[{ name: "Savings", value: savingsActualTotal }, { name: "Debt", value: debtPayments }]} margin={{ top: 4, right: 4, bottom: 4, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} />
-                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: COLORS.muted }} />
-                    <YAxis tick={{ fontSize: 8, fill: COLORS.muted }} tickFormatter={v => `$${v}`} width={40} />
-                    <Tooltip formatter={v => fmt(v)} contentStyle={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, fontSize: 10 }} />
-                    <Bar dataKey="value" radius={[3,3,0,0]}>
-                      <Cell fill={COLORS.accentBlue} />
-                      <Cell fill={COLORS.accentWarm} />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-                <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 4 }}>
-                  {[{ label: "Savings", color: COLORS.accentBlue }, { label: "Debt", color: COLORS.accentWarm }].map(l => (
-                    <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <div style={{ width: 8, height: 8, background: l.color }} />
-                      <span style={{ fontSize: 9, color: COLORS.muted }}>{l.label}</span>
+                <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                  {debts.map((d, idx) => (
+                    <div key={d.id}>
+                      {idx > 0 && <div style={{ height: 1, background: COLORS.containerLow, margin: "8px 0" }} />}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                          <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>{d.label}</p>
+                          <p style={{ fontSize: 11, color: COLORS.subtext }}>{d.interest}% APR</p>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <p style={{ fontSize: 14, fontWeight: 800, color: COLORS.danger }}>{fmt(d.balance)}</p>
+                          <button onClick={() => {
+                            const extra = prompt("Extra payment amount?");
+                            if (extra && !isNaN(extra)) setDebts(prev => prev.map(x => x.id === d.id ? { ...x, balance: Math.max(0, x.balance - parseFloat(extra)) } : x));
+                          }} style={{ fontSize: 11, color: COLORS.primary, background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0 }}>Pay Extra</button>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
-              {/* Daily Expenses Overview */}
-              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 10 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: COLORS.text }}>DAILY EXPENSES OVERVIEW</span>
-                  <div style={{ display: "flex", gap: 10 }}>
-                    {[{ label: "Expenses", color: "#f472b6" }, { label: "Daily Budget", color: COLORS.success }].map(l => (
-                      <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                        <div style={{ width: 12, height: 2, background: l.color }} />
-                        <span style={{ fontSize: 8, color: COLORS.muted }}>{l.label}</span>
-                      </div>
-                    ))}
+
+              {/* Savings */}
+              <div style={{ background: COLORS.card, borderRadius: 20, padding: 24, boxShadow: COLORS.shadowSm }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                  <div style={{ padding: "6px 8px", background: "rgba(186,191,255,0.3)", borderRadius: 10 }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 18, color: COLORS.tertiary }}>savings</span>
                   </div>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>Savings</h3>
                 </div>
-                <ResponsiveContainer width="100%" height={160}>
-                  <ComposedChart data={dailyExpenseData} margin={{ top: 4, right: 4, bottom: 4, left: 0 }}>
-                    <defs>
-                      <linearGradient id="expGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#f472b6" stopOpacity={0.35} />
-                        <stop offset="95%" stopColor="#f472b6" stopOpacity={0.03} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} />
-                    <XAxis dataKey="date" tick={{ fontSize: 7, fill: COLORS.muted }} interval={Math.floor(dailyExpenseData.length / 8)} />
-                    <YAxis tick={{ fontSize: 8, fill: COLORS.muted }} tickFormatter={v => `$${v}`} width={40} />
-                    <Tooltip formatter={v => fmt(v)} contentStyle={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, fontSize: 10 }} />
-                    <Area type="monotone" dataKey="Expenses" stroke="#f472b6" fill="url(#expGrad)" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="Daily Budget" stroke={COLORS.success} strokeWidth={1.5} strokeDasharray="4 2" dot={false} />
-                  </ComposedChart>
-                </ResponsiveContainer>
-                <div style={{ textAlign: "right", marginTop: 4 }}>
-                  <span style={{ fontSize: 9, color: COLORS.muted }}>DAILY BUDGET </span>
-                  <span style={{ fontSize: 10, color: COLORS.success, fontWeight: 700 }}>{fmt(totalIncome / 30)}</span>
-                </div>
-              </div>
-              {/* Expenses Breakdown */}
-              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 10 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>EXPENSES BREAK DOWN</div>
-                <PieChart width={170} height={130}>
-                  <Pie data={expBreakdownData} cx={85} cy={65} innerRadius={32} outerRadius={60} paddingAngle={2} dataKey="value">
-                    {expBreakdownData.map((e, i) => <Cell key={i} fill={e.color} />)}
-                  </Pie>
-                  <Tooltip formatter={v => fmt(v)} contentStyle={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, fontSize: 10 }} />
-                </PieChart>
-                <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 4 }}>
-                  {expBreakdownData.slice(0, 5).map(d => (
-                    <div key={d.name} style={{ display: "flex", justifyContent: "space-between" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                        <div style={{ width: 6, height: 6, borderRadius: 1, background: d.color }} />
-                        <span style={{ fontSize: 9, color: COLORS.muted }}>{d.name}</span>
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  {savingsItems.map(s => (
+                    <div key={s.id}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>{s.label}</span>
+                        <span style={{ fontSize: 12, color: COLORS.subtext }}>{fmt(s.actual)} / {fmt(s.expected)}</span>
                       </div>
-                      <span style={{ fontSize: 9, color: COLORS.text }}>{totalExpenses > 0 ? (d.value / totalExpenses * 100).toFixed(1) : 0}%</span>
+                      <div style={{ height: 6, background: COLORS.containerLow, borderRadius: 9999, overflow: "hidden" }}>
+                        <div style={{ width: `${pct(s.actual, s.expected || 1)}%`, height: "100%", background: COLORS.primary, borderRadius: 9999 }} />
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
-            {/* Transaction Log */}
-            <p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 8 }}>Add your transactions via the + button. They appear here automatically.</p>
-            <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, overflow: "hidden" }}>
-              <div style={{ padding: "8px 14px", borderBottom: `1px solid ${COLORS.border}`, display: "flex", justifyContent: "space-between" }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: COLORS.text }}>TRANSACTION LOG</span>
-                <span style={{ fontSize: 10, color: COLORS.muted }}>{expenses.length} transactions</span>
+
+              {/* Income */}
+              <div style={{ background: COLORS.card, borderRadius: 20, padding: 24, boxShadow: COLORS.shadowSm }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ padding: "6px 8px", background: "rgba(192,232,255,0.3)", borderRadius: 10 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 18, color: COLORS.secondary }}>trending_up</span>
+                    </div>
+                    <h3 style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>Income</h3>
+                  </div>
+                  <button onClick={() => setModal("addIncome")} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 22, color: COLORS.primary }}>add_circle</span>
+                  </button>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {viewIncome.map(i => (
+                    <div key={i.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: "50%", background: COLORS.containerLow, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.subtext }}>work</span>
+                        </div>
+                        <div>
+                          <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>{i.label}</p>
+                          {i.recurring && <p style={{ fontSize: 11, color: COLORS.subtext }}>Recurring</p>}
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.secondary }}>+{fmt(i.amount)}</span>
+                        <button onClick={() => deleteIncomeFromView(i.id)} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 14 }}>×</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, paddingTop: 14, borderTop: `1px solid ${COLORS.containerLow}` }}>
+                  <span style={{ fontSize: 13, color: COLORS.subtext, fontWeight: 500 }}>Total Monthly</span>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: COLORS.secondary }}>{fmt(viewTotalIncome)}</span>
+                </div>
               </div>
-              <div style={{ maxHeight: 280, overflowY: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead style={{ position: "sticky", top: 0, background: COLORS.surface }}>
-                    <tr>
-                      <th style={{ padding: "6px 10px", textAlign: "left", fontSize: 9, color: COLORS.muted, fontWeight: 600 }}>DATE</th>
-                      <th style={{ padding: "6px 10px", textAlign: "left", fontSize: 9, color: COLORS.muted, fontWeight: 600 }}>DESCRIPTION</th>
-                      <th style={{ padding: "6px 10px", textAlign: "left", fontSize: 9, color: COLORS.muted, fontWeight: 600 }}>CATEGORY</th>
-                      <th style={{ padding: "6px 10px", textAlign: "right", fontSize: 9, color: COLORS.muted, fontWeight: 600 }}>AMOUNT</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[...expenses].sort((a, b) => new Date(b.date) - new Date(a.date)).map((e, i) => (
-                      <tr key={e.id} style={{ borderTop: `1px solid ${COLORS.border}`, background: i % 2 ? COLORS.surface + "44" : "transparent" }}>
-                        <td style={{ padding: "6px 10px", color: COLORS.muted, fontSize: 10 }}>{e.date}</td>
-                        <td style={{ padding: "6px 10px", color: COLORS.text, fontSize: 11 }}>{e.label}</td>
-                        <td style={{ padding: "6px 10px", fontSize: 10 }}>
-                          <span style={{ background: COLORS.accentBlue + "22", color: COLORS.accentBlue, padding: "2px 6px", borderRadius: 4, fontSize: 9 }}>{e.category}</span>
-                        </td>
-                        <td style={{ padding: "6px 10px", textAlign: "right", color: COLORS.accentWarm, fontWeight: 600, fontSize: 11 }}>{fmt(e.amount)}</td>
-                      </tr>
+            </div>
+          </div>
+        )}
+        {/* ── BILL CALENDAR TAB ── */}
+        {tab === "weekly" && (() => {
+          const now = new Date();
+          const [calYear, calMonth] = [now.getFullYear(), now.getMonth()];
+          const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+          const firstDayOfWeek = new Date(calYear, calMonth, 1).getDay();
+          const todayDate = now.getDate();
+          const BILL_COLORS = { Housing: { bg: "rgba(97,205,253,0.15)", text: COLORS.primary }, Utilities: { bg: "rgba(192,232,255,0.4)", text: COLORS.secondary }, Entertainment: { bg: "rgba(186,191,255,0.3)", text: COLORS.tertiary } };
+          const paidBillsTotal = bills.filter(b => b.paid).reduce((s, b) => s + b.actual, 0);
+          const unpaidBills = bills.filter(b => !b.paid).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+          const totalBillsBudget = bills.reduce((s, b) => s + b.budget, 0);
+          const billsOnDay = (day) => bills.filter(b => {
+            const d = new Date(b.dueDate);
+            return d.getFullYear() === calYear && d.getMonth() === calMonth && d.getDate() === day;
+          });
+          return (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 24, paddingBottom: 48 }}>
+              {/* ── Calendar (col-8) ── */}
+              <div style={{ gridColumn: "span 8", background: COLORS.card, borderRadius: 20, padding: 28, boxShadow: COLORS.shadowSm }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+                  <h3 style={{ fontSize: 18, fontWeight: 700, color: COLORS.text }}>{MONTH_FULL[calMonth]} {calYear}</h3>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    {["Month", "List"].map((v, i) => (
+                      <button key={v} style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: i === 0 ? COLORS.primary : COLORS.containerLow, color: i === 0 ? "#fff" : COLORS.subtext, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{v}</button>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-        {/* ── TRANSACTIONS TAB ── */}
-        {tab === "transactions" && (
-          <div>
-            <h2 style={{ fontWeight: 800, marginBottom: 20, fontSize: 20 }}>All Transactions</h2>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-              <div>
-                <h3 style={{ fontWeight: 700, marginBottom: 12, color: COLORS.accent, fontSize: 15 }}>Income</h3>
-                {income.map(i => (
-                  <div key={i.id} style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "12px 16px", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div>
-                      <p style={{ fontWeight: 600, fontSize: 14 }}>{i.label}</p>
-                      <p style={{ fontSize: 11, color: COLORS.muted, fontFamily: "'DM Mono', monospace" }}>{i.date} {i.recurring && "· recurring"}</p>
-                    </div>
-                    <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                      <span style={{ color: COLORS.accent, fontWeight: 700, fontFamily: "'DM Mono', monospace" }}>+{fmt(i.amount)}</span>
-                      <button onClick={() => setIncome(prev => prev.filter(x => x.id !== i.id))} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 16 }}>×</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div>
-                <h3 style={{ fontWeight: 700, marginBottom: 12, color: COLORS.accentWarm, fontSize: 15 }}>Expenses</h3>
-                {expenses.map(e => (
-                  <div key={e.id} style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "12px 16px", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div>
-                      <p style={{ fontWeight: 600, fontSize: 14 }}>{e.label}</p>
-                      <p style={{ fontSize: 11, color: COLORS.muted, fontFamily: "'DM Mono', monospace" }}>{e.category} · {e.date} {e.fixed && "· fixed"}</p>
-                    </div>
-                    <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                      <span style={{ color: COLORS.accentWarm, fontWeight: 700, fontFamily: "'DM Mono', monospace" }}>−{fmt(e.amount)}</span>
-                      <button onClick={() => setExpenses(prev => prev.filter(x => x.id !== e.id))} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 16 }}>×</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-        {/* ── DEBTS TAB ── */}
-        {tab === "debts" && (
-          <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h2 style={{ fontWeight: 800, fontSize: 20 }}>Debt Tracker</h2>
-              <button onClick={() => setModal("addDebt")} style={{ ...btnPrimary, width: "auto", background: COLORS.danger + "22", color: COLORS.danger, border: `1px solid ${COLORS.danger}` }}>+ Add Debt</button>
-            </div>
-            <div style={{ display: "grid", gap: 16 }}>
-              {debts.map(d => (
-                <div key={d.id} style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
-                    <div>
-                      <h3 style={{ fontWeight: 700, fontSize: 16 }}>{d.label}</h3>
-                      <p style={{ fontSize: 12, color: COLORS.muted, fontFamily: "'DM Mono', monospace" }}>{d.interest}% APR · Min. payment {fmt(d.minPayment)}/mo</p>
-                    </div>
-                    <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                      <span style={{ color: COLORS.danger, fontWeight: 800, fontSize: 20, fontFamily: "'DM Mono', monospace" }}>{fmt(d.balance)}</span>
-                      <button onClick={() => setDebts(prev => prev.filter(x => x.id !== d.id))} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 18 }}>×</button>
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={() => {
-                      const extra = prompt("Extra payment amount?");
-                      if (extra && !isNaN(extra)) setDebts(prev => prev.map(x => x.id === d.id ? { ...x, balance: Math.max(0, x.balance - parseFloat(extra)) } : x));
-                    }} style={{ background: COLORS.success + "22", border: `1px solid ${COLORS.success}`, color: COLORS.success, borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Make Payment</button>
                   </div>
                 </div>
-              ))}
-            </div>
-            <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20, marginTop: 20 }}>
-              <p style={{ fontSize: 13, color: COLORS.muted, fontFamily: "'DM Mono', monospace", marginBottom: 8 }}>TOTAL DEBT</p>
-              <p style={{ fontSize: 32, fontWeight: 800, color: COLORS.danger }}>{fmt(totalDebt)}</p>
-              <p style={{ fontSize: 12, color: COLORS.muted, fontFamily: "'DM Mono', monospace", marginTop: 4 }}>Total min. payments: {fmt(debtPayments)}/month</p>
-            </div>
-          </div>
-        )}
-        {/* ── WEEKLY REPORT TAB ── */}
-        {tab === "weekly" && (
-          <div>
-            <h2 style={{ fontWeight: 800, fontSize: 20, marginBottom: 20 }}>Weekly Report</h2>
-            <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 24, marginBottom: 20 }}>
-              <h3 style={{ fontWeight: 700, marginBottom: 16, fontSize: 15 }}>Spending Summary</h3>
-              {weeklyData.sort((a,b)=>b.amount-a.amount).map(c => (
-                <div key={c.name} style={{ marginBottom: 14 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600 }}>{c.name}</span>
-                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: COLORS.muted }}>{fmt(c.amount)} <span style={{ color: COLORS.muted, fontSize: 11 }}>({pct(c.amount, totalExpenses).toFixed(0)}%)</span></span>
-                  </div>
-                  <ProgressBar value={c.amount} max={totalExpenses} color={COLORS.accentBlue} />
+                {/* Day headers */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 2 }}>
+                  {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => (
+                    <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: COLORS.muted, textTransform: "uppercase", padding: "6px 0" }}>{d}</div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              {[
-                { label: "Total Spent This Period", value: fmt(totalExpenses), color: COLORS.accentWarm },
-                { label: "Total Income", value: fmt(totalIncome), color: COLORS.accent },
-                { label: "Net", value: fmt(leftover), color: leftover >= 0 ? COLORS.success : COLORS.danger },
-                { label: "Savings Rate", value: `${Math.max(0, (leftover/totalIncome*100)).toFixed(1)}%`, color: COLORS.accentPurple },
-              ].map(s => (
-                <div key={s.label} style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: 20 }}>
-                  <p style={{ fontSize: 11, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 1, fontFamily: "'DM Mono', monospace", marginBottom: 8 }}>{s.label}</p>
-                  <p style={{ fontSize: 24, fontWeight: 800, color: s.color }}>{s.value}</p>
+                {/* Calendar grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+                  {Array.from({ length: firstDayOfWeek }, (_, i) => (
+                    <div key={`empty-${i}`} style={{ background: COLORS.containerLow, borderRadius: 8, minHeight: 80, opacity: 0.3 }} />
+                  ))}
+                  {Array.from({ length: daysInMonth }, (_, i) => {
+                    const day = i + 1;
+                    const dayBills = billsOnDay(day);
+                    const isToday = day === todayDate;
+                    return (
+                      <div key={day} style={{ background: COLORS.card, borderRadius: 8, minHeight: 80, padding: 8, border: `1px solid ${COLORS.containerLow}` }}>
+                        <div style={{ width: 24, height: 24, borderRadius: "50%", background: isToday ? COLORS.primary : "transparent", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
+                          <span style={{ fontSize: 12, fontWeight: isToday ? 800 : 500, color: isToday ? "#fff" : COLORS.text }}>{day}</span>
+                        </div>
+                        {dayBills.map(b => {
+                          const colorSet = BILL_COLORS[b.label] || { bg: "rgba(97,205,253,0.15)", text: COLORS.primary };
+                          return (
+                            <div key={b.id} style={{ background: colorSet.bg, borderRadius: 4, padding: "2px 6px", marginBottom: 2 }}>
+                              <p style={{ fontSize: 10, fontWeight: 700, color: colorSet.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.label}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
-            <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 24, marginTop: 20 }}>
-              <h3 style={{ fontWeight: 700, marginBottom: 14, fontSize: 15 }}>Goals Progress</h3>
-              {goals.map(g => {
-                const spent = catTotals[g.category] || 0;
-                const p = pct(spent, g.limit);
-                const c = p >= 100 ? COLORS.danger : p >= 80 ? COLORS.warning : COLORS.success;
-                return (
-                  <div key={g.id} style={{ marginBottom: 14 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-                      <span style={{ fontSize: 13, fontWeight: 600 }}>{g.label}</span>
-                      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: c }}>{fmt(spent)} / {fmt(g.limit)}</span>
+              </div>
+
+              {/* ── Right sidebar (col-4) ── */}
+              <div style={{ gridColumn: "span 4", display: "flex", flexDirection: "column", gap: 20 }}>
+                {/* Total Monthly Obligations */}
+                <div style={{ background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, borderRadius: 20, padding: 24, color: "#fff" }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)", marginBottom: 8 }}>Total Monthly Obligations</p>
+                  <p style={{ fontSize: 34, fontWeight: 900, letterSpacing: "-0.02em", marginBottom: 16 }}>{fmt(totalBillsBudget)}</p>
+                  <div style={{ background: "rgba(0,90,119,0.4)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 18, color: "rgba(255,255,255,0.8)" }}>trending_down</span>
+                    <div>
+                      <p style={{ fontSize: 11, color: "rgba(255,255,255,0.7)" }}>Remaining to pay</p>
+                      <p style={{ fontSize: 16, fontWeight: 800 }}>{fmt(unpaidBills.reduce((s, b) => s + b.budget, 0))}</p>
                     </div>
-                    <ProgressBar value={spent} max={g.limit} color={c} />
-                    <p style={{ fontSize: 11, color: c, marginTop: 3, fontFamily: "'DM Mono', monospace" }}>
-                      {p >= 100 ? "⚠ Limit exceeded!" : p >= 80 ? "⚡ Approaching limit" : `✓ ${fmt(g.limit - spent)} remaining`}
-                    </p>
                   </div>
-                );
-              })}
+                </div>
+
+                {/* Upcoming Statements */}
+                <div style={{ background: COLORS.card, borderRadius: 20, padding: 24, boxShadow: COLORS.shadowSm }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                    <h4 style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>Upcoming Statements</h4>
+                    <span style={{ fontSize: 11, color: COLORS.subtext, fontWeight: 600 }}>Next 14 Days</span>
+                  </div>
+                  {(() => {
+                    const today14 = new Date(); today14.setHours(0,0,0,0);
+                    const in14days = new Date(today14.getTime() + 14 * 86400000);
+                    const upcoming14 = unpaidBills.filter(b => { const d = new Date(b.dueDate); d.setHours(0,0,0,0); return d <= in14days; });
+                    if (upcoming14.length === 0) return <p style={{ fontSize: 13, color: COLORS.muted }}>No bills due in the next 14 days.</p>;
+                    return upcoming14.map(b => (
+                      <div key={b.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${COLORS.containerLow}` }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(97,205,253,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.primary }}>receipt_long</span>
+                          </div>
+                          <div>
+                            <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>{b.label}</p>
+                            <p style={{ fontSize: 11, color: COLORS.subtext }}>Due {b.dueDate?.slice(5)}</p>
+                          </div>
+                        </div>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>{fmt(b.budget)}</span>
+                      </div>
+                    ));
+                  })()}
+                </div>
+
+                {/* Savings Sprint */}
+                <div style={{ background: "rgba(97,205,253,0.15)", borderRadius: 20, padding: 24 }}>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(0,103,136,0.12)", borderRadius: 9999, padding: "4px 12px", marginBottom: 12 }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 14, color: COLORS.primary }}>bolt</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: COLORS.primary }}>Bills Sprint</span>
+                  </div>
+                  <h4 style={{ fontSize: 15, fontWeight: 700, color: COLORS.onSecondaryContainer, marginBottom: 12 }}>Bills Paid Progress</h4>
+                  <div style={{ height: 8, background: "rgba(255,255,255,0.5)", borderRadius: 9999, overflow: "hidden", marginBottom: 8 }}>
+                    <div style={{ width: `${pct(paidBillsTotal, totalBillsBudget || 1)}%`, height: "100%", background: COLORS.primary, borderRadius: 9999 }} />
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: COLORS.onSecondaryContainer }}>
+                    <span style={{ fontWeight: 700 }}>{fmt(paidBillsTotal)} paid</span>
+                    <span>of {fmt(totalBillsBudget)}</span>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
         {/* ── MONTHLY INSIGHTS TAB ── */}
         {tab === "insights" && (
           <div>
@@ -1460,12 +1633,13 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 const s = monthStats(key);
                 const isActive = key === activeInsightKey;
                 const isToday = key === todayKey;
+                const isFuture = key > todayKey;
                 const hasData = s.hasData;
                 const netColor = s.net >= 0 ? COLORS.success : COLORS.danger;
                 return (
                   <button key={key} onClick={() => setActiveInsightKey(key)} style={{
                     background: isActive ? COLORS.accentBlue + "22" : COLORS.card,
-                    border: `1.5px solid ${isActive ? COLORS.accentBlue : isToday ? COLORS.accent + "66" : COLORS.border}`,
+                    border: `1.5px ${isFuture && !hasData ? "dashed" : "solid"} ${isActive ? COLORS.accentBlue : isToday ? COLORS.accent + "66" : COLORS.border}`,
                     borderRadius: 14, padding: "14px 12px", cursor: "pointer", textAlign: "left",
                     boxShadow: isActive ? `0 0 16px ${COLORS.accentBlue}33` : "none",
                     transition: "all .2s", position: "relative",
@@ -1516,9 +1690,9 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     <button
                       onClick={() => generateInsight(key)}
                       disabled={!s.hasData || insightLoading[key]}
-                      style={{ background: COLORS.accentPurple + "22", border: `1px solid ${COLORS.accentPurple}`, color: COLORS.accentPurple, borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: s.hasData ? "pointer" : "not-allowed", opacity: s.hasData ? 1 : 0.4, display: "flex", alignItems: "center", gap: 8 }}
+                      style={{ background: COLORS.primary + "18", border: `1px solid ${COLORS.primary}44`, color: COLORS.primary, borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: s.hasData ? "pointer" : "not-allowed", opacity: s.hasData ? 1 : 0.4, display: "flex", alignItems: "center", gap: 8 }}
                     >
-                      {insightLoading[key] ? <><div style={{ width: 12, height: 12, border: `2px solid ${COLORS.accentPurple}44`, borderTopColor: COLORS.accentPurple, borderRadius: "50%", animation: "spin 1s linear infinite" }} /> Analyzing…</> : "✦ AI Insights"}
+                      {insightLoading[key] ? <><div style={{ width: 12, height: 12, border: `2px solid ${COLORS.primary}44`, borderTopColor: COLORS.primary, borderRadius: "50%", animation: "spin 1s linear infinite" }} /> Analyzing…</> : "✦ AI Insights"}
                     </button>
                   </div>
                   {/* AI insight box */}
@@ -1678,108 +1852,115 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             </div>
           </div>
         )}
-        {/* ── UPLOAD RECEIPT TAB ── */}
-        {tab === "upload" && (
-          <div>
-            <h2 style={{ fontWeight: 800, fontSize: 20, marginBottom: 8 }}>Upload Receipt or Bill</h2>
-            <p style={{ color: COLORS.muted, fontSize: 13, fontFamily: "'DM Mono', monospace", marginBottom: 24 }}>Claude AI will extract and categorize line items automatically.</p>
-            <div
-              onClick={() => fileRef.current?.click()}
-              style={{ border: `2px dashed ${COLORS.border}`, borderRadius: 18, padding: "48px 24px", textAlign: "center", cursor: "pointer", background: COLORS.card, transition: "border-color .2s" }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = COLORS.accent}
-              onMouseLeave={e => e.currentTarget.style.borderColor = COLORS.border}
-            >
-              <p style={{ fontSize: 40, marginBottom: 12 }}>📄</p>
-              <p style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Drop a receipt or bill here</p>
-              <p style={{ color: COLORS.muted, fontSize: 13, fontFamily: "'DM Mono', monospace" }}>Supports JPG, PNG, PDF</p>
-              <input ref={fileRef} type="file" accept="image/*,.pdf" style={{ display: "none" }} onChange={handleFileUpload} />
-            </div>
-            {parseLoading && (
-              <div style={{ textAlign: "center", padding: 32 }}>
-                <div style={{ width: 36, height: 36, border: `3px solid ${COLORS.border}`, borderTopColor: COLORS.accent, borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 12px" }} />
-                <p style={{ color: COLORS.muted, fontFamily: "'DM Mono', monospace", fontSize: 13 }}>Claude is reading your receipt…</p>
-                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-              </div>
-            )}
-            {parseResult?.error && (
-              <div style={{ background: COLORS.danger + "18", border: `1px solid ${COLORS.danger}`, borderRadius: 14, padding: 20, marginTop: 20 }}>
-                <p style={{ color: COLORS.danger, fontWeight: 600 }}>{parseResult.error}</p>
-              </div>
-            )}
-            {parseResult?.items && (
-              <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 24, marginTop: 20 }}>
-                <h3 style={{ fontWeight: 700, marginBottom: 14, fontSize: 15 }}>Detected Items — Review before importing</h3>
-                {parseResult.items.map((item, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${COLORS.border}` }}>
-                    <div>
-                      <p style={{ fontWeight: 600, fontSize: 14 }}>{item.label}</p>
-                      <p style={{ fontSize: 12, color: COLORS.muted, fontFamily: "'DM Mono', monospace" }}>{item.category} · {item.date}</p>
-                    </div>
-                    <span style={{ fontFamily: "'DM Mono', monospace", fontWeight: 700, color: COLORS.accentWarm }}>{fmt(item.amount)}</span>
-                  </div>
-                ))}
-                <button onClick={() => importParsedItems(parseResult.items)} style={{ ...btnPrimary, marginTop: 18 }}>Import All to Expenses</button>
-              </div>
-            )}
-          </div>
-        )}
-        {/* ── ADVISOR TAB ── */}
+        {/* ── AI ASSISTANT TAB ── */}
         {tab === "advisor" && (
-          <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 200px)" }}>
-            <h2 style={{ fontWeight: 800, fontSize: 20, marginBottom: 6 }}>AI Financial Advisor</h2>
-            <p style={{ color: COLORS.muted, fontSize: 13, fontFamily: "'DM Mono', monospace", marginBottom: 16 }}>Ask anything about your budget. Upload documents for review.</p>
-            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 14, marginBottom: 16, paddingRight: 4 }}>
+          <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 140px)", position: "relative" }}>
+            {/* Header */}
+            <div style={{ marginBottom: 24, flexShrink: 0 }}>
+              <h2 style={{ fontSize: 28, fontWeight: 800, color: COLORS.text, letterSpacing: "-0.02em", marginBottom: 4 }}>How can I help you today?</h2>
+              <p style={{ fontSize: 14, color: COLORS.subtext }}>Your family financial co-pilot is ready.</p>
+            </div>
+            {/* Chat history */}
+            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 24, paddingBottom: 160, paddingRight: 4 }}>
               {advisorHistory.length === 0 && (
-                <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: 20, textAlign: "center" }}>
-                  <p style={{ fontSize: 30, marginBottom: 10 }}>💬</p>
-                  <p style={{ color: COLORS.muted, fontSize: 13, fontFamily: "'DM Mono', monospace" }}>Start a conversation. Try:<br />"How can I save $200 more per month?"<br />"Am I on track with my 50/30/20?"<br />"Review my mortgage document."</p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                  {[
+                    { icon: "shopping_cart", label: "How's our grocery spending?", bg: COLORS.secondaryContainer, color: COLORS.onSecondaryContainer },
+                    { icon: "trending_up", label: "Investment update", bg: COLORS.containerHighest, color: COLORS.text },
+                    { icon: "savings", label: "Vacation goal progress", bg: COLORS.containerHighest, color: COLORS.text },
+                  ].map(chip => (
+                    <button key={chip.label} onClick={() => { setAdvisorMsg(chip.label); handleAdvisor(); }} style={{
+                      display: "flex", alignItems: "center", gap: 8, padding: "10px 16px",
+                      background: chip.bg, border: "none", borderRadius: 9999, cursor: "pointer",
+                      fontSize: 13, fontWeight: 600, color: chip.color, fontFamily: "'Plus Jakarta Sans', sans-serif",
+                    }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{chip.icon}</span>
+                      {chip.label}
+                    </button>
+                  ))}
                 </div>
               )}
               {advisorHistory.map((msg, i) => (
-                <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start" }}>
+                <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", gap: 12, alignItems: "flex-start" }}>
+                  {msg.role === "assistant" && (
+                    <div style={{ width: 40, height: 40, borderRadius: "50%", background: COLORS.primary, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 20, color: "#fff", fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
+                    </div>
+                  )}
                   <div style={{
-                    background: msg.role === "user" ? COLORS.accent + "22" : COLORS.card,
-                    border: `1px solid ${msg.role === "user" ? COLORS.accent + "44" : COLORS.border}`,
-                    borderRadius: 14, padding: "12px 16px", maxWidth: "75%",
-                    fontSize: 14, lineHeight: 1.6, color: COLORS.text,
-                    fontFamily: msg.role === "user" ? "'Syne', sans-serif" : "'DM Mono', monospace",
+                    background: msg.role === "user" ? COLORS.containerHighest : "rgba(255,255,255,0.85)",
+                    backdropFilter: msg.role === "assistant" ? "blur(20px)" : "none",
+                    borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "4px 16px 16px 16px",
+                    padding: "16px 20px", maxWidth: "70%",
+                    fontSize: 14, lineHeight: 1.7, color: COLORS.text,
+                    boxShadow: msg.role === "assistant" ? COLORS.shadowSm : "none",
                     whiteSpace: "pre-wrap",
                   }}>
                     {msg.content}
+                    {msg.role === "user" && <p style={{ fontSize: 10, color: COLORS.muted, marginTop: 6, textAlign: "right" }}>
+                      {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </p>}
                   </div>
                 </div>
               ))}
               {advisorLoading && (
-                <div style={{ display: "flex" }}>
-                  <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "12px 16px" }}>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      {[0,1,2].map(j => <div key={j} style={{ width: 8, height: 8, background: COLORS.accent, borderRadius: "50%", animation: `bounce .8s ${j*0.15}s infinite alternate` }} />)}
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: "50%", background: COLORS.primary, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 20, color: "#fff", fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
+                  </div>
+                  <div style={{ background: "rgba(255,255,255,0.85)", backdropFilter: "blur(20px)", borderRadius: "4px 16px 16px 16px", padding: "16px 20px", boxShadow: COLORS.shadowSm }}>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      {[0,1,2].map(j => <div key={j} style={{ width: 8, height: 8, background: COLORS.primary, borderRadius: "50%", animation: `bounce .8s ${j*0.15}s infinite alternate` }} />)}
                     </div>
                     <style>{`@keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-6px); } }`}</style>
                   </div>
                 </div>
               )}
+              {/* Chips after AI response */}
+              {advisorHistory.length > 0 && !advisorLoading && advisorHistory[advisorHistory.length - 1]?.role === "assistant" && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                  {[
+                    { icon: "shopping_cart", label: "How's our grocery spending?" },
+                    { icon: "trending_up", label: "Investment update" },
+                    { icon: "savings", label: "Vacation goal progress" },
+                  ].map(chip => (
+                    <button key={chip.label} onClick={() => { setAdvisorMsg(chip.label); handleAdvisor(); }} style={{
+                      display: "flex", alignItems: "center", gap: 8, padding: "8px 14px",
+                      background: COLORS.containerHighest, border: "none", borderRadius: 9999, cursor: "pointer",
+                      fontSize: 12, fontWeight: 600, color: COLORS.text, fontFamily: "'Plus Jakarta Sans', sans-serif",
+                    }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{chip.icon}</span>
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-            <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 16 }}>
+            {/* Fixed bottom input */}
+            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(248,250,251,0.85)", backdropFilter: "blur(20px)", padding: "16px 0 8px" }}>
               {advisorFile && (
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, padding: "6px 12px", background: COLORS.accent + "18", borderRadius: 8, width: "fit-content" }}>
-                  <span style={{ fontSize: 13, color: COLORS.accent }}>📎 {advisorFile.name}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, padding: "6px 12px", background: `rgba(0,103,136,0.1)`, borderRadius: 8, width: "fit-content" }}>
+                  <span style={{ fontSize: 13, color: COLORS.primary }}>📎 {advisorFile.name}</span>
                   <button onClick={() => setAdvisorFile(null)} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer" }}>×</button>
                 </div>
               )}
-              <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
-                <button onClick={() => advisorFileRef.current?.click()} title="Attach file" style={{ background: COLORS.border, border: "none", color: COLORS.muted, borderRadius: 10, padding: "10px 14px", cursor: "pointer", fontSize: 16, flexShrink: 0 }}>📎</button>
-                <input ref={advisorFileRef} type="file" accept="image/*,.pdf" style={{ display: "none" }} onChange={e => setAdvisorFile(e.target.files[0])} />
-                <textarea
+              <div style={{ display: "flex", alignItems: "center", gap: 4, background: COLORS.containerLow, borderRadius: 9999, padding: "8px 8px 8px 20px", border: `1px solid rgba(172,179,181,0.1)` }}>
+                <input
                   value={advisorMsg}
                   onChange={e => setAdvisorMsg(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAdvisor(); } }}
-                  placeholder="Ask your advisor anything… (Enter to send)"
-                  rows={2}
-                  style={{ ...inputStyle, flex: 1, resize: "none", lineHeight: 1.5 }}
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAdvisor(); } }}
+                  placeholder="Ask about your finances, goals, or spending..."
+                  style={{ flex: 1, background: "transparent", border: "none", fontSize: 14, color: COLORS.text, outline: "none", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
                 />
-                <button onClick={handleAdvisor} disabled={advisorLoading} style={{ background: COLORS.accent, border: "none", color: "#0a0a10", borderRadius: 10, padding: "10px 18px", fontWeight: 800, fontSize: 18, cursor: "pointer", flexShrink: 0 }}>→</button>
+                <input ref={advisorFileRef} type="file" accept="image/*,.pdf" style={{ display: "none" }} onChange={e => setAdvisorFile(e.target.files[0])} />
+                <button onClick={() => advisorFileRef.current?.click()} style={{ width: 40, height: 40, borderRadius: "50%", background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.subtext }}>attach_file</span>
+                </button>
+                <button onClick={handleAdvisor} disabled={advisorLoading} style={{ width: 48, height: 48, background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, border: "none", borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: COLORS.shadowSm }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 22, color: "#fff" }}>arrow_upward</span>
+                </button>
               </div>
+              <p style={{ fontSize: 10, textAlign: "center", marginTop: 8, color: COLORS.muted }}>AI can make mistakes. Check important financial info.</p>
             </div>
           </div>
         )}
@@ -1789,7 +1970,6 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         onClose={() => setModal(null)}
         onManualExpense={() => setModal("addExpense")}
         onManualIncome={() => setModal("addIncome")}
-        onManualDebt={() => setModal("addDebt")}
         onImportExpenses={(items) => { setExpenses(prev => [...prev, ...items.map(it => ({ ...it, fixed: it.fixed ?? false }))]); setModal(null); }}
         onImportIncome={(items) => { setIncome(prev => [...prev, ...items.map(it => ({ id: it.id, label: it.label, amount: it.amount, date: it.date, recurring: it.recurring ?? false }))]); setModal(null); }}
       />}
@@ -1877,6 +2057,46 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           )}
         </Modal>
       )}
+      {modal === "notifications" && (
+        <Modal title="Bills Due Soon" onClose={() => setModal(null)}>
+          {(() => {
+            const tnow = new Date(); tnow.setHours(0,0,0,0);
+            const in7 = new Date(tnow.getTime() + 7 * 86400000);
+            const dueSoon = bills.filter(b => { if (b.paid) return false; const d = new Date(b.dueDate); d.setHours(0,0,0,0); return d <= in7; }).sort((a,b) => new Date(a.dueDate)-new Date(b.dueDate));
+            if (dueSoon.length === 0) return <p style={{ color: COLORS.muted, fontSize: 14 }}>No bills due in the next 7 days. You're all set!</p>;
+            return dueSoon.map(b => {
+              const dLeft = Math.round((new Date(b.dueDate).setHours(0,0,0,0) - tnow.getTime()) / 86400000);
+              return (
+                <div key={b.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: `1px solid ${COLORS.containerLow}` }}>
+                  <div>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>{b.label}</p>
+                    <p style={{ fontSize: 12, color: dLeft <= 0 ? COLORS.danger : COLORS.subtext }}>{dLeft < 0 ? `Overdue by ${Math.abs(dLeft)} day${Math.abs(dLeft)===1?"":"s"}` : dLeft === 0 ? "Due today" : `Due in ${dLeft} day${dLeft===1?"":"s"}`}</p>
+                  </div>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.text }}>{fmt(b.budget)}</span>
+                </div>
+              );
+            });
+          })()}
+        </Modal>
+      )}
+      {modal === "settings" && (
+        <Modal title="Settings" onClose={() => setModal(null)}>
+          <Field label="Family Name">
+            <input style={inputStyle} value={familyName} onChange={e => setFamilyName(e.target.value)} placeholder="e.g. Roberts Family" />
+          </Field>
+          <Field label="Budget Start Month">
+            <select style={selectStyle} value={startMonthKey} onChange={e => setStartMonthKey(e.target.value)}>
+              {Array.from({ length: 24 }, (_, i) => {
+                const d = new Date(2024, i, 1);
+                const k = monthKey(d.getFullYear(), d.getMonth());
+                return <option key={k} value={k}>{MONTH_FULL[d.getMonth()]} {d.getFullYear()}</option>;
+              })}
+            </select>
+          </Field>
+          <button onClick={() => setModal(null)} style={btnPrimary}>Save Settings</button>
+        </Modal>
+      )}
+      </div>{/* end main column */}
     </div>
   );
 }
