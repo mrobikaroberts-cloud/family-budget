@@ -632,6 +632,7 @@ export default function App() {
   const [addingSavingsId, setAddingSavingsId] = useState(null);    // BUG #24: inline savings input
   const [payExtraDebtId, setPayExtraDebtId] = useState(null);      // BUG #25: inline debt extra pay
   const [editingBillCell, setEditingBillCell] = useState(null);    // { id, field } for inline bill editing
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   // ── Monthly insights state ──
   const todayKey = monthKey(new Date().getFullYear(), new Date().getMonth());
   const [startMonthKey, setStartMonthKey] = useState("2025-01");
@@ -1041,18 +1042,18 @@ If the request doesn't map to a clear category goal, still return JSON with newG
       `}</style>
 
       {/* ── SIDEBAR — light, rounded-r-3xl ── */}
-      <aside style={{ width: 288, background: COLORS.sidebarBg, display: "flex", flexDirection: "column", flexShrink: 0, height: "100vh", borderRadius: "0 24px 24px 0" }}>
+      <aside style={{ width: sidebarCollapsed ? 64 : 288, background: COLORS.sidebarBg, display: "flex", flexDirection: "column", flexShrink: 0, height: "100vh", borderRadius: "0 24px 24px 0", transition: "width 0.2s ease", overflow: "hidden" }}>
         {/* Family branding */}
-        <div style={{ padding: "24px 24px 40px" }}>
+        <div style={{ padding: sidebarCollapsed ? "20px 0" : "24px 24px 40px", display: "flex", justifyContent: sidebarCollapsed ? "center" : "flex-start" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <div style={{ width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg, #006788, #005a77)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 800, color: "#fff", flexShrink: 0, boxShadow: COLORS.shadowSm }}>
               {familyName.split(" ").map(w => w[0]).join("").slice(0, 2)}
             </div>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: COLORS.sidebarText, letterSpacing: "-0.02em", lineHeight: 1.2 }}>{familyName}</h1>
+            {!sidebarCollapsed && <h1 style={{ fontSize: 20, fontWeight: 700, color: COLORS.sidebarText, letterSpacing: "-0.02em", lineHeight: 1.2, whiteSpace: "nowrap" }}>{familyName}</h1>}
           </div>
         </div>
         {/* Nav */}
-        <nav style={{ flex: 1, padding: "0 12px", display: "flex", flexDirection: "column", gap: 4 }}>
+        <nav style={{ flex: 1, padding: sidebarCollapsed ? "0 8px" : "0 12px", display: "flex", flexDirection: "column", gap: 4 }}>
           {[
             { id: "dashboard",    label: "Overview",            icon: "dashboard" },
             { id: "transactions", label: "Family Budget",        icon: "payments" },
@@ -1060,8 +1061,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             { id: "insights",     label: "Monthly Insights",     icon: "bar_chart" },
             { id: "advisor",      label: "AI Assistant",         icon: "smart_toy" },
           ].map(item => (
-            <button key={item.id} className="nav-item" onClick={() => setTab(item.id)} style={{
-              display: "flex", alignItems: "center", gap: 12, padding: "11px 14px",
+            <button key={item.id} className="nav-item" onClick={() => setTab(item.id)} title={sidebarCollapsed ? item.label : undefined} style={{
+              display: "flex", alignItems: "center", justifyContent: sidebarCollapsed ? "center" : "flex-start", gap: 12, padding: sidebarCollapsed ? "11px 0" : "11px 14px",
               background: tab === item.id ? COLORS.sidebarActive : "transparent",
               border: "none", borderRadius: 12,
               color: tab === item.id ? "#ffffff" : COLORS.sidebarText,
@@ -1070,21 +1071,27 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               opacity: tab === item.id ? 1 : 0.8,
               transition: "all 0.15s",
             }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 20, color: "inherit" }}>{item.icon}</span>
-              {item.label}
+              <span className="material-symbols-outlined" style={{ fontSize: 20, color: "inherit", flexShrink: 0 }}>{item.icon}</span>
+              {!sidebarCollapsed && item.label}
             </button>
           ))}
         </nav>
+        {/* Collapse toggle */}
+        <div style={{ padding: sidebarCollapsed ? "8px 0" : "8px 16px", display: "flex", justifyContent: sidebarCollapsed ? "center" : "flex-end" }}>
+          <button onClick={() => setSidebarCollapsed(p => !p)} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} style={{ background: "none", border: "none", cursor: "pointer", padding: 6, borderRadius: 8, color: COLORS.muted, display: "flex", alignItems: "center" }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>{sidebarCollapsed ? "chevron_right" : "chevron_left"}</span>
+          </button>
+        </div>
         {/* Add Transaction CTA */}
-        <div style={{ padding: "20px 16px 28px" }}>
-          <button onClick={() => setModal("addMenu")} style={{
+        <div style={{ padding: sidebarCollapsed ? "12px 8px 28px" : "8px 16px 28px" }}>
+          <button onClick={() => setModal("addMenu")} title={sidebarCollapsed ? "Add Transaction" : undefined} style={{
             width: "100%", background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`,
             border: "none", borderRadius: 12, color: "#fff", fontSize: 14, fontWeight: 600,
-            padding: "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            padding: sidebarCollapsed ? "14px 0" : "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: sidebarCollapsed ? 0 : 8,
             boxShadow: COLORS.shadow,
           }}>
             <span className="material-symbols-outlined" style={{ fontSize: 20 }}>add</span>
-            Add Transaction
+            {!sidebarCollapsed && "Add Transaction"}
           </button>
         </div>
       </aside>
@@ -1505,30 +1512,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           const remainToSpend = totalPlanned > 0 ? totalPlanned - totalActual : viewTotalIncome - totalActual;
           return (
             <div style={{ paddingBottom: 48 }}>
-              {/* ── Remaining-to-spend strip ── */}
-              {(() => {
-                const usedPct = totalPlanned > 0 ? Math.min(100, Math.round((totalActual / totalPlanned) * 100)) : 0;
-                const stripColor = usedPct >= 100 ? COLORS.danger : usedPct >= 80 ? COLORS.warning : COLORS.success;
-                return (
-                  <div style={{ background: COLORS.card, borderRadius: 14, padding: "14px 20px", marginBottom: 20, boxShadow: COLORS.shadowSm, display: "flex", alignItems: "center", gap: 20 }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: COLORS.text }}>Budget Used: {fmt(totalActual)}{totalPlanned > 0 ? ` / ${fmt(totalPlanned)}` : ""}</span>
-                        <span style={{ fontSize: 12, fontWeight: 800, color: stripColor }}>{usedPct}%</span>
-                      </div>
-                      <div style={{ height: 8, background: COLORS.containerLow, borderRadius: 9999, overflow: "hidden" }}>
-                        <div style={{ width: `${usedPct}%`, height: "100%", background: stripColor, borderRadius: 9999, transition: "width .4s" }} />
-                      </div>
-                    </div>
-                    <div style={{ textAlign: "right", flexShrink: 0 }}>
-                      <p style={{ fontSize: 10, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Remaining</p>
-                      <p style={{ fontSize: 22, fontWeight: 800, color: remainToSpend >= 0 ? COLORS.success : COLORS.danger }}>{fmt(Math.abs(remainToSpend))}{remainToSpend < 0 ? " over" : " left"}</p>
-                    </div>
-                  </div>
-                );
-              })()}
               {/* ── Page header ── */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, gap: 20, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, gap: 20, flexWrap: "wrap" }}>
                 <div>
                   <h2 style={{ fontSize: 24, fontWeight: 800, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 4 }}>Budget the Money!</h2>
                   <p style={{ fontSize: 14, color: COLORS.subtext }}>Spending Plan · {MONTH_FULL[vm0]} {vy}</p>
@@ -1575,11 +1560,32 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   </div>
                 </div>
               </div>
-
               {/* ── Main grid ── */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 24 }}>
                 {/* ── Spending Plan Table (col-8) ── */}
                 <div style={{ gridColumn: "span 8", background: COLORS.card, borderRadius: 20, padding: 28, boxShadow: COLORS.shadowSm }}>
+                  {/* ── Budget bar ── */}
+                  {(() => {
+                    const usedPct = totalPlanned > 0 ? Math.min(100, Math.round((totalActual / totalPlanned) * 100)) : 0;
+                    const stripColor = usedPct >= 100 ? COLORS.danger : usedPct >= 80 ? COLORS.warning : COLORS.success;
+                    return (
+                      <div style={{ display: "flex", alignItems: "center", gap: 20, paddingBottom: 16, marginBottom: 16, borderBottom: "0.5px solid rgba(172,179,181,0.3)" }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: COLORS.text }}>Budget Used: {fmt(totalActual)}{totalPlanned > 0 ? ` / ${fmt(totalPlanned)}` : ""}</span>
+                            <span style={{ fontSize: 12, fontWeight: 800, color: stripColor }}>{usedPct}%</span>
+                          </div>
+                          <div style={{ height: 8, background: COLORS.containerLow, borderRadius: 9999, overflow: "hidden" }}>
+                            <div style={{ width: `${usedPct}%`, height: "100%", background: stripColor, borderRadius: 9999, transition: "width .4s" }} />
+                          </div>
+                        </div>
+                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                          <p style={{ fontSize: 10, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Remaining</p>
+                          <p style={{ fontSize: 22, fontWeight: 800, color: remainToSpend >= 0 ? COLORS.success : COLORS.danger }}>{fmt(Math.abs(remainToSpend))}{remainToSpend < 0 ? " over" : " left"}</p>
+                        </div>
+                      </div>
+                    );
+                  })()}
                   {/* Column headers */}
                   <div style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "10px 12px", background: COLORS.containerLow, borderRadius: 10, marginBottom: 16 }}>
                     <span style={colStyle} onClick={() => toggleSort("label")}>Items <SortArrow field="label" /></span>
@@ -2255,7 +2261,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         );
                       })()}
                       {/* Category breakdown */}
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 20 }}>
+                        {/* Spending by Category */}
                         <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
                           <h4 style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}>Spending by Category</h4>
                           {CATEGORIES.filter(c => s.cats[c] > 0).sort((a,b) => s.cats[b]-s.cats[a]).map(c => (
@@ -2269,6 +2276,38 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           ))}
                           {CATEGORIES.every(c => s.cats[c] === 0) && <p style={{ color: COLORS.muted, fontSize: 13 }}>No expenses recorded.</p>}
                         </div>
+                        {/* Debt Details */}
+                        <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
+                          <h4 style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}>Debt Details</h4>
+                          {debts.length === 0 ? (
+                            <p style={{ color: COLORS.muted, fontSize: 13 }}>No debts recorded.</p>
+                          ) : (
+                            debts.map(d => {
+                              const paidOff = d.balance <= 0;
+                              return (
+                                <div key={d.id} style={{ marginBottom: 14, padding: "10px 12px", borderRadius: 10, background: COLORS.containerLow }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                                    <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>{d.label}</span>
+                                    <span style={{ fontSize: 13, color: paidOff ? COLORS.success : COLORS.danger, fontWeight: 700 }}>{paidOff ? "Paid off!" : fmt(d.balance)}</span>
+                                  </div>
+                                  <div style={{ display: "flex", gap: 12 }}>
+                                    <span style={{ fontSize: 11, color: COLORS.muted }}>{d.interest}% APR</span>
+                                    <span style={{ fontSize: 11, color: COLORS.muted }}>Min: {fmt(d.minPayment)}/mo</span>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                          {totalDebt > 0 && (
+                            <button
+                              onClick={() => { setAdvisorMsg(`Can we pay our debt down faster? We have ${debts.map(d => `${d.label}: ${fmt(d.balance)} at ${d.interest}% APR (min payment ${fmt(d.minPayment)})`).join(", ")}. Our monthly income is ${fmt(s.inc)} and total expenses are ${fmt(s.exp)}. Please give us a specific payoff plan with estimated payoff dates.`); pendingAdvisorSend.current = true; setTab("advisor"); }}
+                              style={{ width: "100%", marginTop: 10, background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, color: "#fff", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                            >
+                              🚀 Can we pay this debt down faster?
+                            </button>
+                          )}
+                        </div>
+                        {/* 50/30/20 */}
                         <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
                           <h4 style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}>50 / 30 / 20</h4>
                           {(() => {
@@ -2292,14 +2331,6 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                                     <ProgressBar value={b.val} max={b.target} color={b.color} />
                                   </div>
                                 ))}
-                                {totalDebt > 0 && (
-                                  <button
-                                    onClick={() => { setAdvisorMsg(`Can we pay our debt down faster? We have ${debts.map(d => `${d.label}: ${fmt(d.balance)} at ${d.interest}% APR (min payment ${fmt(d.minPayment)})`).join(", ")}. Our monthly income is ${fmt(s.inc)} and total expenses are ${fmt(s.exp)}. Please give us a specific payoff plan with estimated payoff dates.`); pendingAdvisorSend.current = true; setTab("advisor"); }}
-                                    style={{ width: "100%", marginTop: 10, background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, color: "#fff", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-                                  >
-                                    🚀 Can we pay this debt down faster?
-                                  </button>
-                                )}
                               </>
                             );
                           })()}
