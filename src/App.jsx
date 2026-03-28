@@ -50,22 +50,46 @@ const COLORS = {
 const fmt = (n) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 const pct = (val, total) => (total === 0 ? 0 : Math.min(100, (val / total) * 100));
+const fmtDate = (iso) => { if (!iso) return ""; const [y, m, d] = iso.split("-"); return new Date(+y, +m - 1, +d).toLocaleDateString("en-US", { month: "short", day: "numeric" }); };
+const renderMd = (text) => {
+  const lines = (text || "").split("\n");
+  const out = [];
+  let listItems = [];
+  const flushList = () => { if (listItems.length) { out.push(<ul key={`ul-${out.length}`} style={{ margin: "4px 0 4px 16px", padding: 0 }}>{listItems}</ul>); listItems = []; } };
+  const inlineHtml = (s) => s.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>").replace(/\*(.*?)\*/g, "<em>$1</em>").replace(/`(.*?)`/g, "<code style='background:rgba(0,0,0,0.06);borderRadius:3px;padding:1px 4px;fontSize:0.9em'>$1</code>");
+  lines.forEach((line, i) => {
+    if (line.startsWith("- ") || line.startsWith("• ")) {
+      listItems.push(<li key={i} style={{ fontSize: 14, lineHeight: 1.65, marginBottom: 2 }} dangerouslySetInnerHTML={{ __html: inlineHtml(line.slice(2)) }} />);
+    } else if (line.startsWith("### ")) {
+      flushList(); out.push(<p key={i} style={{ fontWeight: 700, fontSize: 14, margin: "10px 0 4px" }} dangerouslySetInnerHTML={{ __html: inlineHtml(line.slice(4)) }} />);
+    } else if (line.startsWith("## ")) {
+      flushList(); out.push(<p key={i} style={{ fontWeight: 800, fontSize: 15, margin: "12px 0 4px" }} dangerouslySetInnerHTML={{ __html: inlineHtml(line.slice(3)) }} />);
+    } else if (line.trim() === "") {
+      flushList(); out.push(<br key={i} />);
+    } else {
+      flushList(); out.push(<p key={i} style={{ margin: "0 0 4px", fontSize: 14, lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: inlineHtml(line) }} />);
+    }
+  });
+  flushList();
+  return out;
+};
 // ── Initial data ──────────────────────────────────────────────────────────────
+const DEMO_MONTH = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; })();
 const INITIAL_INCOME = [
-  { id: 1, label: "Primary Salary", amount: 5500, date: "2025-06-01", recurring: true },
-  { id: 2, label: "Side Freelance", amount: 800, date: "2025-06-15", recurring: false },
+  { id: 1, label: "Primary Salary", amount: 5500, date: `${DEMO_MONTH}-01`, recurring: true },
+  { id: 2, label: "Side Freelance", amount: 800, date: `${DEMO_MONTH}-15`, recurring: false },
 ];
 const INITIAL_EXPENSES = [
-  { id: 1, label: "Mortgage / Rent", amount: 1800, category: "Housing", date: "2025-06-01", fixed: true },
-  { id: 2, label: "Electricity", amount: 120, category: "Utilities", date: "2025-06-03", fixed: true },
-  { id: 3, label: "Groceries", amount: 280, category: "Food", date: "2025-06-05", fixed: false },
-  { id: 4, label: "Netflix", amount: 18, category: "Entertainment", date: "2025-06-02", fixed: true },
-  { id: 5, label: "Gas", amount: 95, category: "Transport", date: "2025-06-07", fixed: false },
-  { id: 6, label: "Gym", amount: 45, category: "Health", date: "2025-06-01", fixed: true },
-  { id: 7, label: "Dining out", amount: 140, category: "Food", date: "2025-06-10", fixed: false },
-  { id: 8, label: "Car payment", amount: 380, category: "Transport", date: "2025-06-05", fixed: true },
-  { id: 9, label: "Internet", amount: 70, category: "Utilities", date: "2025-06-03", fixed: true },
-  { id: 10, label: "Clothing", amount: 95, category: "Personal", date: "2025-06-12", fixed: false },
+  { id: 1, label: "Mortgage / Rent", amount: 1800, category: "Housing", date: `${DEMO_MONTH}-01`, fixed: true },
+  { id: 2, label: "Electricity", amount: 120, category: "Utilities", date: `${DEMO_MONTH}-03`, fixed: true },
+  { id: 3, label: "Groceries", amount: 280, category: "Food", date: `${DEMO_MONTH}-05`, fixed: false },
+  { id: 4, label: "Netflix", amount: 18, category: "Entertainment", date: `${DEMO_MONTH}-02`, fixed: true },
+  { id: 5, label: "Gas", amount: 95, category: "Transport", date: `${DEMO_MONTH}-07`, fixed: false },
+  { id: 6, label: "Gym", amount: 45, category: "Health", date: `${DEMO_MONTH}-01`, fixed: true },
+  { id: 7, label: "Dining out", amount: 140, category: "Food", date: `${DEMO_MONTH}-10`, fixed: false },
+  { id: 8, label: "Car payment", amount: 380, category: "Transport", date: `${DEMO_MONTH}-05`, fixed: true },
+  { id: 9, label: "Internet", amount: 70, category: "Utilities", date: `${DEMO_MONTH}-03`, fixed: true },
+  { id: 10, label: "Clothing", amount: 95, category: "Personal", date: `${DEMO_MONTH}-12`, fixed: false },
 ];
 const INITIAL_DEBTS = [
   { id: 1, label: "Credit Card A", balance: 3200, minPayment: 80, interest: 19.9 },
@@ -234,7 +258,7 @@ Return ONLY valid JSON (no markdown) with this shape:
     {
       "label": "description",
       "amount": 0.00,
-      "category": "one of: Housing|Food|Utilities|Transport|Health|Entertainment|Personal|Education|Savings|Other",
+      "category": "one of: Housing|Food|Utilities|Transport|Health|Entertainment|Personal|Education|Savings|Kids|Other. Hints: daycare/childcare/diapers/preschool/baby/toys/school supplies → Kids; doctor/pharmacy/copay/hospital/prescription/dental/vision → Health; netflix/spotify/gym/movie/games → Entertainment; mortgage/rent → Housing",
       "date": "YYYY-MM-DD",
       "fixed": true | false,
       "recurring": true | false
@@ -301,7 +325,7 @@ Extract ALL individual line items or transactions. Return ONLY valid JSON (no ma
     {
       "label": "item description",
       "amount": 0.00,
-      "category": "Housing|Food|Utilities|Transport|Health|Entertainment|Personal|Education|Savings|Other",
+      "category": "Housing|Food|Utilities|Transport|Health|Entertainment|Personal|Education|Savings|Kids|Other (Kids=daycare/childcare/diapers/baby/school; Health=doctor/pharmacy/copay/dental)",
       "date": "YYYY-MM-DD",
       "fixed": false,
       "recurring": false
@@ -564,6 +588,8 @@ export default function App() {
   const advisorFileRef = useRef();
   const [advisorFile, setAdvisorFile] = useState(null);
   const pendingAdvisorSend = useRef(false);
+  const headerInputRef = useRef(null);
+  const chatEndRef = useRef(null);
   // ── Dashboard extra state ──
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [viewMonthKey, setViewMonthKey] = useState(() => monthKey(new Date().getFullYear(), new Date().getMonth()));
@@ -597,6 +623,14 @@ export default function App() {
   const [editingSavingsCell, setEditingSavingsCell] = useState(null); // { id, field }
   const [expSortField, setExpSortField] = useState("date");
   const [expSortDir, setExpSortDir] = useState("asc");
+  const [itemBudgets, setItemBudgets] = useState({});  // BUG #5: per-item planned amounts keyed by expense id or template label
+  const [editingPlannedKey, setEditingPlannedKey] = useState(null); // id or template label being edited
+  const [editingIncomeCell, setEditingIncomeCell] = useState(null); // { id, field } for income row editing
+  const [payBillConfirm, setPayBillConfirm] = useState(null);      // BUG #3: bill awaiting pay confirmation
+  const [activeBillDetail, setActiveBillDetail] = useState(null);  // BUG #10: bill detail popover
+  const [billCalView, setBillCalView] = useState("month");          // BUG #11: month/list toggle
+  const [addingSavingsId, setAddingSavingsId] = useState(null);    // BUG #24: inline savings input
+  const [payExtraDebtId, setPayExtraDebtId] = useState(null);      // BUG #25: inline debt extra pay
   // ── Monthly insights state ──
   const todayKey = monthKey(new Date().getFullYear(), new Date().getMonth());
   const [startMonthKey, setStartMonthKey] = useState("2025-01");
@@ -626,6 +660,8 @@ export default function App() {
       handleAdvisor();
     }
   });
+  // Auto-scroll chat to bottom on new messages
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [advisorHistory]);
   const twelveMonths = build12Months(startMonthKey);
   // Get snapshot for a key (fallback empty)
   const getSnap = (key) => monthlySnapshots[key] || { income: [], expenses: [], notes: "" };
@@ -684,7 +720,7 @@ Return plain text bullet points only, no headers.` }]
   // 50/30/20
   const needs = expenses.filter(e => ["Housing","Utilities","Transport","Health"].includes(e.category)).reduce((s,e)=>s+e.amount,0);
   const wants = expenses.filter(e => ["Food","Entertainment","Personal","Education","Other"].includes(e.category)).reduce((s,e)=>s+e.amount,0);
-  const savings = Math.max(0, leftover);
+  const savings = expenses.filter(e => e.category === "Savings").reduce((s, e) => s + e.amount, 0);
   // category totals
   const catTotals = {};
   CATEGORIES.forEach(c => { catTotals[c] = expenses.filter(e => e.category === c).reduce((s,e)=>s+e.amount,0); });
@@ -775,6 +811,7 @@ Return plain text bullet points only, no headers.` }]
   const [newExp, setNewExp] = useState({ label: "", amount: "", category: "Food", date: new Date().toISOString().slice(0,10), fixed: false });
   const [newInc, setNewInc] = useState({ label: "", amount: "", date: new Date().toISOString().slice(0,10), recurring: false });
   const [newDebt, setNewDebt] = useState({ label: "", balance: "", minPayment: "", interest: "" });
+  const [newBill, setNewBill] = useState({ label: "", budget: "", dueDate: "" });
   const addExpense = () => {
     if (!newExp.label || !newExp.amount) return;
     setExpenses(prev => [...prev, { ...newExp, id: Date.now(), amount: parseFloat(newExp.amount) }]);
@@ -806,6 +843,11 @@ Return plain text bullet points only, no headers.` }]
     } else {
       setMonthlySnapshots(prev => ({ ...prev, [viewMonthKey]: { ...getSnap(viewMonthKey), income: getSnap(viewMonthKey).income.filter(x => x.id !== id) } }));
     }
+  };
+  const updateIncomeField = (id, field, value) => {
+    const updated = (arr) => arr.map(e => e.id === id ? { ...e, [field]: field === "amount" ? (parseFloat(value) || 0) : value } : e);
+    if (viewMonthKey === todayKey) { setIncome(updated); }
+    else { setMonthlySnapshots(prev => ({ ...prev, [viewMonthKey]: { ...getSnap(viewMonthKey), income: updated(getSnap(viewMonthKey).income) } })); }
   };
   const updateExpenseField = (id, field, value) => {
     const updated = (arr) => arr.map(e => e.id === id ? { ...e, [field]: field === "amount" ? (parseFloat(value) || 0) : value } : e);
@@ -911,9 +953,10 @@ If the request doesn't map to a clear category goal, still return JSON with newG
     setGoalInput("");
   };
   // ── Claude: Advisor ──
-  const handleAdvisor = async () => {
-    if (!advisorMsg.trim() && !advisorFile) return;
-    const userMsg = advisorMsg.trim();
+  const handleAdvisor = async (msgOverride) => {
+    const msgText = msgOverride !== undefined ? msgOverride : advisorMsg;
+    if (!msgText.trim() && !advisorFile) return;
+    const userMsg = msgText.trim();
     setAdvisorLoading(true);
     const { month0, year } = parseKey(viewMonthKey);
     const summary = `Family: ${familyName}. Month: ${MONTH_FULL[month0]} ${year}. Income: ${fmt(viewTotalIncome)}/mo. Expenses: ${fmt(viewTotalExpenses)}/mo. Net: ${fmt(viewTotalIncome - viewTotalExpenses)}. Category breakdown: ${JSON.stringify(viewCatTotals)}. Bills: ${JSON.stringify(bills.map(b => ({ label: b.label, due: b.dueDate, amount: b.budget, paid: b.paid })))}. Debts: ${JSON.stringify(debts.map(d => ({ label: d.label, balance: d.balance, apr: d.interest })))}. Savings goals: ${JSON.stringify(savingsItems)}. Budget goals: ${JSON.stringify(goals)}.`;
@@ -1046,9 +1089,12 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             {showMonthPicker && (
               <div style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, background: COLORS.card, borderRadius: 16, boxShadow: "0 12px 32px rgba(0,0,0,0.12)", zIndex: 200, padding: 8, minWidth: 200, maxHeight: 320, overflowY: "auto" }}>
                 {(() => {
-                  const months2026 = Array.from({ length: 12 }, (_, i) => monthKey(2026, i));
-                  const snapshotMonths = Object.keys(monthlySnapshots).filter(k => !k.startsWith("2026-"));
-                  const allMonths = [...new Set([...months2026, ...snapshotMonths])].sort().reverse();
+                  const { month0: sm, year: sy } = parseKey(startMonthKey);
+                  const endDate = new Date(); endDate.setMonth(endDate.getMonth() + 3);
+                  const allMonths = [];
+                  let cur = new Date(sy, sm, 1);
+                  while (cur <= endDate) { allMonths.push(monthKey(cur.getFullYear(), cur.getMonth())); cur.setMonth(cur.getMonth() + 1); }
+                  allMonths.reverse();
                   return allMonths.map(key => {
                     const { month0, year } = parseKey(key);
                     const isView = key === viewMonthKey;
@@ -1077,11 +1123,12 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           <div style={{ flex: 1, maxWidth: 600, position: "relative" }}>
             <span className="material-symbols-outlined" style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 20, color: COLORS.primary }}>smart_toy</span>
             <input
+              ref={headerInputRef}
               placeholder="Ask AI Financial Assistant..."
               style={{ width: "100%", background: COLORS.containerLow, border: `2px solid rgba(0,103,136,0.1)`, borderRadius: 9999, padding: "10px 48px 10px 44px", fontSize: 14, color: COLORS.text }}
               onKeyDown={e => { if (e.key === "Enter" && e.target.value.trim()) { setAdvisorMsg(e.target.value.trim()); pendingAdvisorSend.current = true; setTab("advisor"); e.target.value = ""; } }}
             />
-            <button style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 6, borderRadius: "50%" }}>
+            <button onClick={() => { const v = headerInputRef.current?.value?.trim(); if (v) { setAdvisorMsg(v); pendingAdvisorSend.current = true; setTab("advisor"); headerInputRef.current.value = ""; } }} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 6, borderRadius: "50%" }}>
               <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.primary }}>send</span>
             </button>
           </div>
@@ -1188,10 +1235,20 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   <div>
                     <p style={{ fontSize: 10, fontWeight: 700, color: COLORS.onSecondaryContainer, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Amount Due</p>
                     <p style={{ fontSize: 36, fontWeight: 800, color: COLORS.onSecondaryContainer, marginBottom: 20, letterSpacing: "-0.02em" }}>{fmt(nextBill.budget)}</p>
-                    <button onClick={() => setBills(p => p.map(b => b.id === nextBill.id ? { ...b, paid: true, actual: b.budget } : b))}
-                      style={{ width: "100%", background: COLORS.onSecondaryContainer, color: "#fff", border: "none", borderRadius: 9999, padding: "14px", fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: COLORS.shadowSm }}>
-                      Pay Now
-                    </button>
+                    {payBillConfirm?.id === nextBill.id ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        <p style={{ fontSize: 12, color: COLORS.onSecondaryContainer, textAlign: "center", opacity: 0.8 }}>Mark {nextBill.label} {fmt(nextBill.budget)} as paid?</p>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button onClick={() => { setBills(p => p.map(b => b.id === nextBill.id ? { ...b, paid: true, actual: b.budget } : b)); setExpenses(p => [...p, { id: Date.now(), label: nextBill.label, amount: nextBill.budget, category: "Housing", date: todayKey + "-" + new Date().getDate().toString().padStart(2,"0"), fixed: true }]); setPayBillConfirm(null); }} style={{ flex: 1, background: COLORS.onSecondaryContainer, color: "#fff", border: "none", borderRadius: 9999, padding: "11px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Confirm</button>
+                          <button onClick={() => setPayBillConfirm(null)} style={{ flex: 1, background: "rgba(0,89,117,0.15)", color: COLORS.onSecondaryContainer, border: "none", borderRadius: 9999, padding: "11px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button onClick={() => setPayBillConfirm(nextBill)}
+                        style={{ width: "100%", background: COLORS.onSecondaryContainer, color: "#fff", border: "none", borderRadius: 9999, padding: "14px", fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: COLORS.shadowSm }}>
+                        Pay Now
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -1272,7 +1329,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                               {budgetPct !== null && (
                                 <p style={{ fontSize: 10, fontWeight: 700, color: COLORS.secondary, textTransform: "uppercase", letterSpacing: "0.05em" }}>{budgetPct}% of budget</p>
                               )}
-                              <p style={{ fontSize: 12, fontWeight: 500, color: COLORS.subtext }}>{topExpense ? topExpense.date : ""}</p>
+                              <p style={{ fontSize: 12, fontWeight: 500, color: COLORS.subtext }}>{topExpense ? fmtDate(topExpense.date) : ""}</p>
                             </div>
                           </div>
                         </div>
@@ -1369,7 +1426,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             : <span onClick={()=>setEditingCell({id,field})} title="Click to edit" style={{cursor:"text",display:"block",borderRadius:4,padding:"2px 4px",color:COLORS.danger,fontWeight:700}}>−{fmt(value)}</span>;
           const EditableDate = ({ id, field, value }) => editingCell?.id===id && editingCell?.field===field
             ? <input autoFocus type="date" value={value} onChange={e=>updateExpenseField(id,field,e.target.value)} onBlur={()=>setEditingCell(null)} style={{width:"100%",background:COLORS.containerLow,border:"none",borderRadius:6,padding:"3px 6px",fontSize:12,color:COLORS.text,outline:"none"}} />
-            : <span onClick={()=>setEditingCell({id,field})} title="Click to edit" style={{cursor:"text",display:"block",borderRadius:4,padding:"2px 4px",fontSize:12,color:COLORS.subtext}}>{value?.slice(5)||"—"}</span>;
+            : <span onClick={()=>setEditingCell({id,field})} title="Click to edit" style={{cursor:"text",display:"block",borderRadius:4,padding:"2px 4px",fontSize:12,color:COLORS.subtext}}>{value ? fmtDate(value) : "—"}</span>;
           const EditableCat = ({ id, field, value }) => editingCell?.id===id && editingCell?.field===field
             ? <select autoFocus value={value} onChange={e=>updateExpenseField(id,field,e.target.value)} onBlur={()=>setEditingCell(null)} style={{width:"100%",background:COLORS.containerLow,border:"none",borderRadius:6,padding:"3px 6px",fontSize:12,color:COLORS.text,outline:"none"}}>
                 {CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}
@@ -1411,12 +1468,18 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   </div>
                   {viewIncome.map(i => (
                     <div key={i.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 14, color: COLORS.subtext }}>work</span>
-                        <span style={{ fontSize: 12, fontWeight: 500, color: COLORS.text }}>{i.label}{i.recurring ? " ↺" : ""}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 14, color: COLORS.subtext, flexShrink: 0 }}>work</span>
+                        {editingIncomeCell?.id === i.id && editingIncomeCell?.field === "label"
+                          ? <input autoFocus value={i.label} onChange={e => updateIncomeField(i.id, "label", e.target.value)} onBlur={() => setEditingIncomeCell(null)} onKeyDown={e => { if (e.key === "Enter") setEditingIncomeCell(null); }} style={{ flex:1, background:COLORS.containerLow, border:"none", borderRadius:6, padding:"2px 6px", fontSize:12, color:COLORS.text, outline:"none" }} />
+                          : <span onClick={() => setEditingIncomeCell({id:i.id, field:"label"})} title="Click to edit" style={{ fontSize: 12, fontWeight: 500, color: COLORS.text, cursor:"text", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{i.label}{i.recurring ? " ↺" : ""}</span>
+                        }
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.secondary }}>+{fmt(i.amount)}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                        {editingIncomeCell?.id === i.id && editingIncomeCell?.field === "amount"
+                          ? <input autoFocus type="number" defaultValue={i.amount} onBlur={e => { updateIncomeField(i.id, "amount", e.target.value); setEditingIncomeCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }} style={{ width:80, background:COLORS.containerLow, border:"none", borderRadius:6, padding:"2px 6px", fontSize:13, color:COLORS.text, outline:"none" }} />
+                          : <span onClick={() => setEditingIncomeCell({id:i.id, field:"amount"})} title="Click to edit" style={{ fontSize: 13, fontWeight: 700, color: COLORS.secondary, cursor:"text" }}>+{fmt(i.amount)}</span>
+                        }
                         <button onClick={() => deleteIncomeFromView(i.id)} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
                       </div>
                     </div>
@@ -1448,8 +1511,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     const grpActual = grpExp.reduce((s,e) => s+e.amount, 0);
                     const grpPlanned = expenseBudgets[group.catId] || 0;
                     const isCollapsed = collapsedCategories[group.catId];
-                    const util = grpPlanned > 0 ? Math.round(pct(grpActual, grpPlanned)) : null;
-                    const utilColor = util === null ? COLORS.muted : util >= 100 ? COLORS.danger : util >= 80 ? COLORS.warning : COLORS.success;
+                    const util = grpPlanned > 0 ? Math.round((grpActual / grpPlanned) * 100) : null;
+                    const utilColor = util === null ? COLORS.muted : util > 100 ? COLORS.danger : util >= 80 ? COLORS.warning : COLORS.success;
                     const usedLabels = grpExp.map(e => e.label.toLowerCase());
                     const unusedTemplates = group.templateItems.filter(t => !usedLabels.some(l => l.includes(t.split(/[/(]/)[0].trim().toLowerCase())));
 
@@ -1470,7 +1533,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                               <>
                                 <span style={{ fontSize: 11, color: COLORS.subtext }}>{fmt(grpPlanned)} planned</span>
                                 <span style={{ fontSize: 12, fontWeight: 700, color: utilColor }}>{fmt(grpActual)} actual</span>
-                                <span style={{ fontSize: 10, fontWeight: 700, color: utilColor, background: utilColor+"18", borderRadius: 9999, padding: "1px 7px" }}>{util}%</span>
+                                <span style={{ fontSize: 10, fontWeight: 700, color: utilColor, background: utilColor+"18", borderRadius: 9999, padding: "1px 7px" }}>{util > 100 ? `${util}% OVER` : `${util}%`}</span>
                               </>
                             )}
                             {grpPlanned === 0 && grpActual > 0 && <span style={{ fontSize: 12, color: COLORS.subtext }}>{fmt(grpActual)}</span>}
@@ -1486,23 +1549,34 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                                 <EditableText id={e.id} field="label" value={e.label} />
                                 <EditableCat id={e.id} field="category" value={e.category} />
                                 <EditableDate id={e.id} field="date" value={e.date} />
-                                <span style={{ fontSize: 12, color: COLORS.muted }}>—</span>
+                                {editingPlannedKey === `exp-${e.id}`
+                                  ? <input autoFocus type="number" placeholder="0" defaultValue={itemBudgets[`exp-${e.id}`] || ""} onBlur={ev => { const v = parseFloat(ev.target.value) || 0; if (v) setItemBudgets(p => ({...p, [`exp-${e.id}`]: v})); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); }} style={{ width:"100%", background:COLORS.containerLow, border:"none", borderRadius:6, padding:"3px 6px", fontSize:12, color:COLORS.text, outline:"none" }} />
+                                  : <span onClick={() => setEditingPlannedKey(`exp-${e.id}`)} title="Click to set planned budget" style={{ fontSize: 12, color: itemBudgets[`exp-${e.id}`] ? COLORS.subtext : COLORS.muted, cursor: "text", display:"block", borderRadius:4, padding:"2px 4px" }}>{itemBudgets[`exp-${e.id}`] ? fmt(itemBudgets[`exp-${e.id}`]) : "—"}</span>
+                                }
                                 <EditableNum id={e.id} field="amount" value={e.amount} />
                                 <button onClick={() => deleteExpenseFromView(e.id)} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 16, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6 }}>×</button>
                               </div>
                             ))}
                             {/* Template items not yet added */}
-                            {unusedTemplates.slice(0, 4).map(item => (
-                              <div key={item} style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "6px 10px", alignItems: "center", borderRadius: 8, opacity: 0.45, marginBottom: 2 }}>
+                            {unusedTemplates.slice(0, 4).map(item => {
+                              const tKey = `tmpl-${item}`;
+                              return (
+                              <div key={item} style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "6px 10px", alignItems: "center", borderRadius: 8, opacity: 0.55, marginBottom: 2 }}>
                                 <span style={{ fontSize: 13, color: COLORS.muted, fontStyle: "italic" }}>{item}</span>
                                 <span style={{ fontSize: 11, color: COLORS.muted }}>{group.catId}</span>
                                 <span style={{ fontSize: 12, color: COLORS.muted }}>—</span>
-                                <span style={{ fontSize: 12, color: COLORS.muted }}>—</span>
+                                {editingPlannedKey === tKey
+                                  ? <input autoFocus type="number" placeholder="Budget amt" onBlur={ev => { const v = parseFloat(ev.target.value) || 0; if (v) setItemBudgets(p => ({...p, [tKey]: v})); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); }} style={{ width:"100%", background:COLORS.containerLow, border:"none", borderRadius:6, padding:"3px 6px", fontSize:12, color:COLORS.text, outline:"none" }} />
+                                  : <span onClick={() => setEditingPlannedKey(tKey)} title="Click to set planned budget" style={{ fontSize: 12, color: itemBudgets[tKey] ? COLORS.subtext : COLORS.muted, cursor: "text", display:"block", borderRadius:4, padding:"2px 4px" }}>{itemBudgets[tKey] ? fmt(itemBudgets[tKey]) : "—"}</span>
+                                }
                                 <span style={{ fontSize: 12, color: COLORS.muted }}>—</span>
                                 <button onClick={() => { setNewExp(p => ({ ...p, label: item, category: group.catId })); setModal("addExpense"); }}
-                                  style={{ background: "none", border: "none", color: COLORS.primary, cursor: "pointer", fontSize: 18, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center" }} title="Add this item">+</button>
+                                  style={{ background: "none", border: "none", color: COLORS.primary, cursor: "pointer", fontSize: 16, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center" }} title="Add actual expense">
+                                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add</span>
+                                </button>
                               </div>
-                            ))}
+                              );
+                            })}
                             {/* Add row button */}
                             <button onClick={() => { setNewExp(p => ({ ...p, label: "", category: group.catId })); setModal("addExpense"); }}
                               style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: `1px dashed ${COLORS.border}`, borderRadius: 8, padding: "5px 12px", cursor: "pointer", color: COLORS.muted, fontSize: 12, marginTop: 4 }}>
@@ -1559,7 +1633,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           <div key={b.id} style={{ background: COLORS.containerLow, borderRadius: 10, padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", borderLeft: `3px solid ${borderColor}` }}>
                             <div>
                               <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>{b.label}</p>
-                              <p style={{ fontSize: 11, color: isOverdue ? COLORS.danger : COLORS.subtext }}>{b.dueDate?.slice(5)}</p>
+                              <p style={{ fontSize: 11, color: isOverdue ? COLORS.danger : COLORS.subtext }}>{fmtDate(b.dueDate)}</p>
                             </div>
                             <div style={{ textAlign: "right" }}>
                               <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>{fmt(b.budget)}</p>
@@ -1599,10 +1673,14 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                             <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 8 }}>
                               <DebtText id={d.id} field="balance" value={d.balance} style={{ fontSize: 14, fontWeight: 800, color: COLORS.danger, display: "block" }} />
                               <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end", marginTop: 2 }}>
-                                <button onClick={() => {
-                                  const extra = prompt("Extra payment amount?");
-                                  if (extra && !isNaN(extra)) updateDebtField(d.id, "balance", Math.max(0, d.balance - parseFloat(extra)));
-                                }} style={{ fontSize: 11, color: COLORS.primary, background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0 }}>Pay Extra</button>
+                                {payExtraDebtId === d.id
+                                  ? <span style={{ display:"flex", alignItems:"center", gap:4 }}>
+                                      <input id={`pe-${d.id}`} autoFocus type="number" placeholder="$" style={{ width:60, background:COLORS.containerLow, border:"none", borderRadius:6, padding:"2px 6px", fontSize:11, color:COLORS.text, outline:"none" }} onKeyDown={e=>{if(e.key==="Escape")setPayExtraDebtId(null);}} />
+                                      <button onClick={()=>{ const v=parseFloat(document.getElementById(`pe-${d.id}`)?.value)||0; if(v>0)updateDebtField(d.id,"balance",Math.max(0,d.balance-v)); setPayExtraDebtId(null); }} style={{background:COLORS.primary,color:"#fff",border:"none",borderRadius:6,padding:"2px 8px",fontSize:11,fontWeight:700,cursor:"pointer"}}>Pay</button>
+                                      <button onClick={()=>setPayExtraDebtId(null)} style={{background:"none",border:"none",color:COLORS.muted,cursor:"pointer",fontSize:14,padding:0}}>×</button>
+                                    </span>
+                                  : <button onClick={() => setPayExtraDebtId(d.id)} style={{ fontSize: 11, color: COLORS.primary, background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0 }}>Pay Extra</button>
+                                }
                                 <button onClick={() => setDebts(prev => prev.filter(x => x.id !== d.id))} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 14, padding: 0 }}>×</button>
                               </div>
                             </div>
@@ -1641,12 +1719,17 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           <div style={{ height: 6, background: COLORS.containerLow, borderRadius: 9999, overflow: "hidden", marginBottom: 6 }}>
                             <div style={{ width: `${pct(s.actual, s.expected||1)}%`, height: "100%", background: COLORS.primary, borderRadius: 9999 }} />
                           </div>
-                          <div style={{ display: "flex", gap: 6 }}>
-                            <button onClick={() => { const a = prompt("Amount to add?"); if (a && !isNaN(a)) updateSavingsField(s.id,"actual",s.actual+parseFloat(a)); }}
-                              style={{ flex:1, background: `rgba(0,103,136,0.08)`, border:"none", borderRadius:8, padding:"5px 0", fontSize:12, fontWeight:700, color:COLORS.primary, cursor:"pointer" }}>+ Add</button>
-                            <button onClick={() => { const a = prompt("Amount to subtract?"); if (a && !isNaN(a)) updateSavingsField(s.id,"actual",s.actual-parseFloat(a)); }}
-                              style={{ flex:1, background: `rgba(172,49,73,0.06)`, border:"none", borderRadius:8, padding:"5px 0", fontSize:12, fontWeight:700, color:COLORS.danger, cursor:"pointer" }}>− Remove</button>
-                          </div>
+                          {addingSavingsId === s.id
+                            ? <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                                <input id={`sav-inp-${s.id}`} autoFocus type="number" placeholder="Amount" style={{ flex:1, background:COLORS.containerLow, border:"none", borderRadius:8, padding:"5px 8px", fontSize:12, color:COLORS.text, outline:"none" }} onKeyDown={e=>{if(e.key==="Escape")setAddingSavingsId(null);}} />
+                                <button onClick={()=>{ const v=parseFloat(document.getElementById(`sav-inp-${s.id}`)?.value)||0; if(v>0)updateSavingsField(s.id,"actual",s.actual+v); setAddingSavingsId(null); }} style={{background:COLORS.primary,color:"#fff",border:"none",borderRadius:8,padding:"5px 10px",fontSize:12,fontWeight:700,cursor:"pointer"}}>+</button>
+                                <button onClick={()=>{ const v=parseFloat(document.getElementById(`sav-inp-${s.id}`)?.value)||0; if(v>0)updateSavingsField(s.id,"actual",Math.max(0,s.actual-v)); setAddingSavingsId(null); }} style={{background:`rgba(172,49,73,0.12)`,color:COLORS.danger,border:"none",borderRadius:8,padding:"5px 10px",fontSize:12,fontWeight:700,cursor:"pointer"}}>−</button>
+                                <button onClick={()=>setAddingSavingsId(null)} style={{background:"none",border:"none",color:COLORS.muted,cursor:"pointer",fontSize:16,padding:"0 4px"}}>×</button>
+                              </div>
+                            : <div style={{ display: "flex", gap: 6 }}>
+                                <button onClick={() => setAddingSavingsId(s.id)} style={{ flex:1, background: `rgba(0,103,136,0.08)`, border:"none", borderRadius:8, padding:"5px 0", fontSize:12, fontWeight:700, color:COLORS.primary, cursor:"pointer" }}>+ Add / − Remove</button>
+                              </div>
+                          }
                         </div>
                       ))}
                     </div>
@@ -1668,14 +1751,19 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           const unpaidBills = bills.filter(b => !b.paid).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
           const totalBillsBudget = bills.reduce((s, b) => s + b.budget, 0);
           const billsOnDay = (day) => bills.filter(b => {
-            const d = new Date(b.dueDate);
-            return d.getFullYear() === calYear && d.getMonth() === calMonth && d.getDate() === day;
+            const [y, m, dd] = (b.dueDate || "").split("-").map(Number);
+            return y === calYear && m - 1 === calMonth && dd === day;
           });
           return (
             <div style={{ paddingBottom: 48 }}>
-              <div style={{ marginBottom: 24 }}>
-                <h2 style={{ fontSize: 24, fontWeight: 800, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 4 }}>Bill Calendar</h2>
-                <p style={{ fontSize: 14, color: COLORS.subtext }}>Upcoming bills and payment schedule</p>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 24 }}>
+                <div>
+                  <h2 style={{ fontSize: 24, fontWeight: 800, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 4 }}>Bill Calendar</h2>
+                  <p style={{ fontSize: 14, color: COLORS.subtext }}>Upcoming bills and payment schedule</p>
+                </div>
+                <button onClick={() => setModal("addBill")} style={{ display: "flex", alignItems: "center", gap: 6, background: COLORS.primary, color: "#fff", border: "none", borderRadius: 10, padding: "9px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>Add Bill
+                </button>
               </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 24 }}>
               {/* ── Calendar (col-8) ── */}
@@ -1683,11 +1771,35 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
                   <h3 style={{ fontSize: 18, fontWeight: 700, color: COLORS.text }}>{MONTH_FULL[calMonth]} {calYear}</h3>
                   <div style={{ display: "flex", gap: 4 }}>
-                    {["Month", "List"].map((v, i) => (
-                      <button key={v} style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: i === 0 ? COLORS.primary : COLORS.containerLow, color: i === 0 ? "#fff" : COLORS.subtext, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{v}</button>
+                    {[["Month","month"], ["List","list"]].map(([label, val]) => (
+                      <button key={val} onClick={() => setBillCalView(val)} style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: billCalView === val ? COLORS.primary : COLORS.containerLow, color: billCalView === val ? "#fff" : COLORS.subtext, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{label}</button>
                     ))}
                   </div>
                 </div>
+                {/* List view */}
+                {billCalView === "list" && (
+                  <div>
+                    <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr", gap: 8, padding: "8px 12px", background: COLORS.containerLow, borderRadius: 10, marginBottom: 8 }}>
+                      {["Bill", "Due Date", "Amount", "Status", "Action"].map(h => <span key={h} style={{ fontSize: 11, fontWeight: 700, color: COLORS.subtext, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</span>)}
+                    </div>
+                    {[...bills].sort((a,b) => (a.dueDate||"").localeCompare(b.dueDate||"")).map(b => {
+                      const [y,m,dd] = (b.dueDate||"").split("-").map(Number);
+                      const dDate = new Date(y,m-1,dd); const now2 = new Date(); now2.setHours(0,0,0,0);
+                      const isOverdue = !b.paid && dDate < now2;
+                      return (
+                        <div key={b.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr", gap: 8, padding: "10px 12px", borderRadius: 8, background: COLORS.card, marginBottom: 4, boxShadow: COLORS.shadowSm, alignItems: "center", borderLeft: `3px solid ${b.paid ? COLORS.success : isOverdue ? COLORS.danger : "transparent"}` }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>{b.label}</span>
+                          <span style={{ fontSize: 12, color: isOverdue ? COLORS.danger : COLORS.subtext }}>{fmtDate(b.dueDate)}</span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>{fmt(b.budget)}</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: b.paid ? COLORS.success : isOverdue ? COLORS.danger : COLORS.subtext, background: (b.paid ? COLORS.success : isOverdue ? COLORS.danger : COLORS.muted) + "18", borderRadius: 9999, padding: "2px 8px", display: "inline-block" }}>{b.paid ? "Paid" : isOverdue ? "Overdue" : "Upcoming"}</span>
+                          {!b.paid && <button onClick={() => setBills(p => p.map(x => x.id === b.id ? {...x, paid:true, actual:x.budget} : x))} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:9999, padding:"4px 10px", fontSize:11, fontWeight:700, cursor:"pointer" }}>Mark Paid</button>}
+                          {b.paid && <span style={{ fontSize: 11, color: COLORS.muted }}>✓ Done</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {billCalView === "month" && <>
                 {/* Day headers */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 2 }}>
                   {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => (
@@ -1711,8 +1823,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         {dayBills.map(b => {
                           const colorSet = BILL_COLORS[b.label] || { bg: "rgba(97,205,253,0.15)", text: COLORS.primary };
                           return (
-                            <div key={b.id} style={{ background: colorSet.bg, borderRadius: 4, padding: "2px 6px", marginBottom: 2 }}>
-                              <p style={{ fontSize: 10, fontWeight: 700, color: colorSet.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.label}</p>
+                            <div key={b.id} onClick={() => setActiveBillDetail(b)} style={{ background: colorSet.bg, borderRadius: 4, padding: "2px 6px", marginBottom: 2, cursor: "pointer", border: b.paid ? `1px solid ${COLORS.success}` : "1px solid transparent" }}>
+                              <p style={{ fontSize: 10, fontWeight: 700, color: colorSet.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.label}{b.paid ? " ✓" : ""}</p>
                             </div>
                           );
                         })}
@@ -1720,6 +1832,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     );
                   })}
                 </div>
+                </>}
               </div>
 
               {/* ── Right sidebar (col-4) ── */}
@@ -1739,29 +1852,46 @@ If the request doesn't map to a clear category goal, still return JSON with newG
 
                 {/* Upcoming Statements */}
                 <div style={{ background: COLORS.card, borderRadius: 20, padding: 24, boxShadow: COLORS.shadowSm }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                    <h4 style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>Upcoming Statements</h4>
-                    <span style={{ fontSize: 11, color: COLORS.subtext, fontWeight: 600 }}>Next 14 Days</span>
-                  </div>
+                  <h4 style={{ fontSize: 15, fontWeight: 700, color: COLORS.text, marginBottom: 16 }}>Statements</h4>
                   {(() => {
-                    const today14 = new Date(); today14.setHours(0,0,0,0);
-                    const in14days = new Date(today14.getTime() + 14 * 86400000);
-                    const upcoming14 = unpaidBills.filter(b => { const d = new Date(b.dueDate); d.setHours(0,0,0,0); return d <= in14days; });
-                    if (upcoming14.length === 0) return <p style={{ fontSize: 13, color: COLORS.muted }}>No bills due in the next 14 days.</p>;
-                    return upcoming14.map(b => (
-                      <div key={b.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${COLORS.containerLow}` }}>
+                    const now2 = new Date(); now2.setHours(0,0,0,0);
+                    const in14 = new Date(now2.getTime() + 14 * 86400000);
+                    const overdueBills2 = unpaidBills.filter(b => { const [y2,m2,d2] = (b.dueDate||"").split("-").map(Number); return new Date(y2,m2-1,d2) < now2; });
+                    const upcomingBills2 = unpaidBills.filter(b => { const [y2,m2,d2] = (b.dueDate||"").split("-").map(Number); const dt = new Date(y2,m2-1,d2); return dt >= now2 && dt <= in14; });
+                    const BillRow = ({b, color}) => (
+                      <div key={b.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: `1px solid ${COLORS.containerLow}` }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(97,205,253,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.primary }}>receipt_long</span>
+                          <div style={{ width: 30, height: 30, borderRadius: "50%", background: color + "22", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 14, color }}>receipt_long</span>
                           </div>
                           <div>
                             <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>{b.label}</p>
-                            <p style={{ fontSize: 11, color: COLORS.subtext }}>Due {b.dueDate?.slice(5)}</p>
+                            <p style={{ fontSize: 11, color }}>{fmtDate(b.dueDate)}</p>
                           </div>
                         </div>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>{fmt(b.budget)}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>{fmt(b.budget)}</span>
+                          <button onClick={() => setBills(p => p.map(x => x.id === b.id ? {...x, paid:true, actual:x.budget} : x))} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:9999, padding:"3px 9px", fontSize:10, fontWeight:700, cursor:"pointer" }}>Paid</button>
+                        </div>
                       </div>
-                    ));
+                    );
+                    return (
+                      <>
+                        {overdueBills2.length > 0 && (
+                          <div style={{ marginBottom: 12 }}>
+                            <p style={{ fontSize: 10, fontWeight: 800, color: COLORS.danger, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>● Overdue</p>
+                            {overdueBills2.map(b => <BillRow key={b.id} b={b} color={COLORS.danger} />)}
+                          </div>
+                        )}
+                        {upcomingBills2.length > 0 && (
+                          <div>
+                            <p style={{ fontSize: 10, fontWeight: 800, color: COLORS.primary, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>● Next 14 Days</p>
+                            {upcomingBills2.map(b => <BillRow key={b.id} b={b} color={COLORS.subtext} />)}
+                          </div>
+                        )}
+                        {overdueBills2.length === 0 && upcomingBills2.length === 0 && <p style={{ fontSize: 13, color: COLORS.muted }}>No upcoming bills in the next 14 days.</p>}
+                      </>
+                    );
                   })()}
                 </div>
 
@@ -1782,6 +1912,37 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 </div>
               </div>
             </div>
+            {/* Bill detail popover (BUG #10) */}
+            {activeBillDetail && (() => {
+              const b = activeBillDetail;
+              const [y2,m2,d2] = (b.dueDate||"").split("-").map(Number);
+              const isPast = new Date(y2,m2-1,d2) < new Date(new Date().toDateString());
+              return (
+                <div onClick={() => setActiveBillDetail(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div onClick={e => e.stopPropagation()} style={{ background: COLORS.card, borderRadius: 20, padding: 32, minWidth: 320, boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+                      <h3 style={{ fontSize: 18, fontWeight: 800, color: COLORS.text }}>{b.label}</h3>
+                      <button onClick={() => setActiveBillDetail(null)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: COLORS.muted }}>×</button>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span style={{ fontSize: 13, color: COLORS.subtext }}>Amount</span>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.text }}>{fmt(b.budget)}</span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span style={{ fontSize: 13, color: COLORS.subtext }}>Due Date</span>
+                        <span style={{ fontSize: 14, color: COLORS.text }}>{fmtDate(b.dueDate)}</span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span style={{ fontSize: 13, color: COLORS.subtext }}>Status</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: b.paid ? COLORS.success : isPast ? COLORS.danger : COLORS.subtext }}>{b.paid ? "Paid ✓" : isPast ? "Overdue" : "Upcoming"}</span>
+                      </div>
+                    </div>
+                    {!b.paid && <button onClick={() => { setBills(p => p.map(x => x.id === b.id ? {...x, paid:true, actual:x.budget} : x)); setActiveBillDetail(null); }} style={{ width: "100%", background: COLORS.primary, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Mark as Paid</button>}
+                  </div>
+                </div>
+              );
+            })()}
             </div>
           );
         })()}
@@ -1935,7 +2096,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           {(() => {
                             const needs2 = snap.expenses.filter(e => ["Housing","Utilities","Transport","Health"].includes(e.category)).reduce((s,e)=>s+e.amount,0);
                             const wants2 = snap.expenses.filter(e => ["Food","Entertainment","Personal","Education","Other"].includes(e.category)).reduce((s,e)=>s+e.amount,0);
-                            const sav2 = Math.max(0, s.net);
+                            const sav2 = snap.expenses.filter(e => e.category === "Savings").reduce((s2,e) => s2+e.amount, 0);
                             return [
                               { label: "Needs (50%)", val: needs2, target: s.inc * 0.5, color: COLORS.accentBlue },
                               { label: "Wants (30%)", val: wants2, target: s.inc * 0.3, color: COLORS.accentPurple },
@@ -2018,17 +2179,25 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   ));
                 })()}
               </div>
-              {/* Sparkline-style monthly expense bars */}
-              <div style={{ display: "flex", gap: 6, alignItems: "flex-end", height: 60 }}>
+              {/* Dual-series Income vs Expenses bar chart */}
+              <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 5 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: COLORS.primary }} /><span style={{ fontSize: 11, color: COLORS.subtext }}>Income</span></div>
+                <div style={{ display: "flex", alignItems: "center", gap: 5 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: COLORS.accentWarm }} /><span style={{ fontSize: 11, color: COLORS.subtext }}>Expenses</span></div>
+              </div>
+              <div style={{ display: "flex", gap: 4, alignItems: "flex-end", height: 80 }}>
                 {twelveMonths.map(key => {
                   const s = monthStats(key);
                   const { month0 } = parseKey(key);
-                  const maxExp = Math.max(...twelveMonths.map(k => monthStats(k).exp), 1);
-                  const barH = s.hasData ? Math.max(4, (s.exp / maxExp) * 52) : 4;
+                  const maxVal = Math.max(...twelveMonths.map(k => Math.max(monthStats(k).inc, monthStats(k).exp)), 1);
+                  const incH = s.hasData && s.inc > 0 ? Math.max(4, (s.inc / maxVal) * 68) : 2;
+                  const expH = s.hasData && s.exp > 0 ? Math.max(4, (s.exp / maxVal) * 68) : 2;
                   return (
-                    <div key={key} onClick={() => setActiveInsightKey(key)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer", gap: 4 }}>
-                      <div style={{ width: "100%", height: barH, background: key === activeInsightKey ? COLORS.accentBlue : s.hasData ? COLORS.accent + "99" : COLORS.border, borderRadius: "4px 4px 0 0", transition: "all .2s" }} />
-                      <span style={{ fontSize: 9, color: key === activeInsightKey ? COLORS.accentBlue : COLORS.muted }}>{MONTH_NAMES[month0]}</span>
+                    <div key={key} onClick={() => setActiveInsightKey(key)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer", gap: 2 }}>
+                      <div style={{ display: "flex", alignItems: "flex-end", gap: 1, height: 68, width: "100%" }}>
+                        <div style={{ flex: 1, height: incH, background: key === activeInsightKey ? COLORS.primary : COLORS.primary + "66", borderRadius: "3px 3px 0 0", transition: "all .2s" }} />
+                        <div style={{ flex: 1, height: expH, background: key === activeInsightKey ? COLORS.accentWarm : COLORS.accentWarm + "66", borderRadius: "3px 3px 0 0", transition: "all .2s" }} />
+                      </div>
+                      <span style={{ fontSize: 9, color: key === activeInsightKey ? COLORS.primary : COLORS.muted, whiteSpace: "nowrap" }}>{MONTH_NAMES[month0]}</span>
                     </div>
                   );
                 })}
@@ -2053,7 +2222,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     { icon: "trending_up", label: "Investment update", bg: COLORS.containerHighest, color: COLORS.text },
                     { icon: "savings", label: "Vacation goal progress", bg: COLORS.containerHighest, color: COLORS.text },
                   ].map(chip => (
-                    <button key={chip.label} onClick={() => { setAdvisorMsg(chip.label); handleAdvisor(); }} style={{
+                    <button key={chip.label} onClick={() => { setAdvisorMsg(chip.label); handleAdvisor(chip.label); }} style={{
                       display: "flex", alignItems: "center", gap: 8, padding: "10px 16px",
                       background: chip.bg, border: "none", borderRadius: 9999, cursor: "pointer",
                       fontSize: 13, fontWeight: 600, color: chip.color, fontFamily: "'Plus Jakarta Sans', sans-serif",
@@ -2076,11 +2245,10 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     backdropFilter: msg.role === "assistant" ? "blur(20px)" : "none",
                     borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "4px 16px 16px 16px",
                     padding: "16px 20px", maxWidth: "70%",
-                    fontSize: 14, lineHeight: 1.7, color: COLORS.text,
+                    color: COLORS.text,
                     boxShadow: msg.role === "assistant" ? COLORS.shadowSm : "none",
-                    whiteSpace: "pre-wrap",
                   }}>
-                    {msg.content}
+                    {msg.role === "assistant" ? renderMd(msg.content) : <p style={{ fontSize: 14, lineHeight: 1.7, margin: 0 }}>{msg.content}</p>}
                     {msg.role === "user" && <p style={{ fontSize: 10, color: COLORS.muted, marginTop: 6, textAlign: "right" }}>
                       {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </p>}
@@ -2100,6 +2268,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   </div>
                 </div>
               )}
+              <div ref={chatEndRef} />
               {/* Chips after AI response */}
               {advisorHistory.length > 0 && !advisorLoading && advisorHistory[advisorHistory.length - 1]?.role === "assistant" && (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
@@ -2108,7 +2277,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     { icon: "trending_up", label: "Investment update" },
                     { icon: "savings", label: "Vacation goal progress" },
                   ].map(chip => (
-                    <button key={chip.label} onClick={() => { setAdvisorMsg(chip.label); handleAdvisor(); }} style={{
+                    <button key={chip.label} onClick={() => { setAdvisorMsg(chip.label); handleAdvisor(chip.label); }} style={{
                       display: "flex", alignItems: "center", gap: 8, padding: "8px 14px",
                       background: COLORS.containerHighest, border: "none", borderRadius: 9999, cursor: "pointer",
                       fontSize: 12, fontWeight: 600, color: COLORS.text, fontFamily: "'Plus Jakarta Sans', sans-serif",
@@ -2256,11 +2425,25 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>{b.label}</p>
                     <p style={{ fontSize: 12, color: dLeft <= 0 ? COLORS.danger : COLORS.subtext }}>{dLeft < 0 ? `Overdue by ${Math.abs(dLeft)} day${Math.abs(dLeft)===1?"":"s"}` : dLeft === 0 ? "Due today" : `Due in ${dLeft} day${dLeft===1?"":"s"}`}</p>
                   </div>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.text }}>{fmt(b.budget)}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.text }}>{fmt(b.budget)}</span>
+                    <button onClick={() => setBills(p => p.map(x => x.id === b.id ? { ...x, paid: true, actual: x.budget } : x))} style={{ background: COLORS.primary, color: "#fff", border: "none", borderRadius: 9999, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Mark Paid</button>
+                  </div>
                 </div>
               );
             });
           })()}
+        </Modal>
+      )}
+      {modal === "addBill" && (
+        <Modal title="Add Bill" onClose={() => { setModal(null); setNewBill({ label: "", budget: "", dueDate: "" }); }}>
+          <Field label="Bill Name"><input style={inputStyle} value={newBill.label} onChange={e => setNewBill(p=>({...p,label:e.target.value}))} placeholder="e.g. Electric Bill" /></Field>
+          <Field label="Amount"><input style={inputStyle} type="number" value={newBill.budget} onChange={e => setNewBill(p=>({...p,budget:e.target.value}))} placeholder="0" /></Field>
+          <Field label="Due Date"><input style={inputStyle} type="date" value={newBill.dueDate} onChange={e => setNewBill(p=>({...p,dueDate:e.target.value}))} /></Field>
+          <button disabled={!newBill.label || !newBill.budget || !newBill.dueDate} onClick={() => {
+            setBills(p => [...p, { id: Date.now(), label: newBill.label, dueDate: newBill.dueDate, budget: parseFloat(newBill.budget)||0, actual: 0, paid: false }]);
+            setNewBill({ label: "", budget: "", dueDate: "" }); setModal(null);
+          }} style={{ ...btnPrimary, opacity: (!newBill.label || !newBill.budget || !newBill.dueDate) ? 0.5 : 1 }}>Add Bill</button>
         </Modal>
       )}
       {modal === "settings" && (
