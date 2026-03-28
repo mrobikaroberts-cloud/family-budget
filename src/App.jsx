@@ -474,7 +474,7 @@ If date not visible, use today. If unsure of category, use Other.`
                   </>
                 ) : "✦ Parse with Claude"}
               </button>
-              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes pop-in { 0% { transform: scale(0); opacity: 0; } 80% { transform: scale(1.2); } 100% { transform: scale(1); opacity: 1; } }`}</style>
             </div>
           )}
           {/* ── UPLOAD ── */}
@@ -598,12 +598,12 @@ export default function App() {
   const [startingBalance, setStartingBalance] = useState(0);
   const [showIncomeInCharts, setShowIncomeInCharts] = useState(true);
   const [bills, setBills] = useState([
-    { id: 1, label: "Mortgage", dueDate: "2026-03-25", budget: 600, actual: 0, paid: false },
-    { id: 2, label: "Car", dueDate: "2026-03-01", budget: 100, actual: 0, paid: false },
-    { id: 3, label: "Credit Card", dueDate: "2026-03-07", budget: 50, actual: 0, paid: false },
-    { id: 4, label: "Gas", dueDate: "2026-03-12", budget: 50, actual: 50, paid: true },
-    { id: 5, label: "Home Insurance", dueDate: "2026-03-15", budget: 25, actual: 0, paid: false },
-    { id: 6, label: "Internet", dueDate: "2026-03-21", budget: 25, actual: 0, paid: false },
+    { id: 1, label: "Mortgage", dueDate: `${DEMO_MONTH}-25`, budget: 600, actual: 0, paid: false },
+    { id: 2, label: "Car", dueDate: `${DEMO_MONTH}-01`, budget: 100, actual: 0, paid: false },
+    { id: 3, label: "Credit Card", dueDate: `${DEMO_MONTH}-07`, budget: 50, actual: 0, paid: false },
+    { id: 4, label: "Gas", dueDate: `${DEMO_MONTH}-12`, budget: 50, actual: 50, paid: true },
+    { id: 5, label: "Home Insurance", dueDate: `${DEMO_MONTH}-15`, budget: 25, actual: 0, paid: false },
+    { id: 6, label: "Internet", dueDate: `${DEMO_MONTH}-21`, budget: 25, actual: 0, paid: false },
   ]);
   const [savingsItems, setSavingsItems] = useState([
     { id: 1, label: "House", expected: 300, actual: 400 },
@@ -631,6 +631,7 @@ export default function App() {
   const [billCalView, setBillCalView] = useState("month");          // BUG #11: month/list toggle
   const [addingSavingsId, setAddingSavingsId] = useState(null);    // BUG #24: inline savings input
   const [payExtraDebtId, setPayExtraDebtId] = useState(null);      // BUG #25: inline debt extra pay
+  const [editingBillCell, setEditingBillCell] = useState(null);    // { id, field } for inline bill editing
   // ── Monthly insights state ──
   const todayKey = monthKey(new Date().getFullYear(), new Date().getMonth());
   const [startMonthKey, setStartMonthKey] = useState("2025-01");
@@ -662,6 +663,8 @@ export default function App() {
   });
   // Auto-scroll chat to bottom on new messages
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [advisorHistory]);
+  // Sync Monthly Insights expanded month when switching to insights tab
+  useEffect(() => { if (tab === "insights") setActiveInsightKey(viewMonthKey); }, [tab]);
   const twelveMonths = build12Months(startMonthKey);
   // Get snapshot for a key (fallback empty)
   const getSnap = (key) => monthlySnapshots[key] || { income: [], expenses: [], notes: "" };
@@ -781,13 +784,23 @@ Return plain text bullet points only, no headers.` }]
   })();
   // ── Dashboard derived ──
   const today0 = new Date(); today0.setHours(0, 0, 0, 0);
+  // Rolling monthly: for unpaid bills, compute the next occurrence (this month or next month)
+  const getEffectiveDueDate = (bill) => {
+    if (!bill.dueDate) return null;
+    const [, , dd] = bill.dueDate.split("-").map(Number);
+    const now = new Date(); now.setHours(0,0,0,0);
+    const thisMonthDate = new Date(now.getFullYear(), now.getMonth(), dd);
+    if (bill.paid) return thisMonthDate;
+    // If this month's occurrence is past, roll to next month
+    return thisMonthDate < now ? new Date(now.getFullYear(), now.getMonth() + 1, dd) : thisMonthDate;
+  };
   const unpaidSorted = bills.filter(b => !b.paid);
-  const futureBills = unpaidSorted.filter(b => { const d = new Date(b.dueDate); d.setHours(0,0,0,0); return d >= today0; });
+  const futureBills = unpaidSorted.map(b => ({ ...b, _eff: getEffectiveDueDate(b) })).filter(b => b._eff >= today0);
   const nextBill = futureBills.length > 0
-    ? futureBills.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0]
-    : unpaidSorted.sort((a, b) => new Date(b.dueDate) - new Date(a.dueDate))[0];
-  const daysUntilBill = nextBill ? Math.round((new Date(nextBill.dueDate).setHours(0,0,0,0) - today0.getTime()) / 86400000) : null;
-  const billsDueIn7Days = bills.filter(b => { if (b.paid) return false; const d = new Date(b.dueDate); d.setHours(0,0,0,0); const diff = Math.round((d - today0) / 86400000); return diff >= 0 && diff <= 7; }).length;
+    ? futureBills.sort((a, b) => a._eff - b._eff)[0]
+    : (unpaidSorted.length > 0 ? unpaidSorted[0] : null);
+  const daysUntilBill = nextBill?._eff ? Math.round((nextBill._eff.getTime() - today0.getTime()) / 86400000) : null;
+  const billsDueIn7Days = unpaidSorted.filter(b => { const d = getEffectiveDueDate(b); if (!d) return false; const diff = Math.round((d - today0) / 86400000); return diff >= 0 && diff <= 7; }).length;
   const catExpenseCards = Object.entries(catTotals).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
   const totalBills = bills.reduce((s, b) => s + (b.budget || 0), 0);
   const totalDebtPayments = debts.reduce((s, d) => s + parseFloat(d.minPayment || 0), 0);
@@ -1178,31 +1191,66 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               </div>
             </div>
 
-            {/* This week vs last week comparison */}
+            {/* Month-to-month comparison strip */}
             {(() => {
-              const now = new Date(); now.setHours(0,0,0,0);
-              const dow = now.getDay();
-              const startThis = new Date(now.getTime() - dow * 86400000);
-              const startLast = new Date(startThis.getTime() - 7 * 86400000);
-              const thisWeekAmt = viewExpenses.filter(e => { const d = new Date(e.date); d.setHours(0,0,0,0); return d >= startThis && d <= now; }).reduce((s,e) => s+e.amount, 0);
-              const lastWeekAmt = viewExpenses.filter(e => { const d = new Date(e.date); d.setHours(0,0,0,0); return d >= startLast && d < startThis; }).reduce((s,e) => s+e.amount, 0);
-              const diff = thisWeekAmt - lastWeekAmt;
-              const pctChg = lastWeekAmt > 0 ? Math.round(Math.abs(diff) / lastWeekAmt * 100) : null;
+              const { year: vy2, month0: vm2 } = parseKey(viewMonthKey);
+              const prevKey2 = monthKey(new Date(vy2, vm2 - 1, 1).getFullYear(), new Date(vy2, vm2 - 1, 1).getMonth());
+              const prevS2 = monthStats(prevKey2);
+              const currInc = viewTotalIncome, currExp = viewTotalExpenses;
+              const expDiff = prevS2.hasData ? currExp - prevS2.exp : null;
+              const incDiff = prevS2.hasData ? currInc - prevS2.inc : null;
+              const netDiff = prevS2.hasData ? (currInc - currExp) - prevS2.net : null;
+              const { month0: pm2 } = parseKey(prevKey2);
               return (
-                <div style={{ display: "flex", alignItems: "center", gap: 14, background: COLORS.card, borderRadius: 12, padding: "12px 20px", marginBottom: 20, boxShadow: COLORS.shadowSm }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 22, color: diff < 0 ? COLORS.success : diff > 0 ? COLORS.danger : COLORS.subtext }}>
-                    {diff < 0 ? "trending_down" : diff > 0 ? "trending_up" : "trending_flat"}
-                  </span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>This week: {fmt(thisWeekAmt)}</span>
-                  <span style={{ fontSize: 13, color: COLORS.subtext }}>vs last week: {fmt(lastWeekAmt)}</span>
-                  {pctChg !== null && diff !== 0 && (
-                    <span style={{ fontSize: 12, fontWeight: 700, color: diff < 0 ? COLORS.success : COLORS.danger }}>
-                      {diff < 0 ? "▼" : "▲"} {pctChg}% {diff < 0 ? "less" : "more"}
-                    </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 0, background: COLORS.card, borderRadius: 12, marginBottom: 20, boxShadow: COLORS.shadowSm, overflow: "hidden" }}>
+                  {prevS2.hasData ? [
+                    { label: "vs " + MONTH_NAMES[pm2] + " Income", val: incDiff, icon: "trending_up", invert: false },
+                    { label: "vs " + MONTH_NAMES[pm2] + " Expenses", val: expDiff, icon: "receipt_long", invert: true },
+                    { label: "vs " + MONTH_NAMES[pm2] + " Net", val: netDiff, icon: "account_balance", invert: false },
+                  ].map((item, i) => {
+                    const isGood = item.invert ? item.val < 0 : item.val >= 0;
+                    const clr = item.val === 0 ? COLORS.muted : isGood ? COLORS.success : COLORS.danger;
+                    return (
+                      <div key={i} style={{ flex: 1, padding: "12px 20px", borderRight: i < 2 ? `1px solid ${COLORS.containerLow}` : "none", display: "flex", alignItems: "center", gap: 10 }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 20, color: clr }}>{item.val === 0 ? "trending_flat" : item.val > 0 ? "trending_up" : "trending_down"}</span>
+                        <div>
+                          <p style={{ fontSize: 10, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>{item.label}</p>
+                          <p style={{ fontSize: 14, fontWeight: 800, color: clr }}>{item.val > 0 ? "+" : ""}{fmt(item.val)}</p>
+                        </div>
+                      </div>
+                    );
+                  }) : (
+                    <div style={{ padding: "12px 20px", display: "flex", alignItems: "center", gap: 10 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.muted }}>insights</span>
+                      <span style={{ fontSize: 13, color: COLORS.muted }}>No previous month data to compare</span>
+                    </div>
                   )}
-                  {thisWeekAmt === 0 && lastWeekAmt === 0 && (
-                    <span style={{ fontSize: 12, color: COLORS.muted }}>No spending data for this month</span>
-                  )}
+                </div>
+              );
+            })()}
+            {/* ── Net Worth / financial health strip ── */}
+            {(() => {
+              const netWorthVal = savingsActualTotal - totalDebt;
+              const dti = totalIncome > 0 ? Math.round((totalDebt / totalIncome) * 100) : 0;
+              const kwCards = [
+                { label: "Net Worth", val: fmt(netWorthVal), color: netWorthVal >= 0 ? COLORS.success : COLORS.danger, icon: "account_balance_wallet" },
+                { label: "Total Debt", val: fmt(totalDebt), color: COLORS.danger, icon: "credit_card" },
+                { label: "Total Savings", val: fmt(savingsActualTotal), color: COLORS.accent, icon: "savings" },
+                { label: "Debt-to-Income", val: `${dti}%`, color: dti > 200 ? COLORS.danger : dti > 100 ? COLORS.warning : COLORS.success, icon: "percent" },
+              ];
+              return (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
+                  {kwCards.map(k => (
+                    <div key={k.label} style={{ background: COLORS.card, borderRadius: 12, padding: "16px 20px", boxShadow: COLORS.shadowSm, display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 10, background: k.color + "18", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 20, color: k.color }}>{k.icon}</span>
+                      </div>
+                      <div>
+                        <p style={{ fontSize: 10, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 2 }}>{k.label}</p>
+                        <p style={{ fontSize: 18, fontWeight: 800, color: k.color }}>{k.val}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               );
             })()}
@@ -1444,14 +1492,51 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             : <span onClick={()=>setEditingSavingsCell({id,field})} title="Click to edit" style={{cursor:"text",...style}}>{value}</span>;
 
           const knownCatIds = SPENDING_PLAN_GROUPS.map(g => g.catId);
+          // Per-month planned amounts
+          const monthItemBudgets = itemBudgets[viewMonthKey] || {};
+          const setMonthItemBudget = (key, value) => setItemBudgets(p => ({...p, [viewMonthKey]: {...(p[viewMonthKey]||{}), [key]: value}}));
+          const { year: prevY, month0: prevM0 } = parseKey(viewMonthKey);
+          const prevMonthKey = monthKey(new Date(prevY, prevM0 - 1, 1).getFullYear(), new Date(prevY, prevM0 - 1, 1).getMonth());
+          const prevMonthItemBudgets = itemBudgets[prevMonthKey] || {};
+          const hasPrevPlanned = Object.keys(prevMonthItemBudgets).length > 0;
 
+          const totalPlanned = Object.values(monthItemBudgets).reduce((s,v) => s+(v||0), 0) + Object.values(expenseBudgets).reduce((s,v) => s+v, 0);
+          const totalActual = viewTotalExpenses;
+          const remainToSpend = totalPlanned > 0 ? totalPlanned - totalActual : viewTotalIncome - totalActual;
           return (
             <div style={{ paddingBottom: 48 }}>
+              {/* ── Remaining-to-spend strip ── */}
+              {(() => {
+                const usedPct = totalPlanned > 0 ? Math.min(100, Math.round((totalActual / totalPlanned) * 100)) : 0;
+                const stripColor = usedPct >= 100 ? COLORS.danger : usedPct >= 80 ? COLORS.warning : COLORS.success;
+                return (
+                  <div style={{ background: COLORS.card, borderRadius: 14, padding: "14px 20px", marginBottom: 20, boxShadow: COLORS.shadowSm, display: "flex", alignItems: "center", gap: 20 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: COLORS.text }}>Budget Used: {fmt(totalActual)}{totalPlanned > 0 ? ` / ${fmt(totalPlanned)}` : ""}</span>
+                        <span style={{ fontSize: 12, fontWeight: 800, color: stripColor }}>{usedPct}%</span>
+                      </div>
+                      <div style={{ height: 8, background: COLORS.containerLow, borderRadius: 9999, overflow: "hidden" }}>
+                        <div style={{ width: `${usedPct}%`, height: "100%", background: stripColor, borderRadius: 9999, transition: "width .4s" }} />
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <p style={{ fontSize: 10, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Remaining</p>
+                      <p style={{ fontSize: 22, fontWeight: 800, color: remainToSpend >= 0 ? COLORS.success : COLORS.danger }}>{fmt(Math.abs(remainToSpend))}{remainToSpend < 0 ? " over" : " left"}</p>
+                    </div>
+                  </div>
+                );
+              })()}
               {/* ── Page header ── */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, gap: 20, flexWrap: "wrap" }}>
                 <div>
                   <h2 style={{ fontSize: 24, fontWeight: 800, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 4 }}>Budget the Money!</h2>
                   <p style={{ fontSize: 14, color: COLORS.subtext }}>Spending Plan · {MONTH_FULL[vm0]} {vy}</p>
+                  {hasPrevPlanned && Object.keys(monthItemBudgets).length === 0 && (
+                    <button onClick={() => setItemBudgets(p => ({...p, [viewMonthKey]: {...prevMonthItemBudgets}}))} style={{ marginTop: 6, background: "rgba(0,103,136,0.08)", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: COLORS.primary, cursor: "pointer" }}>
+                      Copy planned amounts from {MONTH_NAMES[new Date(prevY, prevM0 - 1, 1).getMonth()]}
+                    </button>
+                  )}
                 </div>
                 {/* Income summary — top right */}
                 <div style={{ background: "rgba(192,232,255,0.3)", borderRadius: 16, padding: "16px 20px", minWidth: 260 }}>
@@ -1520,7 +1605,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       <div key={group.catId} style={{ marginBottom: 6 }}>
                         {/* Group header */}
                         <div onClick={() => setCollapsedCategories(p => ({ ...p, [group.catId]: !p[group.catId] }))}
-                          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px", background: COLORS.containerLow, borderRadius: 10, cursor: "pointer", marginBottom: isCollapsed ? 0 : 6 }}>
+                          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px", background: util >= 100 ? COLORS.danger + "10" : util >= 80 ? COLORS.warning + "10" : COLORS.containerLow, borderRadius: 10, cursor: "pointer", marginBottom: isCollapsed ? 0 : 6, borderLeft: util >= 100 ? `3px solid ${COLORS.danger}` : util >= 80 ? `3px solid ${COLORS.warning}` : "3px solid transparent" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                             <div style={{ width: 28, height: 28, borderRadius: 8, background: CATEGORY_ICON_BG[group.catId] || "#eaeef0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                               <span className="material-symbols-outlined" style={{ fontSize: 15, color: CATEGORY_ICON_COLOR[group.catId] || COLORS.subtext }}>{CATEGORY_ICONS[group.catId] || "category"}</span>
@@ -1550,8 +1635,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                                 <EditableCat id={e.id} field="category" value={e.category} />
                                 <EditableDate id={e.id} field="date" value={e.date} />
                                 {editingPlannedKey === `exp-${e.id}`
-                                  ? <input autoFocus type="number" placeholder="0" defaultValue={itemBudgets[`exp-${e.id}`] || ""} onBlur={ev => { const v = parseFloat(ev.target.value) || 0; if (v) setItemBudgets(p => ({...p, [`exp-${e.id}`]: v})); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); }} style={{ width:"100%", background:COLORS.containerLow, border:"none", borderRadius:6, padding:"3px 6px", fontSize:12, color:COLORS.text, outline:"none" }} />
-                                  : <span onClick={() => setEditingPlannedKey(`exp-${e.id}`)} title="Click to set planned budget" style={{ fontSize: 12, color: itemBudgets[`exp-${e.id}`] ? COLORS.subtext : COLORS.muted, cursor: "text", display:"block", borderRadius:4, padding:"2px 4px" }}>{itemBudgets[`exp-${e.id}`] ? fmt(itemBudgets[`exp-${e.id}`]) : "—"}</span>
+                                  ? <input autoFocus type="number" placeholder="0" defaultValue={monthItemBudgets[`exp-${e.id}`] || ""} onBlur={ev => { const v = parseFloat(ev.target.value) || 0; if (v) setMonthItemBudget(`exp-${e.id}`, v); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); }} style={{ width:"100%", background:COLORS.containerLow, border:"none", borderRadius:6, padding:"3px 6px", fontSize:12, color:COLORS.text, outline:"none" }} />
+                                  : <span onClick={() => setEditingPlannedKey(`exp-${e.id}`)} title="Click to set planned budget" style={{ fontSize: 12, color: monthItemBudgets[`exp-${e.id}`] ? COLORS.subtext : COLORS.muted, cursor: "text", display:"block", borderRadius:4, padding:"2px 4px" }}>{monthItemBudgets[`exp-${e.id}`] ? fmt(monthItemBudgets[`exp-${e.id}`]) : "—"}</span>
                                 }
                                 <EditableNum id={e.id} field="amount" value={e.amount} />
                                 <button onClick={() => deleteExpenseFromView(e.id)} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 16, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6 }}>×</button>
@@ -1566,8 +1651,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                                 <span style={{ fontSize: 11, color: COLORS.muted }}>{group.catId}</span>
                                 <span style={{ fontSize: 12, color: COLORS.muted }}>—</span>
                                 {editingPlannedKey === tKey
-                                  ? <input autoFocus type="number" placeholder="Budget amt" onBlur={ev => { const v = parseFloat(ev.target.value) || 0; if (v) setItemBudgets(p => ({...p, [tKey]: v})); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); }} style={{ width:"100%", background:COLORS.containerLow, border:"none", borderRadius:6, padding:"3px 6px", fontSize:12, color:COLORS.text, outline:"none" }} />
-                                  : <span onClick={() => setEditingPlannedKey(tKey)} title="Click to set planned budget" style={{ fontSize: 12, color: itemBudgets[tKey] ? COLORS.subtext : COLORS.muted, cursor: "text", display:"block", borderRadius:4, padding:"2px 4px" }}>{itemBudgets[tKey] ? fmt(itemBudgets[tKey]) : "—"}</span>
+                                  ? <input autoFocus type="number" placeholder="Budget amt" onBlur={ev => { const v = parseFloat(ev.target.value) || 0; if (v) setMonthItemBudget(tKey, v); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); }} style={{ width:"100%", background:COLORS.containerLow, border:"none", borderRadius:6, padding:"3px 6px", fontSize:12, color:COLORS.text, outline:"none" }} />
+                                  : <span onClick={() => setEditingPlannedKey(tKey)} title="Click to set planned budget" style={{ fontSize: 12, color: monthItemBudgets[tKey] ? COLORS.subtext : COLORS.muted, cursor: "text", display:"block", borderRadius:4, padding:"2px 4px" }}>{monthItemBudgets[tKey] ? fmt(monthItemBudgets[tKey]) : "—"}</span>
                                 }
                                 <span style={{ fontSize: 12, color: COLORS.muted }}>—</span>
                                 <button onClick={() => { setNewExp(p => ({ ...p, label: item, category: group.catId })); setModal("addExpense"); }}
@@ -1626,24 +1711,67 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                       {bills.map(b => {
-                        const bDate = new Date(b.dueDate); bDate.setHours(0,0,0,0);
+                        const [bY,bM,bD] = (b.dueDate||"").split("-").map(Number);
+                        const bDate = new Date(bY,bM-1,bD);
                         const isOverdue = !b.paid && bDate < today0;
                         const borderColor = b.paid ? COLORS.success : isOverdue ? COLORS.danger : "transparent";
+                        const sbInp = { background: COLORS.containerHigh, border: `1px solid ${COLORS.primary}`, borderRadius: 6, outline: "none", color: COLORS.text };
+                        const isEL = editingBillCell?.id === b.id && editingBillCell?.field === "label";
+                        const isED = editingBillCell?.id === b.id && editingBillCell?.field === "dueDate";
+                        const isEA = editingBillCell?.id === b.id && editingBillCell?.field === "budget";
                         return (
-                          <div key={b.id} style={{ background: COLORS.containerLow, borderRadius: 10, padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", borderLeft: `3px solid ${borderColor}` }}>
-                            <div>
-                              <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>{b.label}</p>
-                              <p style={{ fontSize: 11, color: isOverdue ? COLORS.danger : COLORS.subtext }}>{fmtDate(b.dueDate)}</p>
+                          <div key={b.id} style={{ background: COLORS.containerLow, borderRadius: 10, padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", borderLeft: `3px solid ${borderColor}`, gap: 8 }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              {isEL
+                                ? <input autoFocus defaultValue={b.label} style={{ ...sbInp, fontSize: 13, fontWeight: 600, padding: "2px 6px", width: "100%" }} onBlur={e => { setBills(p => p.map(x => x.id === b.id ? {...x, label: e.target.value || x.label} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
+                                : <p onClick={() => setEditingBillCell({id: b.id, field: "label"})} title="Click to edit" style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, cursor: "text" }}>{b.label}</p>
+                              }
+                              {isED
+                                ? <input autoFocus type="date" defaultValue={b.dueDate} style={{ ...sbInp, fontSize: 11, padding: "1px 4px", marginTop: 2 }} onBlur={e => { if (e.target.value) setBills(p => p.map(x => x.id === b.id ? {...x, dueDate: e.target.value} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
+                                : <p onClick={() => setEditingBillCell({id: b.id, field: "dueDate"})} title="Click to edit" style={{ fontSize: 11, color: isOverdue ? COLORS.danger : COLORS.subtext, cursor: "text" }}>{fmtDate(b.dueDate)}</p>
+                              }
                             </div>
-                            <div style={{ textAlign: "right" }}>
-                              <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>{fmt(b.budget)}</p>
+                            <div style={{ textAlign: "right", flexShrink: 0 }}>
+                              {isEA
+                                ? <input autoFocus type="number" defaultValue={b.budget} style={{ ...sbInp, fontSize: 13, fontWeight: 700, padding: "2px 6px", width: 72, textAlign: "right" }} onBlur={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v >= 0) setBills(p => p.map(x => x.id === b.id ? {...x, budget: v} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
+                                : <p onClick={() => setEditingBillCell({id: b.id, field: "budget"})} title="Click to edit" style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, cursor: "text" }}>{fmt(b.budget)}</p>
+                              }
                               <span style={{ fontSize: 10, fontWeight: 700, color: b.paid ? COLORS.success : isOverdue ? COLORS.danger : COLORS.muted }}>{b.paid ? "Paid ✓" : isOverdue ? "Overdue" : "Due"}</span>
                             </div>
+                            <button onClick={() => setBills(p => p.filter(x => x.id !== b.id))} title="Delete" style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 16, padding: 0, flexShrink: 0, lineHeight: 1 }}>×</button>
                           </div>
                         );
                       })}
                     </div>
                   </div>
+
+                  {/* Subscriptions */}
+                  {(() => {
+                    const subs = viewExpenses.filter(e => e.fixed && e.amount <= 200 && ["Entertainment","Personal","Utilities","Health"].includes(e.category));
+                    if (subs.length === 0) return null;
+                    const subsTotal = subs.reduce((s,e) => s+e.amount, 0);
+                    return (
+                      <div style={{ background: COLORS.card, borderRadius: 20, padding: 22, boxShadow: COLORS.shadowSm }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <div style={{ padding: "6px 8px", background: "rgba(85,91,147,0.12)", borderRadius: 10 }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: 17, color: COLORS.accentPurple }}>subscriptions</span>
+                            </div>
+                            <h3 style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>Subscriptions</h3>
+                          </div>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.accentPurple }}>{fmt(subsTotal)}/mo</span>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                          {subs.map(e => (
+                            <div key={e.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${COLORS.containerLow}` }}>
+                              <span style={{ fontSize: 12, color: COLORS.text }}>{e.label}</span>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: COLORS.accentPurple }}>{fmt(e.amount)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Debts — with inline editing and × */}
                   <div style={{ background: COLORS.card, borderRadius: 20, padding: 22, boxShadow: COLORS.shadowSm }}>
@@ -1742,10 +1870,10 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         {/* ── BILL CALENDAR TAB ── */}
         {tab === "weekly" && (() => {
           const now = new Date();
-          const [calYear, calMonth] = [now.getFullYear(), now.getMonth()];
+          const { year: calYear, month0: calMonth } = parseKey(viewMonthKey);
           const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
           const firstDayOfWeek = new Date(calYear, calMonth, 1).getDay();
-          const todayDate = now.getDate();
+          const todayDate = (calYear === now.getFullYear() && calMonth === now.getMonth()) ? now.getDate() : -1;
           const BILL_COLORS = { Housing: { bg: "rgba(97,205,253,0.15)", text: COLORS.primary }, Utilities: { bg: "rgba(192,232,255,0.4)", text: COLORS.secondary }, Entertainment: { bg: "rgba(186,191,255,0.3)", text: COLORS.tertiary } };
           const paidBillsTotal = bills.filter(b => b.paid).reduce((s, b) => s + b.actual, 0);
           const unpaidBills = bills.filter(b => !b.paid).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
@@ -1779,21 +1907,36 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 {/* List view */}
                 {billCalView === "list" && (
                   <div>
-                    <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr", gap: 8, padding: "8px 12px", background: COLORS.containerLow, borderRadius: 10, marginBottom: 8 }}>
-                      {["Bill", "Due Date", "Amount", "Status", "Action"].map(h => <span key={h} style={{ fontSize: 11, fontWeight: 700, color: COLORS.subtext, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</span>)}
+                    <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 28px", gap: 8, padding: "8px 12px", background: COLORS.containerLow, borderRadius: 10, marginBottom: 8 }}>
+                      {["Bill", "Due Date", "Amount", "Status", "Action", ""].map(h => <span key={h} style={{ fontSize: 11, fontWeight: 700, color: COLORS.subtext, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</span>)}
                     </div>
+                    {bills.length === 0 && <p style={{ fontSize: 14, color: COLORS.muted, padding: "20px 0", textAlign: "center" }}>No bills yet. Click "Add Bill" to get started.</p>}
                     {[...bills].sort((a,b) => (a.dueDate||"").localeCompare(b.dueDate||"")).map(b => {
                       const [y,m,dd] = (b.dueDate||"").split("-").map(Number);
                       const dDate = new Date(y,m-1,dd); const now2 = new Date(); now2.setHours(0,0,0,0);
                       const isOverdue = !b.paid && dDate < now2;
+                      const isEditingLabel = editingBillCell?.id === b.id && editingBillCell?.field === "label";
+                      const isEditingDate = editingBillCell?.id === b.id && editingBillCell?.field === "dueDate";
+                      const isEditingAmt = editingBillCell?.id === b.id && editingBillCell?.field === "budget";
+                      const inpStyle = { width: "100%", background: COLORS.containerLow, border: `1px solid ${COLORS.primary}`, borderRadius: 6, padding: "2px 6px", fontSize: 12, color: COLORS.text, outline: "none" };
                       return (
-                        <div key={b.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr", gap: 8, padding: "10px 12px", borderRadius: 8, background: COLORS.card, marginBottom: 4, boxShadow: COLORS.shadowSm, alignItems: "center", borderLeft: `3px solid ${b.paid ? COLORS.success : isOverdue ? COLORS.danger : "transparent"}` }}>
-                          <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>{b.label}</span>
-                          <span style={{ fontSize: 12, color: isOverdue ? COLORS.danger : COLORS.subtext }}>{fmtDate(b.dueDate)}</span>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>{fmt(b.budget)}</span>
+                        <div key={b.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 28px", gap: 8, padding: "10px 12px", borderRadius: 8, background: COLORS.card, marginBottom: 4, boxShadow: COLORS.shadowSm, alignItems: "center", borderLeft: `3px solid ${b.paid ? COLORS.success : isOverdue ? COLORS.danger : "transparent"}` }}>
+                          {isEditingLabel
+                            ? <input autoFocus defaultValue={b.label} style={inpStyle} onBlur={e => { setBills(p => p.map(x => x.id === b.id ? {...x, label: e.target.value || x.label} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
+                            : <span onClick={() => setEditingBillCell({id: b.id, field: "label"})} title="Click to edit" style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, cursor: "text" }}>{b.label}</span>
+                          }
+                          {isEditingDate
+                            ? <input autoFocus type="date" defaultValue={b.dueDate} style={inpStyle} onBlur={e => { if (e.target.value) setBills(p => p.map(x => x.id === b.id ? {...x, dueDate: e.target.value} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
+                            : <span onClick={() => setEditingBillCell({id: b.id, field: "dueDate"})} title="Click to edit" style={{ fontSize: 12, color: isOverdue ? COLORS.danger : COLORS.subtext, cursor: "text" }}>{fmtDate(b.dueDate)}</span>
+                          }
+                          {isEditingAmt
+                            ? <input autoFocus type="number" defaultValue={b.budget} style={inpStyle} onBlur={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v >= 0) setBills(p => p.map(x => x.id === b.id ? {...x, budget: v} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
+                            : <span onClick={() => setEditingBillCell({id: b.id, field: "budget"})} title="Click to edit" style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, cursor: "text" }}>{fmt(b.budget)}</span>
+                          }
                           <span style={{ fontSize: 11, fontWeight: 700, color: b.paid ? COLORS.success : isOverdue ? COLORS.danger : COLORS.subtext, background: (b.paid ? COLORS.success : isOverdue ? COLORS.danger : COLORS.muted) + "18", borderRadius: 9999, padding: "2px 8px", display: "inline-block" }}>{b.paid ? "Paid" : isOverdue ? "Overdue" : "Upcoming"}</span>
                           {!b.paid && <button onClick={() => setBills(p => p.map(x => x.id === b.id ? {...x, paid:true, actual:x.budget} : x))} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:9999, padding:"4px 10px", fontSize:11, fontWeight:700, cursor:"pointer" }}>Mark Paid</button>}
-                          {b.paid && <span style={{ fontSize: 11, color: COLORS.muted }}>✓ Done</span>}
+                          {b.paid && <span style={{ fontSize: 14, color: COLORS.success, animation: "pop-in .3s ease", display: "inline-block" }}>✓</span>}
+                          <button onClick={() => setBills(p => p.filter(x => x.id !== b.id))} title="Delete bill" style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 16, padding: 0, lineHeight: 1 }}>×</button>
                         </div>
                       );
                     })}
@@ -1914,24 +2057,40 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             </div>
             {/* Bill detail popover (BUG #10) */}
             {activeBillDetail && (() => {
-              const b = activeBillDetail;
+              const b = bills.find(x => x.id === activeBillDetail.id) || activeBillDetail;
               const [y2,m2,d2] = (b.dueDate||"").split("-").map(Number);
               const isPast = new Date(y2,m2-1,d2) < new Date(new Date().toDateString());
+              const popInpStyle = { background: COLORS.containerLow, border: `1px solid ${COLORS.primary}`, borderRadius: 8, padding: "4px 10px", fontSize: 14, color: COLORS.text, outline: "none", textAlign: "right" };
+              const isELabel = editingBillCell?.id === b.id && editingBillCell?.field === "label";
+              const isEAmt = editingBillCell?.id === b.id && editingBillCell?.field === "budget";
+              const isEDate = editingBillCell?.id === b.id && editingBillCell?.field === "dueDate";
               return (
-                <div onClick={() => setActiveBillDetail(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div onClick={() => { setActiveBillDetail(null); setEditingBillCell(null); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <div onClick={e => e.stopPropagation()} style={{ background: COLORS.card, borderRadius: 20, padding: 32, minWidth: 320, boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
-                      <h3 style={{ fontSize: 18, fontWeight: 800, color: COLORS.text }}>{b.label}</h3>
-                      <button onClick={() => setActiveBillDetail(null)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: COLORS.muted }}>×</button>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, alignItems: "flex-start" }}>
+                      {isELabel
+                        ? <input autoFocus defaultValue={b.label} style={{ ...popInpStyle, textAlign: "left", fontSize: 18, fontWeight: 800, flex: 1, marginRight: 8 }} onBlur={e => { setBills(p => p.map(x => x.id === b.id ? {...x, label: e.target.value || x.label} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
+                        : <h3 onClick={() => setEditingBillCell({id: b.id, field: "label"})} title="Click to edit" style={{ fontSize: 18, fontWeight: 800, color: COLORS.text, cursor: "text", flex: 1 }}>{b.label}</h3>
+                      }
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button onClick={() => { setBills(p => p.filter(x => x.id !== b.id)); setActiveBillDetail(null); setEditingBillCell(null); }} title="Delete bill" style={{ background: COLORS.danger + "18", border: "none", color: COLORS.danger, borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>🗑</button>
+                        <button onClick={() => { setActiveBillDetail(null); setEditingBillCell(null); }} style={{ background: COLORS.containerHigh, border: "none", fontSize: 20, cursor: "pointer", color: COLORS.muted, borderRadius: 8, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+                      </div>
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <span style={{ fontSize: 13, color: COLORS.subtext }}>Amount</span>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.text }}>{fmt(b.budget)}</span>
+                        {isEAmt
+                          ? <input autoFocus type="number" defaultValue={b.budget} style={popInpStyle} onBlur={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v >= 0) setBills(p => p.map(x => x.id === b.id ? {...x, budget: v} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
+                          : <span onClick={() => setEditingBillCell({id: b.id, field: "budget"})} title="Click to edit" style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, cursor: "text" }}>{fmt(b.budget)}</span>
+                        }
                       </div>
-                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <span style={{ fontSize: 13, color: COLORS.subtext }}>Due Date</span>
-                        <span style={{ fontSize: 14, color: COLORS.text }}>{fmtDate(b.dueDate)}</span>
+                        {isEDate
+                          ? <input autoFocus type="date" defaultValue={b.dueDate} style={popInpStyle} onBlur={e => { if (e.target.value) setBills(p => p.map(x => x.id === b.id ? {...x, dueDate: e.target.value} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
+                          : <span onClick={() => setEditingBillCell({id: b.id, field: "dueDate"})} title="Click to edit" style={{ fontSize: 14, color: COLORS.text, cursor: "text" }}>{fmtDate(b.dueDate)}</span>
+                        }
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between" }}>
                         <span style={{ fontSize: 13, color: COLORS.subtext }}>Status</span>
@@ -2076,6 +2235,25 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           </div>
                         ))}
                       </div>
+                      {/* Debt / Net Worth row */}
+                      {(() => {
+                        const netWorth = savingsActualTotal - totalDebt;
+                        const debtToInc = s.inc > 0 ? ((totalDebt / s.inc) * 100).toFixed(0) : "—";
+                        return (
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 20 }}>
+                            {[
+                              { label: "Total Debt", val: fmt(totalDebt), color: COLORS.danger },
+                              { label: "Net Worth", val: fmt(netWorth), color: netWorth >= 0 ? COLORS.success : COLORS.danger },
+                              { label: "Debt-to-Income", val: debtToInc === "—" ? "—" : `${debtToInc}%`, color: parseFloat(debtToInc) > 200 ? COLORS.danger : parseFloat(debtToInc) > 100 ? COLORS.warning : COLORS.success },
+                            ].map(k => (
+                              <div key={k.label} style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "14px 16px" }}>
+                                <p style={{ fontSize: 10, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 5 }}>{k.label}</p>
+                                <p style={{ fontSize: 18, fontWeight: 800, color: k.color }}>{k.val}</p>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
                       {/* Category breakdown */}
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
                         <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
@@ -2094,22 +2272,36 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
                           <h4 style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}>50 / 30 / 20</h4>
                           {(() => {
-                            const needs2 = snap.expenses.filter(e => ["Housing","Utilities","Transport","Health"].includes(e.category)).reduce((s,e)=>s+e.amount,0);
+                            const debtMins = debts.reduce((s,d) => s+d.minPayment, 0);
+                            const needs2 = snap.expenses.filter(e => ["Housing","Utilities","Transport","Health"].includes(e.category)).reduce((s,e)=>s+e.amount,0) + debtMins;
                             const wants2 = snap.expenses.filter(e => ["Food","Entertainment","Personal","Education","Other"].includes(e.category)).reduce((s,e)=>s+e.amount,0);
                             const sav2 = snap.expenses.filter(e => e.category === "Savings").reduce((s2,e) => s2+e.amount, 0);
-                            return [
-                              { label: "Needs (50%)", val: needs2, target: s.inc * 0.5, color: COLORS.accentBlue },
-                              { label: "Wants (30%)", val: wants2, target: s.inc * 0.3, color: COLORS.accentPurple },
-                              { label: "Savings (20%)", val: sav2, target: s.inc * 0.2, color: COLORS.accent },
-                            ].map(b => (
-                              <div key={b.label} style={{ marginBottom: 14 }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-                                  <span style={{ fontSize: 12, color: b.color, fontWeight: 600 }}>{b.label}</span>
-                                  <span style={{ fontSize: 12, color: COLORS.muted }}>{fmt(b.val)} / {fmt(b.target)}</span>
-                                </div>
-                                <ProgressBar value={b.val} max={b.target} color={b.color} />
-                              </div>
-                            ));
+                            return (
+                              <>
+                                {[
+                                  { label: "Needs (50%)", val: needs2, target: s.inc * 0.5, color: COLORS.accentBlue, note: debtMins > 0 ? `incl. ${fmt(debtMins)} debt mins` : null },
+                                  { label: "Wants (30%)", val: wants2, target: s.inc * 0.3, color: COLORS.accentPurple },
+                                  { label: "Savings (20%)", val: sav2, target: s.inc * 0.2, color: COLORS.accent },
+                                ].map(b => (
+                                  <div key={b.label} style={{ marginBottom: 14 }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                                      <span style={{ fontSize: 12, color: b.color, fontWeight: 600 }}>{b.label}</span>
+                                      <span style={{ fontSize: 12, color: COLORS.muted }}>{fmt(b.val)} / {fmt(b.target)}</span>
+                                    </div>
+                                    {b.note && <p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 4 }}>{b.note}</p>}
+                                    <ProgressBar value={b.val} max={b.target} color={b.color} />
+                                  </div>
+                                ))}
+                                {totalDebt > 0 && (
+                                  <button
+                                    onClick={() => { setAdvisorMsg(`Can we pay our debt down faster? We have ${debts.map(d => `${d.label}: ${fmt(d.balance)} at ${d.interest}% APR (min payment ${fmt(d.minPayment)})`).join(", ")}. Our monthly income is ${fmt(s.inc)} and total expenses are ${fmt(s.exp)}. Please give us a specific payoff plan with estimated payoff dates.`); pendingAdvisorSend.current = true; setTab("advisor"); }}
+                                    style={{ width: "100%", marginTop: 10, background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, color: "#fff", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                                  >
+                                    🚀 Can we pay this debt down faster?
+                                  </button>
+                                )}
+                              </>
+                            );
                           })()}
                           <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${COLORS.border}` }}>
                             <h4 style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: COLORS.muted }}>Notes</h4>
