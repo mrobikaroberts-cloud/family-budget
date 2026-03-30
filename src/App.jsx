@@ -667,7 +667,7 @@ export default function App() {
   const [startMonthKey, setStartMonthKey] = useState("2025-01");
   const [activeInsightKey, setActiveInsightKey] = useState(todayKey);
   // monthlySnapshots: { [key]: { income: [], expenses: [], notes: string, billStatus: { [billId]: bool }, expenseBudgets: {} } }
-  const DEFAULT_EXPENSE_BUDGETS = { Housing: 1800, Food: 500, Utilities: 300, Transport: 500, Health: 100, Entertainment: 150, Personal: 200, Education: 50, Subscriptions: 0, Other: 120 };
+  const DEFAULT_EXPENSE_BUDGETS = { Housing: 1800, Food: 500, Utilities: 300, Transport: 500, Health: 100, Entertainment: 150, Personal: 200, Education: 50, Kids: 0, Savings: 0, Subscriptions: 0, Other: 120 };
   const [monthlySnapshots, setMonthlySnapshots] = useState({
     "2025-01": { income: [{ id: 101, label: "Primary Salary", amount: 5500, recurring: true }], expenses: [{ id: 201, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 202, label: "Electricity", amount: 110, category: "Utilities", fixed: true },{ id: 203, label: "Groceries", amount: 320, category: "Food", fixed: false },{ id: 204, label: "Gas", amount: 80, category: "Transport", fixed: false }], notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } },
     "2025-02": { income: [{ id: 111, label: "Primary Salary", amount: 5500, recurring: true }], expenses: [{ id: 211, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 212, label: "Electricity", amount: 98, category: "Utilities", fixed: true },{ id: 213, label: "Groceries", amount: 290, category: "Food", fixed: false },{ id: 214, label: "Dining out", amount: 180, category: "Food", fixed: false },{ id: 215, label: "Gym", amount: 45, category: "Health", fixed: true }], notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } },
@@ -677,6 +677,24 @@ export default function App() {
     "2025-06": { income: INITIAL_INCOME, expenses: INITIAL_EXPENSES, notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } },
     [DEMO_MONTH]: { income: INITIAL_INCOME, expenses: INITIAL_EXPENSES, notes: "", billStatus: { 4: true }, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } },
   });
+  // Migration: backfill missing catIds in existing snapshots' expenseBudgets
+  useEffect(() => {
+    setMonthlySnapshots(prev => {
+      let changed = false;
+      const next = { ...prev };
+      for (const mk of Object.keys(next)) {
+        const eb = next[mk]?.expenseBudgets;
+        if (!eb) continue;
+        for (const c of CATEGORIES) {
+          if (eb[c.id] === undefined) {
+            if (!changed) { changed = true; }
+            next[mk] = { ...next[mk], expenseBudgets: { ...eb, [c.id]: DEFAULT_EXPENSE_BUDGETS[c.id] ?? 0 } };
+          }
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, []);
   // Sync live income/expenses into snapshots for the currently viewed month
   useEffect(() => {
     setMonthlySnapshots(prev => ({
@@ -1694,7 +1712,10 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                             pre5020Budgets.current = { ...viewExpenseBudgets };
                             pre5020Savings.current = savingsItems.map(s => ({ ...s }));
                             const inc = viewTotalIncome;
-                            setViewExpenseBudgets({ Housing: Math.round(inc*0.30), Utilities: Math.round(inc*0.08), Transport: Math.round(inc*0.08), Health: Math.round(inc*0.04), Food: Math.round(inc*0.12), Entertainment: Math.round(inc*0.04), Personal: Math.round(inc*0.05), Kids: Math.round(inc*0.05), Education: 0, Savings: 0, Other: 0, Subscriptions: 0 });
+                            const needs = Math.round(inc * 0.50 / 5); // Housing, Utilities, Food, Transport, Health
+                            const wants = Math.round(inc * 0.30 / 5); // Entertainment, Personal, Kids, Education, Subscriptions
+                            const saves = Math.round(inc * 0.20 / 2); // Other, Savings
+                            setViewExpenseBudgets({ Housing: needs, Utilities: needs, Food: needs, Transport: needs, Health: needs, Entertainment: wants, Personal: wants, Kids: wants, Education: wants, Subscriptions: wants, Other: saves, Savings: saves });
                             if (savingsItems.length > 0) setSavingsItems(p => [{ ...p[0], expected: Math.round(inc*0.20) }, ...p.slice(1)]);
                             setToggle5020(true);
                           } else {
@@ -1766,7 +1787,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           {/* planned — editable */}
                           {editingPlannedKey === `cat-${group.catId}`
                             ? <input autoFocus type="number" placeholder="0" defaultValue={grpPlanned || ""} onClick={e => e.stopPropagation()} onBlur={ev => { const v = parseFloat(ev.target.value) || 0; setViewExpenseBudgets(prev => ({ ...prev, [group.catId]: v })); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); if (ev.key === "Escape") setEditingPlannedKey(null); }} style={{ width:"100%", background:COLORS.containerLow, border:`1px solid ${COLORS.primary}`, borderRadius:6, padding:"3px 6px", fontSize:12, color:COLORS.text, outline:"none" }} />
-                            : <span onClick={e => { e.stopPropagation(); setEditingPlannedKey(`cat-${group.catId}`); }} title="Click to edit planned budget" style={{ fontSize: 12, fontWeight: 700, color: grpPlanned > 0 ? COLORS.subtext : COLORS.muted, cursor: "text", borderRadius: 4, padding: "2px 4px" }}>{grpPlanned > 0 ? fmt(grpPlanned) : <span style={{ display:"flex", alignItems:"center", gap:3 }}>—<span style={{ fontSize:9, opacity:0.5 }}>✏</span></span>}</span>
+                            : <span onClick={e => { e.stopPropagation(); setEditingPlannedKey(`cat-${group.catId}`); }} title="Click to edit planned budget" style={{ fontSize: 12, fontWeight: 700, color: grpPlanned > 0 ? COLORS.subtext : COLORS.muted, cursor: "text", borderRadius: 4, padding: "2px 4px" }}>{viewExpenseBudgets[group.catId] != null ? fmt(grpPlanned) : <span style={{ display:"flex", alignItems:"center", gap:3 }}>—<span style={{ fontSize:9, opacity:0.5 }}>✏</span></span>}</span>
                           }
                           {/* actual */}
                           <span style={{ fontSize: 12, fontWeight: 700, color: utilColor }}>{grpActual > 0 ? fmt(grpActual) : "—"}</span>
