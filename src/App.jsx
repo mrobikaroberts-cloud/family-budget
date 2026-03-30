@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, ComposedChart, AreaChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 // ── Palette & helpers ─────────────────────────────────────────────────────────
 // Design System: "The Modern Hearth" — Roberts Family Finance
@@ -101,7 +101,21 @@ const INITIAL_GOALS = [
   { id: 2, category: "Entertainment", limit: 100, label: "Fun Money" },
   { id: 3, category: "Personal", limit: 150, label: "Personal Spend" },
 ];
-const CATEGORIES = ["Housing", "Food", "Utilities", "Transport", "Health", "Entertainment", "Personal", "Education", "Savings", "Kids", "Subscriptions", "Other"];
+const CATEGORIES = [
+  { id: "Housing", label: "Housing" },
+  { id: "Food", label: "Food & Groceries" },
+  { id: "Utilities", label: "Utilities" },
+  { id: "Transport", label: "Transportation" },
+  { id: "Health", label: "Health & Medical" },
+  { id: "Entertainment", label: "Entertainment" },
+  { id: "Personal", label: "Personal Care" },
+  { id: "Education", label: "Education" },
+  { id: "Savings", label: "Savings & Investments" },
+  { id: "Kids", label: "Kids & Family" },
+  { id: "Subscriptions", label: "Subscriptions" },
+  { id: "Other", label: "Other" },
+];
+const CAT_LABEL = Object.fromEntries(CATEGORIES.map(c => [c.id, c.label]));
 const SPENDING_PLAN_GROUPS = [
   { catId: "Housing",       label: "Housing",                 icon: "home",               templateItems: ["Rent / Mortgage", "Furnishings / home upgrades"] },
   { catId: "Utilities",     label: "Utilities",               icon: "bolt",               templateItems: ["Electricity", "Water / sewer", "Gas", "Trash / recycling", "Internet", "Mobile phones"] },
@@ -541,7 +555,7 @@ If date not visible, use today. If unsure of category, use Other.`
                       <div>
                         <p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 4 }}>CATEGORY</p>
                         <select value={item.category} onChange={e => updateItem(item.id, "category", e.target.value)} style={{ ...selectStyle, padding: "6px 10px", fontSize: 12 }}>
-                          {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                          {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                         </select>
                       </div>
                       <div>
@@ -598,23 +612,21 @@ export default function App() {
   const [budgetEndDate, setBudgetEndDate] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10));
   const [startingBalance, setStartingBalance] = useState(0);
   const [showIncomeInCharts, setShowIncomeInCharts] = useState(true);
+  // Bills are TEMPLATES — paid status is per-month in monthlySnapshots[mk].billStatus
   const [bills, setBills] = useState([
-    { id: 1, label: "Mortgage", dueDate: `${DEMO_MONTH}-25`, budget: 600, actual: 0, paid: false },
-    { id: 2, label: "Car", dueDate: `${DEMO_MONTH}-01`, budget: 100, actual: 0, paid: false },
-    { id: 3, label: "Credit Card", dueDate: `${DEMO_MONTH}-07`, budget: 50, actual: 0, paid: false },
-    { id: 4, label: "Gas", dueDate: `${DEMO_MONTH}-12`, budget: 50, actual: 50, paid: true },
-    { id: 5, label: "Home Insurance", dueDate: `${DEMO_MONTH}-15`, budget: 25, actual: 0, paid: false },
-    { id: 6, label: "Internet", dueDate: `${DEMO_MONTH}-21`, budget: 25, actual: 0, paid: false },
+    { id: 1, label: "Mortgage", dayOfMonth: 25, budget: 600 },
+    { id: 2, label: "Car", dayOfMonth: 1, budget: 100 },
+    { id: 3, label: "Credit Card", dayOfMonth: 7, budget: 50 },
+    { id: 4, label: "Gas", dayOfMonth: 12, budget: 50 },
+    { id: 5, label: "Home Insurance", dayOfMonth: 15, budget: 25 },
+    { id: 6, label: "Internet", dayOfMonth: 21, budget: 25 },
   ]);
   const [savingsItems, setSavingsItems] = useState([
     { id: 1, label: "House", expected: 300, actual: 400 },
     { id: 2, label: "Holiday", expected: 25, actual: 0 },
     { id: 3, label: "Emergency Fund", expected: 20, actual: 0 },
   ]);
-  const [expenseBudgets, setExpenseBudgets] = useState({
-    Housing: 1800, Food: 500, Utilities: 300, Transport: 500,
-    Health: 100, Entertainment: 150, Personal: 200, Education: 50, Subscriptions: 0, Other: 120,
-  });
+  // viewExpenseBudgets is now per-month — derived from viewExpenseBudgets (see getSnap helpers)
   const [familyName, setFamilyName] = useState("Roberts Family");
   const [expenseCardPage, setExpenseCardPage] = useState(0);
   // Family Budget tab state
@@ -641,29 +653,62 @@ export default function App() {
   const [toggle5020, setToggle5020] = useState(false);
   const [toast5020, setToast5020] = useState("");
   const [billLinkToast, setBillLinkToast] = useState(false);
-  const [newBillInline, setNewBillInline] = useState(null); // { label, budget, dueDate } for inline add
+  const [newBillInline, setNewBillInline] = useState(null); // { label, budget, dayOfMonth } for inline add
   const pre5020Budgets = useRef(null);
   const pre5020Savings = useRef(null);
+  // ── Refs for month-scoped data ──
+  const prevMonthRef = useRef(viewMonthKey);
+  const incomeRef = useRef(income);
+  const expensesRef = useRef(expenses);
+  incomeRef.current = income;
+  expensesRef.current = expenses;
   // ── Monthly insights state ──
   const todayKey = monthKey(new Date().getFullYear(), new Date().getMonth());
   const [startMonthKey, setStartMonthKey] = useState("2025-01");
   const [activeInsightKey, setActiveInsightKey] = useState(todayKey);
-  // monthlySnapshots: { [key]: { income: [], expenses: [], notes: string, insightLoading, insightText } }
+  // monthlySnapshots: { [key]: { income: [], expenses: [], notes: string, billStatus: { [billId]: bool }, expenseBudgets: {} } }
+  const DEFAULT_EXPENSE_BUDGETS = { Housing: 1800, Food: 500, Utilities: 300, Transport: 500, Health: 100, Entertainment: 150, Personal: 200, Education: 50, Subscriptions: 0, Other: 120 };
   const [monthlySnapshots, setMonthlySnapshots] = useState({
-    "2025-01": { income: [{ id: 101, label: "Primary Salary", amount: 5500, recurring: true }], expenses: [{ id: 201, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 202, label: "Electricity", amount: 110, category: "Utilities", fixed: true },{ id: 203, label: "Groceries", amount: 320, category: "Food", fixed: false },{ id: 204, label: "Gas", amount: 80, category: "Transport", fixed: false }], notes: "" },
-    "2025-02": { income: [{ id: 111, label: "Primary Salary", amount: 5500, recurring: true }], expenses: [{ id: 211, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 212, label: "Electricity", amount: 98, category: "Utilities", fixed: true },{ id: 213, label: "Groceries", amount: 290, category: "Food", fixed: false },{ id: 214, label: "Dining out", amount: 180, category: "Food", fixed: false },{ id: 215, label: "Gym", amount: 45, category: "Health", fixed: true }], notes: "" },
-    "2025-03": { income: [{ id: 121, label: "Primary Salary", amount: 5500, recurring: true },{ id: 122, label: "Tax Refund", amount: 1200, recurring: false }], expenses: [{ id: 221, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 222, label: "Electricity", amount: 105, category: "Utilities", fixed: true },{ id: 223, label: "Groceries", amount: 340, category: "Food", fixed: false },{ id: 224, label: "Clothing", amount: 210, category: "Personal", fixed: false }], notes: "" },
-    "2025-04": { income: [{ id: 131, label: "Primary Salary", amount: 5500, recurring: true }], expenses: [{ id: 231, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 232, label: "Utilities", amount: 115, category: "Utilities", fixed: true },{ id: 233, label: "Groceries", amount: 310, category: "Food", fixed: false },{ id: 234, label: "Entertainment", amount: 95, category: "Entertainment", fixed: false }], notes: "" },
-    "2025-05": { income: [{ id: 141, label: "Primary Salary", amount: 5500, recurring: true },{ id: 142, label: "Side Freelance", amount: 600, recurring: false }], expenses: [{ id: 241, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 242, label: "Electricity", amount: 130, category: "Utilities", fixed: true },{ id: 243, label: "Groceries", amount: 295, category: "Food", fixed: false },{ id: 244, label: "Car payment", amount: 380, category: "Transport", fixed: true },{ id: 245, label: "Health", amount: 60, category: "Health", fixed: false }], notes: "" },
-    "2025-06": { income: INITIAL_INCOME, expenses: INITIAL_EXPENSES, notes: "" },
+    "2025-01": { income: [{ id: 101, label: "Primary Salary", amount: 5500, recurring: true }], expenses: [{ id: 201, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 202, label: "Electricity", amount: 110, category: "Utilities", fixed: true },{ id: 203, label: "Groceries", amount: 320, category: "Food", fixed: false },{ id: 204, label: "Gas", amount: 80, category: "Transport", fixed: false }], notes: "", billStatus: {}, expenseBudgets: DEFAULT_EXPENSE_BUDGETS },
+    "2025-02": { income: [{ id: 111, label: "Primary Salary", amount: 5500, recurring: true }], expenses: [{ id: 211, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 212, label: "Electricity", amount: 98, category: "Utilities", fixed: true },{ id: 213, label: "Groceries", amount: 290, category: "Food", fixed: false },{ id: 214, label: "Dining out", amount: 180, category: "Food", fixed: false },{ id: 215, label: "Gym", amount: 45, category: "Health", fixed: true }], notes: "", billStatus: {}, expenseBudgets: DEFAULT_EXPENSE_BUDGETS },
+    "2025-03": { income: [{ id: 121, label: "Primary Salary", amount: 5500, recurring: true },{ id: 122, label: "Tax Refund", amount: 1200, recurring: false }], expenses: [{ id: 221, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 222, label: "Electricity", amount: 105, category: "Utilities", fixed: true },{ id: 223, label: "Groceries", amount: 340, category: "Food", fixed: false },{ id: 224, label: "Clothing", amount: 210, category: "Personal", fixed: false }], notes: "", billStatus: {}, expenseBudgets: DEFAULT_EXPENSE_BUDGETS },
+    "2025-04": { income: [{ id: 131, label: "Primary Salary", amount: 5500, recurring: true }], expenses: [{ id: 231, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 232, label: "Utilities", amount: 115, category: "Utilities", fixed: true },{ id: 233, label: "Groceries", amount: 310, category: "Food", fixed: false },{ id: 234, label: "Entertainment", amount: 95, category: "Entertainment", fixed: false }], notes: "", billStatus: {}, expenseBudgets: DEFAULT_EXPENSE_BUDGETS },
+    "2025-05": { income: [{ id: 141, label: "Primary Salary", amount: 5500, recurring: true },{ id: 142, label: "Side Freelance", amount: 600, recurring: false }], expenses: [{ id: 241, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 242, label: "Electricity", amount: 130, category: "Utilities", fixed: true },{ id: 243, label: "Groceries", amount: 295, category: "Food", fixed: false },{ id: 244, label: "Car payment", amount: 380, category: "Transport", fixed: true },{ id: 245, label: "Health", amount: 60, category: "Health", fixed: false }], notes: "", billStatus: {}, expenseBudgets: DEFAULT_EXPENSE_BUDGETS },
+    "2025-06": { income: INITIAL_INCOME, expenses: INITIAL_EXPENSES, notes: "", billStatus: {}, expenseBudgets: DEFAULT_EXPENSE_BUDGETS },
+    [DEMO_MONTH]: { income: INITIAL_INCOME, expenses: INITIAL_EXPENSES, notes: "", billStatus: { 4: true }, expenseBudgets: DEFAULT_EXPENSE_BUDGETS },
   });
-  // Persist current month's live data into snapshots whenever income/expenses change
+  // Sync live income/expenses into snapshots for the currently viewed month
   useEffect(() => {
     setMonthlySnapshots(prev => ({
       ...prev,
-      [todayKey]: { ...(prev[todayKey] || { notes: "" }), income, expenses },
+      [viewMonthKey]: { ...(prev[viewMonthKey] || { notes: "", billStatus: {}, expenseBudgets: DEFAULT_EXPENSE_BUDGETS }), income, expenses },
     }));
-  }, [income, expenses]);
+  }, [income, expenses, viewMonthKey]);
+  // Month switch: save old month, load new month data
+  useEffect(() => {
+    const prevKey = prevMonthRef.current;
+    if (prevKey === viewMonthKey) return;
+    // Save current data to old month
+    setMonthlySnapshots(prev => ({
+      ...prev,
+      [prevKey]: { ...(prev[prevKey] || { notes: "", billStatus: {}, expenseBudgets: DEFAULT_EXPENSE_BUDGETS }), income: incomeRef.current, expenses: expensesRef.current },
+    }));
+    // Load new month data
+    const snap = monthlySnapshots[viewMonthKey];
+    if (snap?.income?.length > 0 || snap?.expenses?.length > 0) {
+      setIncome(snap.income || []);
+      setExpenses(snap.expenses || []);
+    } else {
+      // Auto-populate: recurring income + fixed expenses from old month
+      const newDate = `${viewMonthKey}-01`;
+      const src = monthlySnapshots[prevKey] || { income: incomeRef.current, expenses: expensesRef.current };
+      const recInc = (src.income || []).filter(i => i.recurring).map((i, idx) => ({ ...i, id: Date.now() + idx, date: newDate }));
+      const fixExp = (src.expenses || []).filter(e => e.fixed).map((e, idx) => ({ ...e, id: Date.now() + 500 + idx, date: newDate }));
+      setIncome(recInc);
+      setExpenses(fixExp);
+    }
+    prevMonthRef.current = viewMonthKey;
+  }, [viewMonthKey]); // eslint-disable-line react-hooks/exhaustive-deps
   // Reset expense card pagination when viewing a different month
   useEffect(() => { setExpenseCardPage(0); }, [viewMonthKey]);
   // Auto-send when navigating to advisor tab from header search
@@ -691,7 +736,7 @@ export default function App() {
       const tabSlug = parts[0];
       const tabId = HASH_TAB[tabSlug];
       if (tabId) { setTab(tabId); }
-      if (tabSlug === "bill-calendar" && parts[1]) {
+      if (parts[1]) {
         const mk = SLUG_MONTH(parts[1]);
         if (mk) setViewMonthKey(mk);
       }
@@ -703,20 +748,45 @@ export default function App() {
   // On tab/month change: update hash
   useEffect(() => {
     const slug = TAB_HASH[tab] || "overview";
-    const monthPart = tab === "weekly" ? `/${MONTH_SLUG(viewMonthKey)}` : "";
+    const monthPart = `/${MONTH_SLUG(viewMonthKey)}`;
     const newHash = `#/${slug}${monthPart}`;
     if (window.location.hash !== newHash) window.history.replaceState(null, "", newHash);
   }, [tab, viewMonthKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const twelveMonths = build12Months(startMonthKey);
+  // All insight months: merge twelveMonths with every key in monthlySnapshots, sorted
+  const allInsightMonths = (() => {
+    const set = new Set([...twelveMonths, ...Object.keys(monthlySnapshots)]);
+    return [...set].sort();
+  })();
   // Get snapshot for a key (fallback empty)
-  const getSnap = (key) => monthlySnapshots[key] || { income: [], expenses: [], notes: "" };
+  const getSnap = (key) => monthlySnapshots[key] || { income: [], expenses: [], notes: "", billStatus: {}, expenseBudgets: DEFAULT_EXPENSE_BUDGETS };
+  // ── Bill helpers (per-month paid status) ──
+  const getBillDueDate = (bill, mk) => { const day = String(bill.dayOfMonth).padStart(2, "0"); return `${mk}-${day}`; };
+  const getBillPaid = (bill, mk) => !!(monthlySnapshots[mk]?.billStatus?.[bill.id]);
+  const markBillPaid = (billId, mk, paid = true) => setMonthlySnapshots(prev => ({ ...prev, [mk]: { ...(prev[mk] || { income: [], expenses: [], notes: "", billStatus: {}, expenseBudgets: DEFAULT_EXPENSE_BUDGETS }), billStatus: { ...(prev[mk]?.billStatus || {}), [billId]: paid } } }));
+  // ── Per-month expense budgets (Fix 9) ──
+  const viewExpenseBudgets = monthlySnapshots[viewMonthKey]?.expenseBudgets || DEFAULT_EXPENSE_BUDGETS;
+  const setViewExpenseBudgets = (updater) => setMonthlySnapshots(prev => {
+    const oldBudgets = prev[viewMonthKey]?.expenseBudgets || DEFAULT_EXPENSE_BUDGETS;
+    const newBudgets = typeof updater === "function" ? updater(oldBudgets) : updater;
+    return { ...prev, [viewMonthKey]: { ...(prev[viewMonthKey] || { income: [], expenses: [], notes: "", billStatus: {} }), expenseBudgets: newBudgets } };
+  });
+  // ── Default date for modals (Fix 4) ──
+  const getDefaultDate = (mk) => {
+    const [yr, mo] = mk.split("-").map(Number);
+    const now = new Date(); const ty = now.getFullYear(); const tm = now.getMonth() + 1;
+    if (yr === ty && mo === tm) return now.toISOString().split("T")[0];
+    if (yr > ty || (yr === ty && mo > tm)) return `${mk}-01`;
+    const lastDay = new Date(yr, mo, 0).getDate();
+    return `${mk}-${String(lastDay).padStart(2, "0")}`;
+  };
   // Compute stats for any month key
   const monthStats = (key) => {
     const snap = getSnap(key);
     const inc = snap.income.reduce((s, i) => s + i.amount, 0);
     const exp = snap.expenses.reduce((s, e) => s + e.amount, 0);
     const cats = {};
-    CATEGORIES.forEach(c => { cats[c] = snap.expenses.filter(e => e.category === c).reduce((s,e)=>s+e.amount,0); });
+    CATEGORIES.forEach(c => { cats[c.id] = snap.expenses.filter(e => e.category === c.id).reduce((s,e)=>s+e.amount,0); });
     return { inc, exp, net: inc - exp, cats, hasData: snap.income.length > 0 || snap.expenses.length > 0 };
   };
   const updateSnapNotes = (key, notes) => setMonthlySnapshots(prev => ({ ...prev, [key]: { ...getSnap(key), notes } }));
@@ -768,15 +838,15 @@ Return plain text bullet points only, no headers.` }]
   const savings = expenses.filter(e => e.category === "Savings").reduce((s, e) => s + e.amount, 0);
   // category totals
   const catTotals = {};
-  CATEGORIES.forEach(c => { catTotals[c] = expenses.filter(e => e.category === c).reduce((s,e)=>s+e.amount,0); });
+  CATEGORIES.forEach(c => { catTotals[c.id] = expenses.filter(e => e.category === c.id).reduce((s,e)=>s+e.amount,0); });
   // weekly report helper
-  const weeklyData = CATEGORIES.map(c => ({ name: c, amount: catTotals[c] })).filter(c => c.amount > 0);
+  const weeklyData = CATEGORIES.map(c => ({ name: c.label, amount: catTotals[c.id] })).filter(c => c.amount > 0);
   // ── Dashboard derived ──
   const billsBudgetTotal = bills.reduce((s, b) => s + b.budget, 0);
-  const billsActualTotal = bills.reduce((s, b) => s + b.actual, 0);
+  const billsActualTotal = bills.reduce((s, b) => s + (getBillPaid(b, viewMonthKey) ? b.budget : 0), 0);
   const savingsExpectedTotal = savingsItems.reduce((s, i) => s + i.expected, 0);
   const savingsActualTotal = savingsItems.reduce((s, i) => s + i.actual, 0);
-  const expenseBudgetTotal = Object.values(expenseBudgets).reduce((s, v) => s + v, 0);
+  const expenseBudgetTotal = Object.values(viewExpenseBudgets).reduce((s, v) => s + v, 0);
   const totalBudgeted = expenseBudgetTotal + billsBudgetTotal + savingsExpectedTotal;
   const totalSpent = totalExpenses + billsActualTotal + savingsActualTotal;
   const leftForBudgeting = totalIncome - totalBudgeted;
@@ -790,11 +860,11 @@ Return plain text bullet points only, no headers.` }]
     { name: "Debt", value: debtPayments, color: "#facc15" },
     { name: "Savings", value: savingsActualTotal, color: "#34d399" },
   ].filter(d => d.value > 0);
-  const budgetVsActualData = CATEGORIES.filter(c => (expenseBudgets[c] || 0) > 0 || catTotals[c] > 0).map(c => ({
-    name: c.slice(0, 5), Budget: expenseBudgets[c] || 0, Actual: catTotals[c] || 0,
+  const budgetVsActualData = CATEGORIES.filter(c => (viewExpenseBudgets[c.id] || 0) > 0 || catTotals[c.id] > 0).map(c => ({
+    name: c.label.slice(0, 5), Budget: viewExpenseBudgets[c.id] || 0, Actual: catTotals[c.id] || 0,
   }));
-  const expBreakdownData = CATEGORIES.filter(c => catTotals[c] > 0).map((c, i) => ({
-    name: c, value: catTotals[c], color: CHART_COLORS[i % CHART_COLORS.length],
+  const expBreakdownData = CATEGORIES.filter(c => catTotals[c.id] > 0).map((c, i) => ({
+    name: c.label, value: catTotals[c.id], color: CHART_COLORS[i % CHART_COLORS.length],
   }));
   const dailyExpenseData = (() => {
     const map = {};
@@ -826,23 +896,13 @@ Return plain text bullet points only, no headers.` }]
   })();
   // ── Dashboard derived ──
   const today0 = new Date(); today0.setHours(0, 0, 0, 0);
-  // Rolling monthly: for unpaid bills, compute the next occurrence (this month or next month)
-  const getEffectiveDueDate = (bill) => {
-    if (!bill.dueDate) return null;
-    const [, , dd] = bill.dueDate.split("-").map(Number);
-    const now = new Date(); now.setHours(0,0,0,0);
-    const thisMonthDate = new Date(now.getFullYear(), now.getMonth(), dd);
-    if (bill.paid) return thisMonthDate;
-    // If this month's occurrence is past, roll to next month
-    return thisMonthDate < now ? new Date(now.getFullYear(), now.getMonth() + 1, dd) : thisMonthDate;
-  };
-  const unpaidSorted = bills.filter(b => !b.paid);
-  const futureBills = unpaidSorted.map(b => ({ ...b, _eff: getEffectiveDueDate(b) })).filter(b => b._eff >= today0);
-  const nextBill = futureBills.length > 0
-    ? futureBills.sort((a, b) => a._eff - b._eff)[0]
-    : (unpaidSorted.length > 0 ? unpaidSorted[0] : null);
-  const daysUntilBill = nextBill?._eff ? Math.round((nextBill._eff.getTime() - today0.getTime()) / 86400000) : null;
-  const billsDueIn7Days = unpaidSorted.filter(b => { const d = getEffectiveDueDate(b); if (!d) return false; const diff = Math.round((d - today0) / 86400000); return diff >= 0 && diff <= 7; }).length;
+  // Next bill due — uses month-scoped bill data (getBillDueDate / getBillPaid)
+  const unpaidSorted = bills.filter(b => !getBillPaid(b, viewMonthKey))
+    .map(b => ({ ...b, _due: new Date(getBillDueDate(b, viewMonthKey)) }))
+    .sort((a, b) => a._due - b._due);
+  const nextBill = unpaidSorted.length > 0 ? unpaidSorted[0] : null;
+  const daysUntilBill = nextBill ? Math.round((nextBill._due.getTime() - today0.getTime()) / 86400000) : null;
+  const billsDueIn7Days = unpaidSorted.filter(b => { const diff = Math.round((b._due - today0) / 86400000); return diff >= 0 && diff <= 7; }).length;
   const catExpenseCards = Object.entries(catTotals).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
   const totalBills = bills.reduce((s, b) => s + (b.budget || 0), 0);
   const totalDebtPayments = debts.reduce((s, d) => s + parseFloat(d.minPayment || 0), 0);
@@ -851,22 +911,19 @@ Return plain text bullet points only, no headers.` }]
   const CATEGORY_ICONS = { Housing: "home", Food: "restaurant", Transport: "directions_car", Utilities: "bolt", Health: "medication", Entertainment: "movie", Personal: "person", Education: "school", Kids: "child_care", Subscriptions: "subscriptions", Other: "category" };
   const CATEGORY_ICON_BG = { Housing: "rgba(97,205,253,0.2)", Food: "rgba(192,232,255,0.3)", Transport: "rgba(186,191,255,0.3)", Utilities: "rgba(192,232,255,0.3)", Health: "rgba(186,191,255,0.3)", Entertainment: "rgba(186,191,255,0.3)", Personal: "rgba(186,191,255,0.3)", Education: "rgba(97,205,253,0.2)", Kids: "rgba(192,232,255,0.3)", Subscriptions: "rgba(186,191,255,0.3)", Other: "#eaeef0" };
   const CATEGORY_ICON_COLOR = { Housing: COLORS.primary, Food: COLORS.secondary, Transport: COLORS.tertiary, Utilities: COLORS.secondary, Health: COLORS.tertiary, Entertainment: COLORS.tertiary, Personal: COLORS.tertiary, Education: COLORS.primary, Kids: COLORS.secondary, Subscriptions: COLORS.tertiary, Other: COLORS.subtext };
-  // ── View-month derived values (dashboard month picker) ──
-  const viewSnap = viewMonthKey === todayKey
-    ? { income, expenses }
-    : (monthlySnapshots[viewMonthKey] || { income: [], expenses: [] });
-  const viewExpenses = viewSnap.expenses;
-  const viewIncome = viewSnap.income;
+  // ── View-month derived values (income/expenses are now always month-scoped) ──
+  const viewExpenses = expenses;
+  const viewIncome = income;
   const viewTotalExpenses = viewExpenses.reduce((s, e) => s + e.amount, 0);
   const viewTotalIncome = viewIncome.reduce((s, i) => s + i.amount, 0);
   const viewSpentPct = Math.round(pct(viewTotalExpenses, viewTotalIncome || 1));
-  const viewCatTotals = CATEGORIES.reduce((acc, c) => ({ ...acc, [c]: viewExpenses.filter(e => e.category === c).reduce((s, e) => s + e.amount, 0) }), {});
+  const viewCatTotals = CATEGORIES.reduce((acc, c) => ({ ...acc, [c.id]: viewExpenses.filter(e => e.category === c.id).reduce((s, e) => s + e.amount, 0) }), {});
   const viewCatExpenseCards = Object.entries(viewCatTotals).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
   // ── Add forms state ──
-  const [newExp, setNewExp] = useState({ label: "", amount: "", category: "Food", date: new Date().toISOString().slice(0,10), fixed: false });
-  const [newInc, setNewInc] = useState({ label: "", amount: "", date: new Date().toISOString().slice(0,10), recurring: false });
+  const [newExp, setNewExp] = useState({ label: "", amount: "", category: "Food", date: getDefaultDate(viewMonthKey), fixed: false });
+  const [newInc, setNewInc] = useState({ label: "", amount: "", date: getDefaultDate(viewMonthKey), recurring: false });
   const [newDebt, setNewDebt] = useState({ label: "", balance: "", minPayment: "", interest: "" });
-  const [newBill, setNewBill] = useState({ label: "", budget: "", dueDate: "" });
+  const [newBill, setNewBill] = useState({ label: "", budget: "", dayOfMonth: "" });
   const addExpense = () => {
     if (!newExp.label || !newExp.amount) return;
     if (editingExpenseId) {
@@ -879,13 +936,13 @@ Return plain text bullet points only, no headers.` }]
     } else {
       setExpenses(prev => [...prev, { ...newExp, id: Date.now(), amount: parseFloat(newExp.amount) }]);
     }
-    setNewExp({ label: "", amount: "", category: "Food", date: new Date().toISOString().slice(0,10), fixed: false });
+    setNewExp({ label: "", amount: "", category: "Food", date: getDefaultDate(viewMonthKey), fixed: false });
     setModal(null);
   };
   const addIncome = () => {
     if (!newInc.label || !newInc.amount) return;
     setIncome(prev => [...prev, { ...newInc, id: Date.now(), amount: parseFloat(newInc.amount) }]);
-    setNewInc({ label: "", amount: "", date: new Date().toISOString().slice(0,10), recurring: false });
+    setNewInc({ label: "", amount: "", date: getDefaultDate(viewMonthKey), recurring: false });
     setModal(null);
   };
   const addDebt = () => {
@@ -894,30 +951,10 @@ Return plain text bullet points only, no headers.` }]
     setNewDebt({ label: "", balance: "", minPayment: "", interest: "" });
     setModal(null);
   };
-  const deleteExpenseFromView = (id) => {
-    if (viewMonthKey === todayKey) {
-      setExpenses(prev => prev.filter(x => x.id !== id));
-    } else {
-      setMonthlySnapshots(prev => ({ ...prev, [viewMonthKey]: { ...getSnap(viewMonthKey), expenses: getSnap(viewMonthKey).expenses.filter(x => x.id !== id) } }));
-    }
-  };
-  const deleteIncomeFromView = (id) => {
-    if (viewMonthKey === todayKey) {
-      setIncome(prev => prev.filter(x => x.id !== id));
-    } else {
-      setMonthlySnapshots(prev => ({ ...prev, [viewMonthKey]: { ...getSnap(viewMonthKey), income: getSnap(viewMonthKey).income.filter(x => x.id !== id) } }));
-    }
-  };
-  const updateIncomeField = (id, field, value) => {
-    const updated = (arr) => arr.map(e => e.id === id ? { ...e, [field]: field === "amount" ? (parseFloat(value) || 0) : value } : e);
-    if (viewMonthKey === todayKey) { setIncome(updated); }
-    else { setMonthlySnapshots(prev => ({ ...prev, [viewMonthKey]: { ...getSnap(viewMonthKey), income: updated(getSnap(viewMonthKey).income) } })); }
-  };
-  const updateExpenseField = (id, field, value) => {
-    const updated = (arr) => arr.map(e => e.id === id ? { ...e, [field]: field === "amount" ? (parseFloat(value) || 0) : value } : e);
-    if (viewMonthKey === todayKey) { setExpenses(updated); }
-    else { setMonthlySnapshots(prev => ({ ...prev, [viewMonthKey]: { ...getSnap(viewMonthKey), expenses: updated(getSnap(viewMonthKey).expenses) } })); }
-  };
+  const deleteExpenseFromView = (id) => setExpenses(prev => prev.filter(x => x.id !== id));
+  const deleteIncomeFromView = (id) => setIncome(prev => prev.filter(x => x.id !== id));
+  const updateIncomeField = (id, field, value) => setIncome(prev => prev.map(e => e.id === id ? { ...e, [field]: field === "amount" ? (parseFloat(value) || 0) : value } : e));
+  const updateExpenseField = (id, field, value) => setExpenses(prev => prev.map(e => e.id === id ? { ...e, [field]: field === "amount" ? (parseFloat(value) || 0) : value } : e));
   const updateDebtField = (id, field, value) => {
     setDebts(prev => prev.map(d => d.id === id ? { ...d, [field]: ["balance","minPayment","interest"].includes(field) ? (parseFloat(value)||0) : value } : d));
   };
@@ -1023,7 +1060,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
     const userMsg = msgText.trim();
     setAdvisorLoading(true);
     const { month0, year } = parseKey(viewMonthKey);
-    const summary = `Family: ${familyName}. Month: ${MONTH_FULL[month0]} ${year}. Income: ${fmt(viewTotalIncome)}/mo. Expenses: ${fmt(viewTotalExpenses)}/mo. Net: ${fmt(viewTotalIncome - viewTotalExpenses)}. Category breakdown: ${JSON.stringify(viewCatTotals)}. Bills: ${JSON.stringify(bills.map(b => ({ label: b.label, due: b.dueDate, amount: b.budget, paid: b.paid })))}. Debts: ${JSON.stringify(debts.map(d => ({ label: d.label, balance: d.balance, apr: d.interest })))}. Savings goals: ${JSON.stringify(savingsItems)}. Budget goals: ${JSON.stringify(goals)}.`;
+    const summary = `Family: ${familyName}. Month: ${MONTH_FULL[month0]} ${year}. Income: ${fmt(viewTotalIncome)}/mo. Expenses: ${fmt(viewTotalExpenses)}/mo. Net: ${fmt(viewTotalIncome - viewTotalExpenses)}. Category breakdown: ${JSON.stringify(viewCatTotals)}. Bills: ${JSON.stringify(bills.map(b => ({ label: b.label, due: getBillDueDate(b, viewMonthKey), amount: b.budget, paid: getBillPaid(b, viewMonthKey) })))}. Debts: ${JSON.stringify(debts.map(d => ({ label: d.label, balance: d.balance, apr: d.interest })))}. Savings goals: ${JSON.stringify(savingsItems)}. Budget goals: ${JSON.stringify(goals)}.`;
 
     let contentBlocks = [];
     if (advisorFile) {
@@ -1416,7 +1453,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24 }}>
                     {viewCatExpenseCards.slice(expenseCardPage * 3, expenseCardPage * 3 + 3).map(([cat, amt]) => {
                       const topExpense = [...viewExpenses].filter(e => e.category === cat).sort((a, b) => b.amount - a.amount)[0];
-                      const budgetPct = expenseBudgets[cat] ? Math.round(pct(amt, expenseBudgets[cat])) : null;
+                      const budgetPct = viewExpenseBudgets[cat] ? Math.round(pct(amt, viewExpenseBudgets[cat])) : null;
                       return (
                         <div key={cat} className="exp-card" style={{ background: COLORS.card, borderRadius: 12, padding: "24px", boxShadow: COLORS.shadowSm, cursor: "default" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
@@ -1432,9 +1469,9 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                             <span style={{ fontSize: 24, fontWeight: 700, color: COLORS.text, letterSpacing: "-0.02em" }}>{fmt(amt)}</span>
                             <div style={{ textAlign: "right" }}>
                               {budgetPct !== null && (
-                                <p style={{ fontSize: 10, fontWeight: 700, color: budgetPct > 100 ? COLORS.danger : budgetPct > 80 ? COLORS.warning : COLORS.secondary, textTransform: "uppercase", letterSpacing: "0.05em" }}>{budgetPct}% of {fmt(expenseBudgets[cat])}</p>
+                                <p style={{ fontSize: 10, fontWeight: 700, color: budgetPct > 100 ? COLORS.danger : budgetPct > 80 ? COLORS.warning : COLORS.secondary, textTransform: "uppercase", letterSpacing: "0.05em" }}>{budgetPct}% of {fmt(viewExpenseBudgets[cat])}</p>
                               )}
-                              {expenseBudgets[cat] > 0 && <p style={{ fontSize: 11, color: COLORS.muted }}>{fmt(expenseBudgets[cat] - amt)} left</p>}
+                              {viewExpenseBudgets[cat] > 0 && <p style={{ fontSize: 11, color: COLORS.muted }}>{fmt(viewExpenseBudgets[cat] - amt)} left</p>}
                               <p style={{ fontSize: 12, fontWeight: 500, color: COLORS.subtext }}>{topExpense ? fmtDate(topExpense.date) : ""}</p>
                             </div>
                           </div>
@@ -1535,7 +1572,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             : <span onClick={()=>setEditingCell({id,field})} title="Click to edit" style={{cursor:"text",display:"block",borderRadius:4,padding:"2px 4px",fontSize:12,color:COLORS.subtext}}>{value ? fmtDate(value) : "—"}</span>;
           const EditableCat = ({ id, field, value }) => editingCell?.id===id && editingCell?.field===field
             ? <select autoFocus value={value} onChange={e=>updateExpenseField(id,field,e.target.value)} onBlur={()=>setEditingCell(null)} style={{width:"100%",background:COLORS.containerLow,border:"none",borderRadius:6,padding:"3px 6px",fontSize:12,color:COLORS.text,outline:"none"}}>
-                {CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}
+                {CATEGORIES.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}
               </select>
             : <span onClick={()=>setEditingCell({id,field})} title="Click to edit" style={{cursor:"pointer",display:"inline-block",fontSize:11,fontWeight:600,color:COLORS.subtext,background:COLORS.containerHighest,borderRadius:9999,padding:"2px 8px"}}>{value}</span>;
 
@@ -1558,7 +1595,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           const prevMonthItemBudgets = itemBudgets[prevMonthKey] || {};
           const hasPrevPlanned = Object.keys(prevMonthItemBudgets).length > 0;
 
-          const totalPlanned = Object.values(monthItemBudgets).reduce((s,v) => s+(v||0), 0) + Object.values(expenseBudgets).reduce((s,v) => s+v, 0);
+          const totalPlanned = Object.values(monthItemBudgets).reduce((s,v) => s+(v||0), 0) + Object.values(viewExpenseBudgets).reduce((s,v) => s+v, 0);
           const totalActual = viewTotalExpenses;
           const remainToSpend = viewTotalIncome > 0 ? viewTotalIncome - totalActual : totalPlanned - totalActual;
           const barMax = viewTotalIncome > 0 ? viewTotalIncome : (totalPlanned || 1);
@@ -1583,7 +1620,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, gap: 20, flexWrap: "wrap" }}>
                 <div>
                   <h2 style={{ fontSize: 22, fontWeight: 800, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 2 }}>{MONTH_FULL[vm0]} {vy} Budget</h2>
-                  <p style={{ fontSize: 13, color: COLORS.subtext }}>{fmt(totalActual)} spent of {fmt(viewTotalIncome)} · <strong style={{ color: remainToSpend >= 0 ? COLORS.success : COLORS.danger }}>{fmt(Math.abs(remainToSpend))} {remainToSpend >= 0 ? "remaining" : "over"}</strong>{isCurrentMonth && daysLeft > 0 ? ` · ${daysLeft} days left` : ""}</p>
+                  <p style={{ fontSize: 13, color: COLORS.subtext }}>{fmt(totalActual)} spent of {fmt(viewTotalIncome)} income{totalPlanned > 0 ? ` · ${fmt(totalPlanned)} planned` : ""}{isCurrentMonth && daysLeft > 0 ? ` · ${daysLeft} days left` : ""}</p>
                   {hasPrevPlanned && Object.keys(monthItemBudgets).length === 0 && (
                     <button onClick={() => setItemBudgets(p => ({...p, [viewMonthKey]: {...prevMonthItemBudgets}}))} style={{ marginTop: 6, background: "rgba(0,103,136,0.08)", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: COLORS.primary, cursor: "pointer" }}>
                       Copy planned amounts from {MONTH_NAMES[new Date(prevY, prevM0 - 1, 1).getMonth()]}
@@ -1652,14 +1689,14 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         <button onClick={() => {
                           if (!toggle5020) {
                             if (viewTotalIncome === 0) { setToast5020("Add income first to use the 50/30/20 rule"); setTimeout(() => setToast5020(""), 3000); return; }
-                            pre5020Budgets.current = { ...expenseBudgets };
+                            pre5020Budgets.current = { ...viewExpenseBudgets };
                             pre5020Savings.current = savingsItems.map(s => ({ ...s }));
                             const inc = viewTotalIncome;
-                            setExpenseBudgets({ Housing: Math.round(inc*0.30), Utilities: Math.round(inc*0.08), Transport: Math.round(inc*0.08), Health: Math.round(inc*0.04), Food: Math.round(inc*0.12), Entertainment: Math.round(inc*0.04), Personal: Math.round(inc*0.05), Kids: Math.round(inc*0.05), Education: 0, Savings: 0, Other: 0, Subscriptions: 0 });
+                            setViewExpenseBudgets({ Housing: Math.round(inc*0.30), Utilities: Math.round(inc*0.08), Transport: Math.round(inc*0.08), Health: Math.round(inc*0.04), Food: Math.round(inc*0.12), Entertainment: Math.round(inc*0.04), Personal: Math.round(inc*0.05), Kids: Math.round(inc*0.05), Education: 0, Savings: 0, Other: 0, Subscriptions: 0 });
                             if (savingsItems.length > 0) setSavingsItems(p => [{ ...p[0], expected: Math.round(inc*0.20) }, ...p.slice(1)]);
                             setToggle5020(true);
                           } else {
-                            if (pre5020Budgets.current) setExpenseBudgets(pre5020Budgets.current);
+                            if (pre5020Budgets.current) setViewExpenseBudgets(pre5020Budgets.current);
                             if (pre5020Savings.current) setSavingsItems(pre5020Savings.current);
                             pre5020Budgets.current = null; pre5020Savings.current = null;
                             setToggle5020(false);
@@ -1700,7 +1737,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   {SPENDING_PLAN_GROUPS.map(group => {
                     const grpExp = sortExp(viewExpenses.filter(e => e.category === group.catId));
                     const grpActual = grpExp.reduce((s,e) => s+e.amount, 0);
-                    const grpPlanned = expenseBudgets[group.catId] || 0;
+                    const grpPlanned = viewExpenseBudgets[group.catId] || 0;
                     const isCollapsed = collapsedCategories[group.catId];
                     const util = grpPlanned > 0 ? Math.round((grpActual / grpPlanned) * 100) : null;
                     const utilColor = util === null ? COLORS.muted : util > 100 ? COLORS.danger : util >= 80 ? COLORS.warning : COLORS.success;
@@ -1709,9 +1746,9 @@ If the request doesn't map to a clear category goal, still return JSON with newG
 
                     return (
                       <div key={group.catId} style={{ marginBottom: 6 }}>
-                        {/* Group header */}
+                        {/* Group header — uses same grid as rows */}
                         <div onClick={() => setCollapsedCategories(p => ({ ...p, [group.catId]: !p[group.catId] }))}
-                          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px", background: util >= 100 ? COLORS.danger + "10" : util >= 80 ? COLORS.warning + "10" : COLORS.containerLow, borderRadius: 10, cursor: "pointer", marginBottom: isCollapsed ? 0 : 6, borderLeft: util >= 100 ? `3px solid ${COLORS.danger}` : util >= 80 ? `3px solid ${COLORS.warning}` : "3px solid transparent" }}>
+                          style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, alignItems: "center", padding: "9px 12px", background: util >= 100 ? COLORS.danger + "10" : util >= 80 ? COLORS.warning + "10" : COLORS.containerLow, borderRadius: 10, cursor: "pointer", marginBottom: isCollapsed ? 0 : 6, borderLeft: util >= 100 ? `3px solid ${COLORS.danger}` : util >= 80 ? `3px solid ${COLORS.warning}` : "3px solid transparent" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                             <div style={{ width: 28, height: 28, borderRadius: 8, background: CATEGORY_ICON_BG[group.catId] || "#eaeef0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                               <span className="material-symbols-outlined" style={{ fontSize: 15, color: CATEGORY_ICON_COLOR[group.catId] || COLORS.subtext }}>{CATEGORY_ICONS[group.catId] || "category"}</span>
@@ -1720,18 +1757,18 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                             {grpExp.length > 0 && <span style={{ fontSize: 11, color: COLORS.muted }}>({grpExp.length})</span>}
                             <div style={{ width: 7, height: 7, borderRadius: "50%", background: utilColor, flexShrink: 0 }} title={util === null ? "No budget set" : util > 100 ? "Over budget" : util >= 80 ? "Near limit" : "On track"} />
                           </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            {grpPlanned > 0 && (
-                              <>
-                                <span style={{ fontSize: 11, color: COLORS.subtext }}>{fmt(grpPlanned)} planned</span>
-                                <span style={{ fontSize: 12, fontWeight: 700, color: utilColor }}>{fmt(grpActual)}</span>
-                                <span style={{ fontSize: 10, fontWeight: 700, color: utilColor, background: utilColor+"18", borderRadius: 9999, padding: "1px 7px" }}>{util > 100 ? `${util}% OVER` : `${util}%`}</span>
-                                {(() => { const grpVar = grpPlanned - grpActual; return grpVar !== 0 ? <span style={{ fontSize: 10, fontWeight: 700, color: grpVar > 0 ? COLORS.success : COLORS.danger }}>{grpVar > 0 ? "+" : ""}{fmt(grpVar)}</span> : null; })()}
-                              </>
-                            )}
-                            {grpPlanned === 0 && grpActual > 0 && <span style={{ fontSize: 12, color: COLORS.subtext }}>{fmt(grpActual)}</span>}
-                            <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.muted, transition: "transform .2s", transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)" }}>expand_more</span>
-                          </div>
+                          {/* cat column — empty */}
+                          <span />
+                          {/* due column — empty */}
+                          <span />
+                          {/* planned */}
+                          <span style={{ fontSize: 12, fontWeight: 700, color: grpPlanned > 0 ? COLORS.subtext : COLORS.muted }}>{grpPlanned > 0 ? fmt(grpPlanned) : "—"}</span>
+                          {/* actual */}
+                          <span style={{ fontSize: 12, fontWeight: 700, color: utilColor }}>{grpActual > 0 ? fmt(grpActual) : "—"}</span>
+                          {/* variance */}
+                          {(() => { const grpVar = grpPlanned > 0 ? grpPlanned - grpActual : null; return <span style={{ fontSize: 12, fontWeight: 700, color: grpVar === null ? COLORS.muted : grpVar >= 0 ? COLORS.success : COLORS.danger }}>{grpVar === null ? "—" : grpVar > 0 ? `+${fmt(grpVar)}` : fmt(grpVar)}</span>; })()}
+                          {/* actions col — chevron */}
+                          <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.muted, transition: "transform .2s", transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)", textAlign: "center" }}>expand_more</span>
                         </div>
 
                         {!isCollapsed && (
@@ -1754,7 +1791,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                                   {expVar === null ? "—" : expVar > 0 ? `+${fmt(expVar)}` : fmt(expVar)}
                                 </span>
                                 <div style={{ display: "flex", gap: 2 }}>
-                                  <button onClick={() => { setEditingExpenseId(e.id); setNewExp({ label: e.label, amount: String(e.amount), category: e.category, date: e.date || new Date().toISOString().slice(0,10), fixed: e.fixed }); setModal("addExpense"); }} title="Edit" style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 13, width: 22, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 4 }}>✏</button>
+                                  <button onClick={() => { setEditingExpenseId(e.id); setNewExp({ label: e.label, amount: String(e.amount), category: e.category, date: e.date || getDefaultDate(viewMonthKey), fixed: e.fixed }); setModal("addExpense"); }} title="Edit" style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 13, width: 22, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 4 }}>✏</button>
                                   <button onClick={() => deleteExpenseFromView(e.id)} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 16, width: 20, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 4 }}>×</button>
                                 </div>
                               </div>
@@ -1837,10 +1874,12 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                       {bills.map(b => {
-                        const [bY,bM,bD] = (b.dueDate||"").split("-").map(Number);
+                        const bDueDate = getBillDueDate(b, viewMonthKey);
+                        const [bY,bM,bD] = bDueDate.split("-").map(Number);
                         const bDate = new Date(bY,bM-1,bD);
-                        const isOverdue = !b.paid && bDate < today0;
-                        const borderColor = b.paid ? COLORS.success : isOverdue ? COLORS.danger : "transparent";
+                        const bPaid = getBillPaid(b, viewMonthKey);
+                        const isOverdue = !bPaid && bDate < today0;
+                        const borderColor = bPaid ? COLORS.success : isOverdue ? COLORS.danger : "transparent";
                         const sbInp = { background: COLORS.containerHigh, border: `1px solid ${COLORS.primary}`, borderRadius: 6, outline: "none", color: COLORS.text };
                         const isEL = editingBillCell?.id === b.id && editingBillCell?.field === "label";
                         const isED = editingBillCell?.id === b.id && editingBillCell?.field === "dueDate";
@@ -1853,8 +1892,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                                 : <p onClick={() => setEditingBillCell({id: b.id, field: "label"})} title="Click to edit" style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, cursor: "text" }}>{b.label}</p>
                               }
                               {isED
-                                ? <input autoFocus type="date" defaultValue={b.dueDate} style={{ ...sbInp, fontSize: 11, padding: "1px 4px", marginTop: 2 }} onBlur={e => { if (e.target.value) setBills(p => p.map(x => x.id === b.id ? {...x, dueDate: e.target.value} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
-                                : <p onClick={() => setEditingBillCell({id: b.id, field: "dueDate"})} title="Click to edit" style={{ fontSize: 11, color: isOverdue ? COLORS.danger : COLORS.subtext, cursor: "text" }}>{fmtDate(b.dueDate)}</p>
+                                ? <input autoFocus type="number" min="1" max="31" defaultValue={b.dayOfMonth} style={{ ...sbInp, fontSize: 11, padding: "1px 4px", marginTop: 2, width: 50 }} onBlur={e => { const v = parseInt(e.target.value); if (v >= 1 && v <= 31) setBills(p => p.map(x => x.id === b.id ? {...x, dayOfMonth: v} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
+                                : <p onClick={() => setEditingBillCell({id: b.id, field: "dueDate"})} title="Click to edit" style={{ fontSize: 11, color: isOverdue ? COLORS.danger : COLORS.subtext, cursor: "text" }}>{fmtDate(bDueDate)}</p>
                               }
                             </div>
                             <div style={{ textAlign: "right", flexShrink: 0 }}>
@@ -1862,13 +1901,13 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                                 ? <input autoFocus type="number" defaultValue={b.budget} style={{ ...sbInp, fontSize: 13, fontWeight: 700, padding: "2px 6px", width: 72, textAlign: "right" }} onBlur={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v >= 0) setBills(p => p.map(x => x.id === b.id ? {...x, budget: v} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
                                 : <p onClick={() => setEditingBillCell({id: b.id, field: "budget"})} title="Click to edit" style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, cursor: "text" }}>{fmt(b.budget)}</p>
                               }
-                              {b.paid
+                              {bPaid
                                 ? <span style={{ fontSize: 10, fontWeight: 700, color: COLORS.success }}>Paid ✓</span>
                                 : <span style={{ fontSize: 10, fontWeight: 700, color: isOverdue ? COLORS.danger : COLORS.muted, animation: isOverdue ? "pulse 2s infinite" : "none" }}>{isOverdue ? "Overdue" : "Due"}</span>
                               }
                             </div>
-                            {!b.paid && (
-                              <button onClick={() => setBills(p => p.map(x => x.id === b.id ? {...x, paid: true, actual: x.budget} : x))} title="Mark as paid" style={{ background: `rgba(0,103,136,0.1)`, border: "none", color: COLORS.primary, cursor: "pointer", fontSize: 11, fontWeight: 700, padding: "3px 7px", borderRadius: 6, flexShrink: 0 }}>Pay ✓</button>
+                            {!bPaid && (
+                              <button onClick={() => markBillPaid(b.id, viewMonthKey)} title="Mark as paid" style={{ background: `rgba(0,103,136,0.1)`, border: "none", color: COLORS.primary, cursor: "pointer", fontSize: 11, fontWeight: 700, padding: "3px 7px", borderRadius: 6, flexShrink: 0 }}>Pay ✓</button>
                             )}
                             <button onClick={() => setBills(p => p.filter(x => x.id !== b.id))} title="Delete" style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 16, padding: 0, flexShrink: 0, lineHeight: 1 }}>×</button>
                           </div>
@@ -1986,14 +2025,12 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           const firstDayOfWeek = new Date(calYear, calMonth, 1).getDay();
           const todayDate = (calYear === now.getFullYear() && calMonth === now.getMonth()) ? now.getDate() : -1;
           const BILL_COLORS = { Housing: { bg: "rgba(97,205,253,0.15)", text: COLORS.primary }, Utilities: { bg: "rgba(192,232,255,0.4)", text: COLORS.secondary }, Entertainment: { bg: "rgba(186,191,255,0.3)", text: COLORS.tertiary } };
-          const paidBillsTotal = bills.filter(b => b.paid).reduce((s, b) => s + b.actual, 0);
-          const unpaidBills = bills.filter(b => !b.paid).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+          const calMk = monthKey(calYear, calMonth);
+          const paidBillsTotal = bills.filter(b => getBillPaid(b, calMk)).reduce((s, b) => s + b.budget, 0);
+          const unpaidBills = bills.filter(b => !getBillPaid(b, calMk)).sort((a, b) => a.dayOfMonth - b.dayOfMonth);
           const totalBillsBudget = bills.reduce((s, b) => s + b.budget, 0);
-          const billsOnDay = (day) => bills.filter(b => {
-            const [y, m, dd] = (b.dueDate || "").split("-").map(Number);
-            return y === calYear && m - 1 === calMonth && dd === day;
-          });
-          const paidAmountTotal = bills.filter(b => b.paid).reduce((s, b) => s + b.budget, 0);
+          const billsOnDay = (day) => bills.filter(b => b.dayOfMonth === day);
+          const paidAmountTotal = bills.filter(b => getBillPaid(b, calMk)).reduce((s, b) => s + b.budget, 0);
           const remainingBillsTotal = totalBillsBudget - paidAmountTotal;
           const inpStyleInline = { background: COLORS.containerLow, border: `1px solid ${COLORS.primary}40`, borderRadius: 8, padding: "6px 10px", fontSize: 13, color: COLORS.text, outline: "none" };
           return (
@@ -2064,10 +2101,11 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                             <span style={{ fontSize: 12, fontWeight: isToday ? 800 : 500, color: isToday ? "#fff" : COLORS.text }}>{day}</span>
                           </div>
                           {dayBills.map(b => {
-                            const colorSet = b.paid ? { bg: COLORS.success + "18", text: COLORS.success } : { bg: "rgba(97,205,253,0.15)", text: COLORS.primary };
+                            const bPaidCal = getBillPaid(b, calMk);
+                            const colorSet = bPaidCal ? { bg: COLORS.success + "18", text: COLORS.success } : { bg: "rgba(97,205,253,0.15)", text: COLORS.primary };
                             return (
-                              <div key={b.id} onClick={() => setActiveBillDetail(b)} style={{ background: colorSet.bg, borderRadius: 4, padding: "2px 6px", marginBottom: 2, cursor: "pointer", border: b.paid ? `1px solid ${COLORS.success}40` : "1px solid transparent" }}>
-                                <p style={{ fontSize: 10, fontWeight: 700, color: colorSet.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.label}{b.paid ? " ✓" : ""}</p>
+                              <div key={b.id} onClick={() => setActiveBillDetail(b)} style={{ background: colorSet.bg, borderRadius: 4, padding: "2px 6px", marginBottom: 2, cursor: "pointer", border: bPaidCal ? `1px solid ${COLORS.success}40` : "1px solid transparent" }}>
+                                <p style={{ fontSize: 10, fontWeight: 700, color: colorSet.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.label}{bPaidCal ? " ✓" : ""}</p>
                               </div>
                             );
                           })}
@@ -2083,17 +2121,19 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       {["Bill", "Due Date", "Amount", "Status", "Action", ""].map(h => <span key={h} style={{ fontSize: 11, fontWeight: 700, color: COLORS.subtext, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</span>)}
                     </div>
                     {bills.length === 0 && <p style={{ fontSize: 14, color: COLORS.muted, padding: "20px 0", textAlign: "center" }}>No bills yet.</p>}
-                    {[...bills].sort((a,b) => (a.dueDate||"").localeCompare(b.dueDate||"")).map(b => {
-                      const [y,m,dd] = (b.dueDate||"").split("-").map(Number);
+                    {[...bills].sort((a,b) => a.dayOfMonth - b.dayOfMonth).map(b => {
+                      const bDueDateL = getBillDueDate(b, calMk);
+                      const [y,m,dd] = bDueDateL.split("-").map(Number);
                       const dDate = new Date(y,m-1,dd); const nowL = new Date(); nowL.setHours(0,0,0,0);
-                      const isOverdueL = !b.paid && dDate < nowL;
+                      const bPaidL = getBillPaid(b, calMk);
+                      const isOverdueL = !bPaidL && dDate < nowL;
                       return (
-                        <div key={b.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 60px 28px", gap: 8, padding: "10px 12px", borderRadius: 8, background: COLORS.card, marginBottom: 4, boxShadow: COLORS.shadowSm, alignItems: "center", borderLeft: `3px solid ${b.paid ? COLORS.success : isOverdueL ? COLORS.danger : "transparent"}` }}>
+                        <div key={b.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 60px 28px", gap: 8, padding: "10px 12px", borderRadius: 8, background: COLORS.card, marginBottom: 4, boxShadow: COLORS.shadowSm, alignItems: "center", borderLeft: `3px solid ${bPaidL ? COLORS.success : isOverdueL ? COLORS.danger : "transparent"}` }}>
                           <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>{b.label}</span>
-                          <span style={{ fontSize: 12, color: COLORS.subtext }}>{fmtDate(b.dueDate)}</span>
+                          <span style={{ fontSize: 12, color: COLORS.subtext }}>{fmtDate(bDueDateL)}</span>
                           <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>{fmt(b.budget)}</span>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: b.paid ? COLORS.success : isOverdueL ? COLORS.danger : COLORS.subtext, background: (b.paid ? COLORS.success : isOverdueL ? COLORS.danger : COLORS.muted) + "18", borderRadius: 9999, padding: "2px 8px" }}>{b.paid ? "Paid" : isOverdueL ? "Overdue" : "Upcoming"}</span>
-                          {!b.paid ? <button onClick={() => setBills(p => p.map(x => x.id === b.id ? {...x, paid:true, actual:x.budget} : x))} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:9999, padding:"4px 8px", fontSize:11, fontWeight:700, cursor:"pointer" }}>Mark Paid</button> : <span style={{ fontSize: 14, color: COLORS.success }}>✓</span>}
+                          <span style={{ fontSize: 11, fontWeight: 700, color: bPaidL ? COLORS.success : isOverdueL ? COLORS.danger : COLORS.subtext, background: (bPaidL ? COLORS.success : isOverdueL ? COLORS.danger : COLORS.muted) + "18", borderRadius: 9999, padding: "2px 8px" }}>{bPaidL ? "Paid" : isOverdueL ? "Overdue" : "Upcoming"}</span>
+                          {!bPaidL ? <button onClick={() => markBillPaid(b.id, calMk)} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:9999, padding:"4px 8px", fontSize:11, fontWeight:700, cursor:"pointer" }}>Mark Paid</button> : <span style={{ fontSize: 14, color: COLORS.success }}>✓</span>}
                           <button onClick={() => setBills(p => p.filter(x => x.id !== b.id))} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 16, padding: 0 }}>×</button>
                         </div>
                       );
@@ -2106,7 +2146,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               <div style={{ background: COLORS.card, borderRadius: 20, padding: 28, boxShadow: COLORS.shadowSm, marginBottom: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                   <h3 style={{ fontSize: 16, fontWeight: 700, color: COLORS.text }}>Bills This Month</h3>
-                  <button onClick={() => setNewBillInline({ label: "", budget: "", dueDate: "" })} style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(0,103,136,0.08)", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, color: COLORS.primary, cursor: "pointer" }}>
+                  <button onClick={() => setNewBillInline({ label: "", budget: "", dayOfMonth: "" })} style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(0,103,136,0.08)", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, color: COLORS.primary, cursor: "pointer" }}>
                     <span className="material-symbols-outlined" style={{ fontSize: 15 }}>add</span>+ Add Bill
                   </button>
                 </div>
@@ -2115,33 +2155,35 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   {["Bill Name", "Due Date", "Amount", "Status", "Action", ""].map(h => <span key={h} style={{ fontSize: 11, fontWeight: 700, color: COLORS.subtext, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</span>)}
                 </div>
                 {bills.length === 0 && <p style={{ fontSize: 13, color: COLORS.muted, padding: "16px 0", textAlign: "center" }}>No bills added yet.</p>}
-                {[...bills].sort((a,b) => (a.dueDate||"").localeCompare(b.dueDate||"")).map(b => {
-                  const [y,m,dd] = (b.dueDate||"").split("-").map(Number);
+                {[...bills].sort((a,b) => a.dayOfMonth - b.dayOfMonth).map(b => {
+                  const bDueDateE = getBillDueDate(b, calMk);
+                  const [y,m,dd] = bDueDateE.split("-").map(Number);
                   const dDate = new Date(y,m-1,dd); const nowE = new Date(); nowE.setHours(0,0,0,0);
-                  const isOverdueE = !b.paid && dDate < nowE;
+                  const bPaidE = getBillPaid(b, calMk);
+                  const isOverdueE = !bPaidE && dDate < nowE;
                   const isEL = editingBillCell?.id === b.id && editingBillCell?.field === "label";
                   const isED = editingBillCell?.id === b.id && editingBillCell?.field === "dueDate";
                   const isEA = editingBillCell?.id === b.id && editingBillCell?.field === "budget";
                   const cellInp = { background: COLORS.containerLow, border: `1px solid ${COLORS.primary}`, borderRadius: 6, padding: "4px 8px", fontSize: 13, color: COLORS.text, outline: "none", width: "100%" };
                   return (
-                    <div key={b.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 80px 28px", gap: 8, padding: "10px 12px", borderRadius: 10, background: b.paid ? COLORS.success + "08" : isOverdueE ? COLORS.danger + "06" : COLORS.containerLow + "60", marginBottom: 6, alignItems: "center", borderLeft: `3px solid ${b.paid ? COLORS.success : isOverdueE ? COLORS.danger : "transparent"}` }}>
+                    <div key={b.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 80px 28px", gap: 8, padding: "10px 12px", borderRadius: 10, background: bPaidE ? COLORS.success + "08" : isOverdueE ? COLORS.danger + "06" : COLORS.containerLow + "60", marginBottom: 6, alignItems: "center", borderLeft: `3px solid ${bPaidE ? COLORS.success : isOverdueE ? COLORS.danger : "transparent"}` }}>
                       {/* Bill Name */}
                       {isEL ? <input autoFocus defaultValue={b.label} style={cellInp} onBlur={e => { setBills(p => p.map(x => x.id===b.id?{...x,label:e.target.value||x.label}:x)); setEditingBillCell(null); }} onKeyDown={e=>{ if(e.key==="Enter")e.target.blur(); if(e.key==="Escape")setEditingBillCell(null); }} />
                         : <span onClick={() => setEditingBillCell({id:b.id,field:"label"})} style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, cursor: "text" }}>{b.label}</span>}
                       {/* Due Date */}
-                      {isED ? <input autoFocus type="date" defaultValue={b.dueDate} style={cellInp} onBlur={e => { if(e.target.value) setBills(p => p.map(x => x.id===b.id?{...x,dueDate:e.target.value}:x)); setEditingBillCell(null); }} onKeyDown={e=>{ if(e.key==="Enter")e.target.blur(); if(e.key==="Escape")setEditingBillCell(null); }} />
-                        : <span onClick={() => setEditingBillCell({id:b.id,field:"dueDate"})} style={{ fontSize: 12, color: isOverdueE ? COLORS.danger : COLORS.subtext, cursor: "text" }}>{fmtDate(b.dueDate)}</span>}
+                      {isED ? <input autoFocus type="number" min="1" max="31" defaultValue={b.dayOfMonth} style={cellInp} onBlur={e => { const v = parseInt(e.target.value); if(v >= 1 && v <= 31) setBills(p => p.map(x => x.id===b.id?{...x,dayOfMonth:v}:x)); setEditingBillCell(null); }} onKeyDown={e=>{ if(e.key==="Enter")e.target.blur(); if(e.key==="Escape")setEditingBillCell(null); }} />
+                        : <span onClick={() => setEditingBillCell({id:b.id,field:"dueDate"})} style={{ fontSize: 12, color: isOverdueE ? COLORS.danger : COLORS.subtext, cursor: "text" }}>{fmtDate(bDueDateE)}</span>}
                       {/* Amount */}
                       {isEA ? <input autoFocus type="number" defaultValue={b.budget} style={cellInp} onBlur={e => { const v=parseFloat(e.target.value); if(!isNaN(v)&&v>=0) setBills(p=>p.map(x=>x.id===b.id?{...x,budget:v}:x)); setEditingBillCell(null); }} onKeyDown={e=>{ if(e.key==="Enter")e.target.blur(); if(e.key==="Escape")setEditingBillCell(null); }} />
                         : <span onClick={() => setEditingBillCell({id:b.id,field:"budget"})} style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, cursor: "text" }}>{fmt(b.budget)}</span>}
                       {/* Status */}
-                      <span style={{ fontSize: 11, fontWeight: 700, color: b.paid ? COLORS.success : isOverdueE ? COLORS.danger : COLORS.subtext, background: (b.paid ? COLORS.success : isOverdueE ? COLORS.danger : COLORS.muted) + "18", borderRadius: 9999, padding: "3px 10px", display: "inline-block" }}>
-                        {b.paid ? "Paid" : isOverdueE ? "Overdue" : "Upcoming"}
+                      <span style={{ fontSize: 11, fontWeight: 700, color: bPaidE ? COLORS.success : isOverdueE ? COLORS.danger : COLORS.subtext, background: (bPaidE ? COLORS.success : isOverdueE ? COLORS.danger : COLORS.muted) + "18", borderRadius: 9999, padding: "3px 10px", display: "inline-block" }}>
+                        {bPaidE ? "Paid" : isOverdueE ? "Overdue" : "Upcoming"}
                       </span>
                       {/* Action */}
-                      {b.paid
-                        ? <button onClick={() => setBills(p => p.map(x => x.id===b.id ? {...x,paid:false,actual:0} : x))} style={{ background: COLORS.containerLow, border:"none", borderRadius:8, padding:"5px 8px", fontSize:11, fontWeight:700, color:COLORS.subtext, cursor:"pointer" }}>Unpay</button>
-                        : <button onClick={() => setBills(p => p.map(x => x.id===b.id ? {...x,paid:true,actual:x.budget} : x))} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:8, padding:"5px 8px", fontSize:11, fontWeight:700, cursor:"pointer" }}>Mark Paid</button>
+                      {bPaidE
+                        ? <button onClick={() => markBillPaid(b.id, calMk, false)} style={{ background: COLORS.containerLow, border:"none", borderRadius:8, padding:"5px 8px", fontSize:11, fontWeight:700, color:COLORS.subtext, cursor:"pointer" }}>Unpay</button>
+                        : <button onClick={() => markBillPaid(b.id, calMk)} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:8, padding:"5px 8px", fontSize:11, fontWeight:700, cursor:"pointer" }}>Mark Paid</button>
                       }
                       {/* Delete */}
                       <button onClick={() => setBills(p => p.filter(x => x.id !== b.id))} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 16, padding: 0 }}>×</button>
@@ -2152,10 +2194,10 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 {newBillInline !== null && (
                   <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 80px 28px", gap: 8, padding: "10px 12px", borderRadius: 10, background: COLORS.primary + "08", marginTop: 8, alignItems: "center" }}>
                     <input autoFocus placeholder="Bill name" value={newBillInline.label} onChange={e => setNewBillInline(p => ({...p, label: e.target.value}))} style={{ ...inpStyleInline, width: "100%" }} />
-                    <input type="date" value={newBillInline.dueDate} onChange={e => setNewBillInline(p => ({...p, dueDate: e.target.value}))} style={{ ...inpStyleInline, width: "100%" }} />
+                    <input type="number" min="1" max="31" placeholder="Day" value={newBillInline.dayOfMonth} onChange={e => setNewBillInline(p => ({...p, dayOfMonth: e.target.value}))} style={{ ...inpStyleInline, width: "100%" }} />
                     <input type="number" placeholder="Amount" value={newBillInline.budget} onChange={e => setNewBillInline(p => ({...p, budget: e.target.value}))} style={{ ...inpStyleInline, width: "100%" }} />
                     <span style={{ fontSize: 11, color: COLORS.muted }}>Upcoming</span>
-                    <button onClick={() => { if(!newBillInline.label || !newBillInline.budget) return; setBills(p => [...p, { id: Date.now(), label: newBillInline.label, budget: parseFloat(newBillInline.budget)||0, dueDate: newBillInline.dueDate || `${DEMO_MONTH}-01`, actual: 0, paid: false }]); setNewBillInline(null); }} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:8, padding:"6px 8px", fontSize:11, fontWeight:700, cursor:"pointer" }}>Save</button>
+                    <button onClick={() => { if(!newBillInline.label || !newBillInline.budget) return; setBills(p => [...p, { id: Date.now(), label: newBillInline.label, budget: parseFloat(newBillInline.budget)||0, dayOfMonth: parseInt(newBillInline.dayOfMonth)||1 }]); setNewBillInline(null); }} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:8, padding:"6px 8px", fontSize:11, fontWeight:700, cursor:"pointer" }}>Save</button>
                     <button onClick={() => setNewBillInline(null)} style={{ background:"none", border:"none", color:COLORS.muted, cursor:"pointer", fontSize:18, padding:0 }}>×</button>
                   </div>
                 )}
@@ -2167,8 +2209,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 {(() => {
                   const now2 = new Date(); now2.setHours(0,0,0,0);
                   const in14 = new Date(now2.getTime() + 14 * 86400000);
-                  const overdueBills2 = unpaidBills.filter(b => { const [y2,m2,d2] = (b.dueDate||"").split("-").map(Number); return new Date(y2,m2-1,d2) < now2; });
-                  const upcomingBills2 = unpaidBills.filter(b => { const [y2,m2,d2] = (b.dueDate||"").split("-").map(Number); const dt = new Date(y2,m2-1,d2); return dt >= now2 && dt <= in14; });
+                  const overdueBills2 = unpaidBills.filter(b => { const dueDateStr = getBillDueDate(b, calMk); const [y2,m2,d2] = dueDateStr.split("-").map(Number); return new Date(y2,m2-1,d2) < now2; });
+                  const upcomingBills2 = unpaidBills.filter(b => { const dueDateStr = getBillDueDate(b, calMk); const [y2,m2,d2] = dueDateStr.split("-").map(Number); const dt = new Date(y2,m2-1,d2); return dt >= now2 && dt <= in14; });
                   const StmtRow = ({b, color}) => (
                     <div key={b.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: `1px solid ${COLORS.containerLow}` }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -2177,12 +2219,12 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         </div>
                         <div>
                           <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>{b.label}</p>
-                          <p style={{ fontSize: 11, color }}>{fmtDate(b.dueDate)}</p>
+                          <p style={{ fontSize: 11, color }}>{fmtDate(getBillDueDate(b, calMk))}</p>
                         </div>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>{fmt(b.budget)}</span>
-                        <button onClick={() => setBills(p => p.map(x => x.id === b.id ? {...x, paid:true, actual:x.budget} : x))} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:9999, padding:"3px 9px", fontSize:10, fontWeight:700, cursor:"pointer" }}>Paid</button>
+                        <button onClick={() => markBillPaid(b.id, calMk)} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:9999, padding:"3px 9px", fontSize:10, fontWeight:700, cursor:"pointer" }}>Paid</button>
                       </div>
                     </div>
                   );
@@ -2208,8 +2250,10 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             {/* Bill detail popover (BUG #10) */}
             {activeBillDetail && (() => {
               const b = bills.find(x => x.id === activeBillDetail.id) || activeBillDetail;
-              const [y2,m2,d2] = (b.dueDate||"").split("-").map(Number);
+              const bDueDatePop = getBillDueDate(b, calMk);
+              const [y2,m2,d2] = bDueDatePop.split("-").map(Number);
               const isPast = new Date(y2,m2-1,d2) < new Date(new Date().toDateString());
+              const bPaidPop = getBillPaid(b, calMk);
               const popInpStyle = { background: COLORS.containerLow, border: `1px solid ${COLORS.primary}`, borderRadius: 8, padding: "4px 10px", fontSize: 14, color: COLORS.text, outline: "none", textAlign: "right" };
               const isELabel = editingBillCell?.id === b.id && editingBillCell?.field === "label";
               const isEAmt = editingBillCell?.id === b.id && editingBillCell?.field === "budget";
@@ -2238,16 +2282,16 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <span style={{ fontSize: 13, color: COLORS.subtext }}>Due Date</span>
                         {isEDate
-                          ? <input autoFocus type="date" defaultValue={b.dueDate} style={popInpStyle} onBlur={e => { if (e.target.value) setBills(p => p.map(x => x.id === b.id ? {...x, dueDate: e.target.value} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
-                          : <span onClick={() => setEditingBillCell({id: b.id, field: "dueDate"})} title="Click to edit" style={{ fontSize: 14, color: COLORS.text, cursor: "text" }}>{fmtDate(b.dueDate)}</span>
+                          ? <input autoFocus type="number" min="1" max="31" defaultValue={b.dayOfMonth} style={popInpStyle} onBlur={e => { const v = parseInt(e.target.value); if (v >= 1 && v <= 31) setBills(p => p.map(x => x.id === b.id ? {...x, dayOfMonth: v} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
+                          : <span onClick={() => setEditingBillCell({id: b.id, field: "dueDate"})} title="Click to edit" style={{ fontSize: 14, color: COLORS.text, cursor: "text" }}>{fmtDate(bDueDatePop)}</span>
                         }
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between" }}>
                         <span style={{ fontSize: 13, color: COLORS.subtext }}>Status</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: b.paid ? COLORS.success : isPast ? COLORS.danger : COLORS.subtext }}>{b.paid ? "Paid ✓" : isPast ? "Overdue" : "Upcoming"}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: bPaidPop ? COLORS.success : isPast ? COLORS.danger : COLORS.subtext }}>{bPaidPop ? "Paid ✓" : isPast ? "Overdue" : "Upcoming"}</span>
                       </div>
                     </div>
-                    {!b.paid && <button onClick={() => { setBills(p => p.map(x => x.id === b.id ? {...x, paid:true, actual:x.budget} : x)); setActiveBillDetail(null); }} style={{ width: "100%", background: COLORS.primary, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Mark as Paid</button>}
+                    {!bPaidPop && <button onClick={() => { markBillPaid(b.id, calMk); setActiveBillDetail(null); }} style={{ width: "100%", background: COLORS.primary, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Mark as Paid</button>}
                   </div>
                 </div>
               );
@@ -2262,7 +2306,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, flexWrap: "wrap", gap: 14 }}>
               <div>
                 <h2 style={{ fontWeight: 800, fontSize: 24, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 4 }}>Monthly Insights</h2>
-                <p style={{ color: COLORS.subtext, fontSize: 14 }}>12-month view · Click any month for details & AI analysis</p>
+                <p style={{ color: COLORS.subtext, fontSize: 14 }}>All months · Click any month for details & AI analysis</p>
               </div>
               {/* Start month picker */}
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -2280,9 +2324,9 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 </select>
               </div>
             </div>
-            {/* 12-month mini-card strip */}
+            {/* All-months mini-card strip */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10, marginBottom: 28 }}>
-              {twelveMonths.map((key) => {
+              {allInsightMonths.map((key) => {
                 const { month0, year } = parseKey(key);
                 const s = monthStats(key);
                 const isActive = key === activeInsightKey;
@@ -2409,14 +2453,14 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         {/* Spending by Category */}
                         <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
                           <h4 style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}>Spending by Category</h4>
-                          {CATEGORIES.filter(c => s.cats[c] > 0 || expenseBudgets[c] > 0).sort((a,b) => (s.cats[b]||0)-(s.cats[a]||0)).map(c => {
-                            const budget = expenseBudgets[c] || 0;
-                            const spent = s.cats[c] || 0;
+                          {CATEGORIES.filter(c => s.cats[c.id] > 0 || viewExpenseBudgets[c.id] > 0).sort((a,b) => (s.cats[b.id]||0)-(s.cats[a.id]||0)).map(c => {
+                            const budget = viewExpenseBudgets[c.id] || 0;
+                            const spent = s.cats[c.id] || 0;
                             const barMax2 = Math.max(spent, budget, 1);
                             return (
-                            <div key={c} style={{ marginBottom: 11 }}>
+                            <div key={c.id} style={{ marginBottom: 11 }}>
                               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                                <span style={{ fontSize: 12, color: COLORS.text }}>{c}</span>
+                                <span style={{ fontSize: 12, color: COLORS.text }}>{c.label}</span>
                                 <span style={{ fontSize: 12, color: COLORS.muted }}>{fmt(spent)}{budget > 0 ? ` / ${fmt(budget)}` : ""}</span>
                               </div>
                               <div style={{ position: "relative", height: 6, background: COLORS.containerLow, borderRadius: 9999, overflow: "visible" }}>
@@ -2428,7 +2472,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                             </div>
                             );
                           })}
-                          {CATEGORIES.every(c => s.cats[c] === 0) && <p style={{ color: COLORS.muted, fontSize: 13 }}>No expenses recorded.</p>}
+                          {CATEGORIES.every(c => s.cats[c.id] === 0) && <p style={{ color: COLORS.muted, fontSize: 13 }}>No expenses recorded.</p>}
                         </div>
                         {/* Debt Details */}
                         <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
@@ -2538,11 +2582,11 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               <h4 style={{ fontWeight: 700, fontSize: 15, marginBottom: 16 }}>Year-at-a-Glance</h4>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 18 }}>
                 {(() => {
-                  const allStats = twelveMonths.map(k => monthStats(k));
+                  const allStats = allInsightMonths.map(k => monthStats(k));
                   const totalInc = allStats.reduce((s,m)=>s+m.inc,0);
                   const totalExp = allStats.reduce((s,m)=>s+m.exp,0);
-                  const bestMonth = twelveMonths.reduce((best,k) => monthStats(k).net > monthStats(best).net ? k : best, twelveMonths[0]);
-                  const worstMonth = twelveMonths.filter(k=>monthStats(k).hasData).reduce((worst,k) => monthStats(k).net < monthStats(worst).net ? k : worst, twelveMonths[0]);
+                  const bestMonth = allInsightMonths.reduce((best,k) => monthStats(k).net > monthStats(best).net ? k : best, allInsightMonths[0]);
+                  const worstMonth = allInsightMonths.filter(k=>monthStats(k).hasData).reduce((worst,k) => monthStats(k).net < monthStats(worst).net ? k : worst, allInsightMonths[0]);
                   return [
                     { label: "Total Income", val: fmt(totalInc), color: COLORS.accent },
                     { label: "Total Expenses", val: fmt(totalExp), color: COLORS.accentWarm },
@@ -2562,10 +2606,10 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 <div style={{ display: "flex", alignItems: "center", gap: 5 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: COLORS.accentWarm }} /><span style={{ fontSize: 11, color: COLORS.subtext }}>Expenses</span></div>
               </div>
               <div style={{ display: "flex", gap: 4, alignItems: "flex-end", height: 80 }}>
-                {twelveMonths.map(key => {
+                {allInsightMonths.map(key => {
                   const s = monthStats(key);
                   const { month0 } = parseKey(key);
-                  const maxVal = Math.max(...twelveMonths.map(k => Math.max(monthStats(k).inc, monthStats(k).exp)), 1);
+                  const maxVal = Math.max(...allInsightMonths.map(k => Math.max(monthStats(k).inc, monthStats(k).exp)), 1);
                   const incH = s.hasData && s.inc > 0 ? Math.max(4, (s.inc / maxVal) * 68) : 2;
                   const expH = s.hasData && s.exp > 0 ? Math.max(4, (s.exp / maxVal) * 68) : 2;
                   return (
@@ -2704,12 +2748,12 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         onImportIncome={(items) => { setIncome(prev => [...prev, ...items.map(it => ({ id: it.id, label: it.label, amount: it.amount, date: it.date, recurring: it.recurring ?? false }))]); setModal(null); }}
       />}
       {modal === "addExpense" && (
-        <Modal title={editingExpenseId ? "Edit Expense" : "Add Expense"} onClose={() => { setModal(null); setEditingExpenseId(null); setNewExp({ label: "", amount: "", category: "Food", date: new Date().toISOString().slice(0,10), fixed: false }); }}>
+        <Modal title={editingExpenseId ? "Edit Expense" : "Add Expense"} onClose={() => { setModal(null); setEditingExpenseId(null); setNewExp({ label: "", amount: "", category: "Food", date: getDefaultDate(viewMonthKey), fixed: false }); }}>
           <Field label="Description"><input style={inputStyle} value={newExp.label} onChange={e => setNewExp(p => ({ ...p, label: e.target.value }))} placeholder="e.g. Groceries" /></Field>
           <Field label="Amount ($)"><input style={inputStyle} type="number" value={newExp.amount} onChange={e => setNewExp(p => ({ ...p, amount: e.target.value }))} placeholder="0.00" /></Field>
           <Field label="Category">
             <select style={selectStyle} value={newExp.category} onChange={e => setNewExp(p => ({ ...p, category: e.target.value }))}>
-              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
           </Field>
           <Field label="Date"><input style={inputStyle} type="date" value={newExp.date} onChange={e => setNewExp(p => ({ ...p, date: e.target.value }))} /></Field>
@@ -2792,10 +2836,10 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           {(() => {
             const tnow = new Date(); tnow.setHours(0,0,0,0);
             const in7 = new Date(tnow.getTime() + 7 * 86400000);
-            const dueSoon = bills.filter(b => { if (b.paid) return false; const d = new Date(b.dueDate); d.setHours(0,0,0,0); return d <= in7; }).sort((a,b) => new Date(a.dueDate)-new Date(b.dueDate));
+            const dueSoon = bills.filter(b => { if (getBillPaid(b, viewMonthKey)) return false; const d = new Date(getBillDueDate(b, viewMonthKey)); d.setHours(0,0,0,0); return d <= in7; }).sort((a,b) => new Date(getBillDueDate(a, viewMonthKey))-new Date(getBillDueDate(b, viewMonthKey)));
             if (dueSoon.length === 0) return <p style={{ color: COLORS.muted, fontSize: 14 }}>No bills due in the next 7 days. You're all set!</p>;
             return dueSoon.map(b => {
-              const dLeft = Math.round((new Date(b.dueDate).setHours(0,0,0,0) - tnow.getTime()) / 86400000);
+              const dLeft = Math.round((new Date(getBillDueDate(b, viewMonthKey)).setHours(0,0,0,0) - tnow.getTime()) / 86400000);
               return (
                 <div key={b.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: `1px solid ${COLORS.containerLow}` }}>
                   <div>
@@ -2804,7 +2848,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.text }}>{fmt(b.budget)}</span>
-                    <button onClick={() => setBills(p => p.map(x => x.id === b.id ? { ...x, paid: true, actual: x.budget } : x))} style={{ background: COLORS.primary, color: "#fff", border: "none", borderRadius: 9999, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Mark Paid</button>
+                    <button onClick={() => markBillPaid(b.id, viewMonthKey)} style={{ background: COLORS.primary, color: "#fff", border: "none", borderRadius: 9999, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Mark Paid</button>
                   </div>
                 </div>
               );
@@ -2813,14 +2857,14 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         </Modal>
       )}
       {modal === "addBill" && (
-        <Modal title="Add Bill" onClose={() => { setModal(null); setNewBill({ label: "", budget: "", dueDate: "" }); }}>
+        <Modal title="Add Bill" onClose={() => { setModal(null); setNewBill({ label: "", budget: "", dayOfMonth: "" }); }}>
           <Field label="Bill Name"><input style={inputStyle} value={newBill.label} onChange={e => setNewBill(p=>({...p,label:e.target.value}))} placeholder="e.g. Electric Bill" /></Field>
           <Field label="Amount"><input style={inputStyle} type="number" value={newBill.budget} onChange={e => setNewBill(p=>({...p,budget:e.target.value}))} placeholder="0" /></Field>
-          <Field label="Due Date"><input style={inputStyle} type="date" value={newBill.dueDate} onChange={e => setNewBill(p=>({...p,dueDate:e.target.value}))} /></Field>
-          <button disabled={!newBill.label || !newBill.budget || !newBill.dueDate} onClick={() => {
-            setBills(p => [...p, { id: Date.now(), label: newBill.label, dueDate: newBill.dueDate, budget: parseFloat(newBill.budget)||0, actual: 0, paid: false }]);
-            setNewBill({ label: "", budget: "", dueDate: "" }); setModal(null);
-          }} style={{ ...btnPrimary, opacity: (!newBill.label || !newBill.budget || !newBill.dueDate) ? 0.5 : 1 }}>Add Bill</button>
+          <Field label="Day of Month"><input style={inputStyle} type="number" min="1" max="31" value={newBill.dayOfMonth} onChange={e => setNewBill(p=>({...p,dayOfMonth:e.target.value}))} placeholder="e.g. 15" /></Field>
+          <button disabled={!newBill.label || !newBill.budget || !newBill.dayOfMonth} onClick={() => {
+            setBills(p => [...p, { id: Date.now(), label: newBill.label, dayOfMonth: parseInt(newBill.dayOfMonth)||1, budget: parseFloat(newBill.budget)||0 }]);
+            setNewBill({ label: "", budget: "", dayOfMonth: "" }); setModal(null);
+          }} style={{ ...btnPrimary, opacity: (!newBill.label || !newBill.budget || !newBill.dayOfMonth) ? 0.5 : 1 }}>Add Bill</button>
         </Modal>
       )}
       {modal === "settings" && (
