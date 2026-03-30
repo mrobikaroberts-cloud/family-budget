@@ -740,6 +740,19 @@ export default function App() {
     }, 1000);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [income, expenses, bills, debts, savingsItems, monthlySnapshots, itemBudgets, goals, advisorHistory, familyName, householdId, firebaseLoading]);
+  // ── withSave helper — wraps any async Firebase operation with status indicator ──
+  const withSave = async (operation) => {
+    setSaveStatus('saving');
+    try {
+      await operation();
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus(null), 2000);
+    } catch (err) {
+      console.error('Save error:', err);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus(null), 4000);
+    }
+  };
   // monthlySnapshots: { [key]: { income: [], expenses: [], notes: string, billStatus: { [billId]: bool }, expenseBudgets: {} } }
   const DEFAULT_EXPENSE_BUDGETS = { Housing: 1800, Food: 500, Utilities: 300, Transport: 500, Health: 100, Entertainment: 150, Personal: 200, Education: 50, Kids: 0, Savings: 0, Subscriptions: 0, Other: 120 };
   const [monthlySnapshots, setMonthlySnapshots] = useState({
