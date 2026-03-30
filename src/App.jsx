@@ -638,6 +638,12 @@ export default function App() {
   const [showPlaceholders, setShowPlaceholders] = useState(false);
   const [editingExpenseId, setEditingExpenseId] = useState(null);
   const [savingsMode, setSavingsMode] = useState(null); // "add" | "remove"
+  const [toggle5020, setToggle5020] = useState(false);
+  const [toast5020, setToast5020] = useState("");
+  const [billLinkToast, setBillLinkToast] = useState(false);
+  const [newBillInline, setNewBillInline] = useState(null); // { label, budget, dueDate } for inline add
+  const pre5020Budgets = useRef(null);
+  const pre5020Savings = useRef(null);
   // ── Monthly insights state ──
   const todayKey = monthKey(new Date().getFullYear(), new Date().getMonth());
   const [startMonthKey, setStartMonthKey] = useState("2025-01");
@@ -671,6 +677,36 @@ export default function App() {
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [advisorHistory]);
   // Sync Monthly Insights expanded month when switching to insights tab
   useEffect(() => { if (tab === "insights") setActiveInsightKey(viewMonthKey); }, [tab]);
+  // ── Hash-based URL routing ──
+  const TAB_HASH = { dashboard: "overview", transactions: "family-budget", weekly: "bill-calendar", insights: "monthly-insights", advisor: "ai-assistant" };
+  const HASH_TAB = Object.fromEntries(Object.entries(TAB_HASH).map(([k,v]) => [v,k]));
+  const MONTH_SLUG = (mk) => { const { year, month0 } = parseKey(mk); return `${MONTH_FULL[month0].toLowerCase()}-${year}`; };
+  const SLUG_MONTH = (slug) => { const parts = slug.split("-"); if (parts.length < 2) return null; const yr = parseInt(parts[parts.length - 1]); const mn = MONTH_FULL.findIndex(m => m.toLowerCase() === parts.slice(0, -1).join("-")); if (mn === -1 || isNaN(yr)) return null; return monthKey(yr, mn); };
+  // On mount: read hash → set tab and month
+  useEffect(() => {
+    const readHash = () => {
+      const hash = window.location.hash.replace(/^#\/?/, "");
+      const parts = hash.split("/").filter(Boolean);
+      if (parts.length === 0) return;
+      const tabSlug = parts[0];
+      const tabId = HASH_TAB[tabSlug];
+      if (tabId) { setTab(tabId); }
+      if (tabSlug === "bill-calendar" && parts[1]) {
+        const mk = SLUG_MONTH(parts[1]);
+        if (mk) setViewMonthKey(mk);
+      }
+    };
+    readHash();
+    window.addEventListener("hashchange", readHash);
+    return () => window.removeEventListener("hashchange", readHash);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // On tab/month change: update hash
+  useEffect(() => {
+    const slug = TAB_HASH[tab] || "overview";
+    const monthPart = tab === "weekly" ? `/${MONTH_SLUG(viewMonthKey)}` : "";
+    const newHash = `#/${slug}${monthPart}`;
+    if (window.location.hash !== newHash) window.history.replaceState(null, "", newHash);
+  }, [tab, viewMonthKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const twelveMonths = build12Months(startMonthKey);
   // Get snapshot for a key (fallback empty)
   const getSnap = (key) => monthlySnapshots[key] || { income: [], expenses: [], notes: "" };
@@ -1598,7 +1634,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   {/* ── Budget bar ── */}
                   <div style={{ paddingBottom: 14, marginBottom: 14, borderBottom: "0.5px solid rgba(172,179,181,0.3)" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: COLORS.text }}>{fmt(totalActual)} spent of {fmt(viewTotalIncome > 0 ? viewTotalIncome : totalPlanned)} income{totalPlanned > 0 && viewTotalIncome > 0 ? ` · ${fmt(totalPlanned)} planned` : ""}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: COLORS.text }}>{fmt(totalActual)} spent of {fmt(viewTotalIncome)} income{totalPlanned > 0 ? ` · ${fmt(totalPlanned)} planned` : ""}</span>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <button onClick={() => { setAdvisorMsg(`My budget health: ${healthStatus.label}. I've spent ${fmt(totalActual)} of ${fmt(viewTotalIncome)} income (${usedPctBar}%). ${isCurrentMonth ? `${daysLeft} days left in the month.` : ""} Please give me specific advice.`); pendingAdvisorSend.current = true; setTab("advisor"); }} style={{ fontSize: 11, fontWeight: 700, color: healthStatus.color, background: healthStatus.bg, border: "none", borderRadius: 9999, padding: "3px 10px", cursor: "pointer" }}>{healthStatus.label}</button>
                         <span style={{ fontSize: 12, fontWeight: 800, color: barColor }}>{usedPctBar}%</span>
@@ -1610,8 +1646,33 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         <div style={{ position: "absolute", top: -2, left: `${plannedPctBar}%`, width: 2, height: 12, background: COLORS.primary, borderRadius: 2, opacity: 0.6 }} title={`Planned: ${fmt(totalPlanned)}`} />
                       )}
                     </div>
+                    {/* 50/30/20 toggle row */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <button onClick={() => {
+                          if (!toggle5020) {
+                            if (viewTotalIncome === 0) { setToast5020("Add income first to use the 50/30/20 rule"); setTimeout(() => setToast5020(""), 3000); return; }
+                            pre5020Budgets.current = { ...expenseBudgets };
+                            pre5020Savings.current = savingsItems.map(s => ({ ...s }));
+                            const inc = viewTotalIncome;
+                            setExpenseBudgets({ Housing: Math.round(inc*0.30), Utilities: Math.round(inc*0.08), Transport: Math.round(inc*0.08), Health: Math.round(inc*0.04), Food: Math.round(inc*0.12), Entertainment: Math.round(inc*0.04), Personal: Math.round(inc*0.05), Kids: Math.round(inc*0.05), Education: 0, Savings: 0, Other: 0, Subscriptions: 0 });
+                            if (savingsItems.length > 0) setSavingsItems(p => [{ ...p[0], expected: Math.round(inc*0.20) }, ...p.slice(1)]);
+                            setToggle5020(true);
+                          } else {
+                            if (pre5020Budgets.current) setExpenseBudgets(pre5020Budgets.current);
+                            if (pre5020Savings.current) setSavingsItems(pre5020Savings.current);
+                            pre5020Budgets.current = null; pre5020Savings.current = null;
+                            setToggle5020(false);
+                          }
+                        }} style={{ fontSize: 11, fontWeight: 700, background: toggle5020 ? COLORS.primary : "none", color: toggle5020 ? "#fff" : COLORS.primary, border: `1.5px solid ${COLORS.primary}`, borderRadius: 9999, padding: "3px 12px", cursor: "pointer", transition: "all .2s" }}>
+                          50/30/20 Rule {toggle5020 ? "ON" : "OFF"}
+                        </button>
+                        {toggle5020 && viewTotalIncome > 0 && <span style={{ fontSize: 11, color: COLORS.muted }}>Based on {fmt(viewTotalIncome)} income</span>}
+                        {toast5020 && <span style={{ fontSize: 11, color: COLORS.warning, fontWeight: 600 }}>{toast5020}</span>}
+                      </div>
+                    </div>
                     {!onboardingDismissed && plannedCount < 5 && (
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, background: `rgba(0,103,136,0.07)`, borderRadius: 8, padding: "8px 12px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, background: `rgba(0,103,136,0.07)`, borderRadius: 8, padding: "8px 12px" }}>
                         <span style={{ fontSize: 12, color: COLORS.primary }}>👋 Set your planned amounts to unlock full budget tracking — click any <strong>—</strong> in the Planned column.</span>
                         <button onClick={() => setOnboardingDismissed(true)} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 14, padding: "0 4px" }}>×</button>
                       </div>
@@ -1663,7 +1724,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                             {grpPlanned > 0 && (
                               <>
                                 <span style={{ fontSize: 11, color: COLORS.subtext }}>{fmt(grpPlanned)} planned</span>
-                                <span style={{ fontSize: 12, fontWeight: 700, color: utilColor }}>{fmt(grpActual)} actual</span>
+                                <span style={{ fontSize: 12, fontWeight: 700, color: utilColor }}>{fmt(grpActual)}</span>
                                 <span style={{ fontSize: 10, fontWeight: 700, color: utilColor, background: utilColor+"18", borderRadius: 9999, padding: "1px 7px" }}>{util > 100 ? `${util}% OVER` : `${util}%`}</span>
                                 {(() => { const grpVar = grpPlanned - grpActual; return grpVar !== 0 ? <span style={{ fontSize: 10, fontWeight: 700, color: grpVar > 0 ? COLORS.success : COLORS.danger }}>{grpVar > 0 ? "+" : ""}{fmt(grpVar)}</span> : null; })()}
                               </>
@@ -1807,7 +1868,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                               }
                             </div>
                             {!b.paid && (
-                              <button onClick={() => setPayBillConfirm(b)} title="Mark as paid" style={{ background: `rgba(0,103,136,0.1)`, border: "none", color: COLORS.primary, cursor: "pointer", fontSize: 11, fontWeight: 700, padding: "3px 7px", borderRadius: 6, flexShrink: 0 }}>Pay ✓</button>
+                              <button onClick={() => setBills(p => p.map(x => x.id === b.id ? {...x, paid: true, actual: x.budget} : x))} title="Mark as paid" style={{ background: `rgba(0,103,136,0.1)`, border: "none", color: COLORS.primary, cursor: "pointer", fontSize: 11, fontWeight: 700, padding: "3px 7px", borderRadius: 6, flexShrink: 0 }}>Pay ✓</button>
                             )}
                             <button onClick={() => setBills(p => p.filter(x => x.id !== b.id))} title="Delete" style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 16, padding: 0, flexShrink: 0, lineHeight: 1 }}>×</button>
                           </div>
@@ -1932,20 +1993,48 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             const [y, m, dd] = (b.dueDate || "").split("-").map(Number);
             return y === calYear && m - 1 === calMonth && dd === day;
           });
+          const paidAmountTotal = bills.filter(b => b.paid).reduce((s, b) => s + b.budget, 0);
+          const remainingBillsTotal = totalBillsBudget - paidAmountTotal;
+          const inpStyleInline = { background: COLORS.containerLow, border: `1px solid ${COLORS.primary}40`, borderRadius: 8, padding: "6px 10px", fontSize: 13, color: COLORS.text, outline: "none" };
           return (
             <div style={{ paddingBottom: 48 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 24 }}>
+              {/* ── Header ── */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
                 <div>
                   <h2 style={{ fontSize: 24, fontWeight: 800, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 4 }}>Bill Calendar</h2>
                   <p style={{ fontSize: 14, color: COLORS.subtext }}>Upcoming bills and payment schedule</p>
                 </div>
-                <button onClick={() => setModal("addBill")} style={{ display: "flex", alignItems: "center", gap: 6, background: COLORS.primary, color: "#fff", border: "none", borderRadius: 10, padding: "9px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>Add Bill
-                </button>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <button onClick={() => { navigator.clipboard.writeText(window.location.href); setBillLinkToast(true); setTimeout(() => setBillLinkToast(false), 2000); }} title="Copy link to this month" style={{ background: billLinkToast ? COLORS.success + "18" : COLORS.containerLow, border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 12, fontWeight: 600, color: billLinkToast ? COLORS.success : COLORS.subtext, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>link</span>{billLinkToast ? "Link copied!" : "Copy link"}
+                  </button>
+                  <button onClick={() => setModal("addBill")} style={{ display: "flex", alignItems: "center", gap: 6, background: COLORS.primary, color: "#fff", border: "none", borderRadius: 10, padding: "9px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>Add Bill
+                  </button>
+                </div>
               </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 24 }}>
-              {/* ── Calendar (col-8) ── */}
-              <div style={{ gridColumn: "span 8", background: COLORS.card, borderRadius: 20, padding: 28, boxShadow: COLORS.shadowSm }}>
+
+              {/* ── 3 Summary stat boxes ── */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 20 }}>
+                {[
+                  { label: "Total Bills", value: totalBillsBudget, icon: "receipt_long", color: COLORS.primary, bg: "rgba(0,103,136,0.08)" },
+                  { label: "Paid", value: paidAmountTotal, icon: "check_circle", color: COLORS.success, bg: "rgba(0,103,136,0.06)" },
+                  { label: "Remaining", value: remainingBillsTotal, icon: "pending", color: remainingBillsTotal > 0 ? COLORS.warning : COLORS.success, bg: remainingBillsTotal > 0 ? "rgba(249,115,22,0.07)" : "rgba(0,103,136,0.06)" },
+                ].map(stat => (
+                  <div key={stat.label} style={{ background: COLORS.card, borderRadius: 16, padding: "18px 20px", boxShadow: COLORS.shadowSm, display: "flex", alignItems: "center", gap: 14 }}>
+                    <div style={{ width: 42, height: 42, borderRadius: 12, background: stat.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 20, color: stat.color }}>{stat.icon}</span>
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 11, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700, marginBottom: 3 }}>{stat.label}</p>
+                      <p style={{ fontSize: 22, fontWeight: 800, color: stat.color, letterSpacing: "-0.02em" }}>{fmt(stat.value)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* ── Full-width calendar card ── */}
+              <div style={{ background: COLORS.card, borderRadius: 20, padding: 28, boxShadow: COLORS.shadowSm, marginBottom: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
                   <h3 style={{ fontSize: 18, fontWeight: 700, color: COLORS.text }}>{MONTH_FULL[calMonth]} {calYear}</h3>
                   <div style={{ display: "flex", gap: 4 }}>
@@ -1954,157 +2043,168 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     ))}
                   </div>
                 </div>
-                {/* List view */}
+                {/* Month view */}
+                {billCalView === "month" && <>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 2 }}>
+                    {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => (
+                      <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: COLORS.muted, textTransform: "uppercase", padding: "6px 0" }}>{d}</div>
+                    ))}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+                    {Array.from({ length: firstDayOfWeek }, (_, i) => (
+                      <div key={`empty-${i}`} style={{ background: COLORS.containerLow, borderRadius: 8, minHeight: 80, opacity: 0.3 }} />
+                    ))}
+                    {Array.from({ length: daysInMonth }, (_, i) => {
+                      const day = i + 1;
+                      const dayBills = billsOnDay(day);
+                      const isToday = day === todayDate;
+                      return (
+                        <div key={day} style={{ background: COLORS.card, borderRadius: 8, minHeight: 80, padding: 8, border: `1px solid ${COLORS.containerLow}` }}>
+                          <div style={{ width: 24, height: 24, borderRadius: "50%", background: isToday ? COLORS.primary : "transparent", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
+                            <span style={{ fontSize: 12, fontWeight: isToday ? 800 : 500, color: isToday ? "#fff" : COLORS.text }}>{day}</span>
+                          </div>
+                          {dayBills.map(b => {
+                            const colorSet = b.paid ? { bg: COLORS.success + "18", text: COLORS.success } : { bg: "rgba(97,205,253,0.15)", text: COLORS.primary };
+                            return (
+                              <div key={b.id} onClick={() => setActiveBillDetail(b)} style={{ background: colorSet.bg, borderRadius: 4, padding: "2px 6px", marginBottom: 2, cursor: "pointer", border: b.paid ? `1px solid ${COLORS.success}40` : "1px solid transparent" }}>
+                                <p style={{ fontSize: 10, fontWeight: 700, color: colorSet.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.label}{b.paid ? " ✓" : ""}</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>}
+                {/* List view (quick read-only toggle) */}
                 {billCalView === "list" && (
                   <div>
-                    <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 28px", gap: 8, padding: "8px 12px", background: COLORS.containerLow, borderRadius: 10, marginBottom: 8 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 60px 28px", gap: 8, padding: "8px 12px", background: COLORS.containerLow, borderRadius: 10, marginBottom: 8 }}>
                       {["Bill", "Due Date", "Amount", "Status", "Action", ""].map(h => <span key={h} style={{ fontSize: 11, fontWeight: 700, color: COLORS.subtext, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</span>)}
                     </div>
-                    {bills.length === 0 && <p style={{ fontSize: 14, color: COLORS.muted, padding: "20px 0", textAlign: "center" }}>No bills yet. Click "Add Bill" to get started.</p>}
+                    {bills.length === 0 && <p style={{ fontSize: 14, color: COLORS.muted, padding: "20px 0", textAlign: "center" }}>No bills yet.</p>}
                     {[...bills].sort((a,b) => (a.dueDate||"").localeCompare(b.dueDate||"")).map(b => {
                       const [y,m,dd] = (b.dueDate||"").split("-").map(Number);
-                      const dDate = new Date(y,m-1,dd); const now2 = new Date(); now2.setHours(0,0,0,0);
-                      const isOverdue = !b.paid && dDate < now2;
-                      const isEditingLabel = editingBillCell?.id === b.id && editingBillCell?.field === "label";
-                      const isEditingDate = editingBillCell?.id === b.id && editingBillCell?.field === "dueDate";
-                      const isEditingAmt = editingBillCell?.id === b.id && editingBillCell?.field === "budget";
-                      const inpStyle = { width: "100%", background: COLORS.containerLow, border: `1px solid ${COLORS.primary}`, borderRadius: 6, padding: "2px 6px", fontSize: 12, color: COLORS.text, outline: "none" };
+                      const dDate = new Date(y,m-1,dd); const nowL = new Date(); nowL.setHours(0,0,0,0);
+                      const isOverdueL = !b.paid && dDate < nowL;
                       return (
-                        <div key={b.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 28px", gap: 8, padding: "10px 12px", borderRadius: 8, background: COLORS.card, marginBottom: 4, boxShadow: COLORS.shadowSm, alignItems: "center", borderLeft: `3px solid ${b.paid ? COLORS.success : isOverdue ? COLORS.danger : "transparent"}` }}>
-                          {isEditingLabel
-                            ? <input autoFocus defaultValue={b.label} style={inpStyle} onBlur={e => { setBills(p => p.map(x => x.id === b.id ? {...x, label: e.target.value || x.label} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
-                            : <span onClick={() => setEditingBillCell({id: b.id, field: "label"})} title="Click to edit" style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, cursor: "text" }}>{b.label}</span>
-                          }
-                          {isEditingDate
-                            ? <input autoFocus type="date" defaultValue={b.dueDate} style={inpStyle} onBlur={e => { if (e.target.value) setBills(p => p.map(x => x.id === b.id ? {...x, dueDate: e.target.value} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
-                            : <span onClick={() => setEditingBillCell({id: b.id, field: "dueDate"})} title="Click to edit" style={{ fontSize: 12, color: isOverdue ? COLORS.danger : COLORS.subtext, cursor: "text" }}>{fmtDate(b.dueDate)}</span>
-                          }
-                          {isEditingAmt
-                            ? <input autoFocus type="number" defaultValue={b.budget} style={inpStyle} onBlur={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v >= 0) setBills(p => p.map(x => x.id === b.id ? {...x, budget: v} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
-                            : <span onClick={() => setEditingBillCell({id: b.id, field: "budget"})} title="Click to edit" style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, cursor: "text" }}>{fmt(b.budget)}</span>
-                          }
-                          <span style={{ fontSize: 11, fontWeight: 700, color: b.paid ? COLORS.success : isOverdue ? COLORS.danger : COLORS.subtext, background: (b.paid ? COLORS.success : isOverdue ? COLORS.danger : COLORS.muted) + "18", borderRadius: 9999, padding: "2px 8px", display: "inline-block" }}>{b.paid ? "Paid" : isOverdue ? "Overdue" : "Upcoming"}</span>
-                          {!b.paid && <button onClick={() => setBills(p => p.map(x => x.id === b.id ? {...x, paid:true, actual:x.budget} : x))} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:9999, padding:"4px 10px", fontSize:11, fontWeight:700, cursor:"pointer" }}>Mark Paid</button>}
-                          {b.paid && <span style={{ fontSize: 14, color: COLORS.success, animation: "pop-in .3s ease", display: "inline-block" }}>✓</span>}
-                          <button onClick={() => setBills(p => p.filter(x => x.id !== b.id))} title="Delete bill" style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 16, padding: 0, lineHeight: 1 }}>×</button>
+                        <div key={b.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 60px 28px", gap: 8, padding: "10px 12px", borderRadius: 8, background: COLORS.card, marginBottom: 4, boxShadow: COLORS.shadowSm, alignItems: "center", borderLeft: `3px solid ${b.paid ? COLORS.success : isOverdueL ? COLORS.danger : "transparent"}` }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>{b.label}</span>
+                          <span style={{ fontSize: 12, color: COLORS.subtext }}>{fmtDate(b.dueDate)}</span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>{fmt(b.budget)}</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: b.paid ? COLORS.success : isOverdueL ? COLORS.danger : COLORS.subtext, background: (b.paid ? COLORS.success : isOverdueL ? COLORS.danger : COLORS.muted) + "18", borderRadius: 9999, padding: "2px 8px" }}>{b.paid ? "Paid" : isOverdueL ? "Overdue" : "Upcoming"}</span>
+                          {!b.paid ? <button onClick={() => setBills(p => p.map(x => x.id === b.id ? {...x, paid:true, actual:x.budget} : x))} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:9999, padding:"4px 8px", fontSize:11, fontWeight:700, cursor:"pointer" }}>Mark Paid</button> : <span style={{ fontSize: 14, color: COLORS.success }}>✓</span>}
+                          <button onClick={() => setBills(p => p.filter(x => x.id !== b.id))} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 16, padding: 0 }}>×</button>
                         </div>
                       );
                     })}
                   </div>
                 )}
-                {billCalView === "month" && <>
-                {/* Day headers */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 2 }}>
-                  {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => (
-                    <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: COLORS.muted, textTransform: "uppercase", padding: "6px 0" }}>{d}</div>
-                  ))}
-                </div>
-                {/* Calendar grid */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
-                  {Array.from({ length: firstDayOfWeek }, (_, i) => (
-                    <div key={`empty-${i}`} style={{ background: COLORS.containerLow, borderRadius: 8, minHeight: 80, opacity: 0.3 }} />
-                  ))}
-                  {Array.from({ length: daysInMonth }, (_, i) => {
-                    const day = i + 1;
-                    const dayBills = billsOnDay(day);
-                    const isToday = day === todayDate;
-                    return (
-                      <div key={day} style={{ background: COLORS.card, borderRadius: 8, minHeight: 80, padding: 8, border: `1px solid ${COLORS.containerLow}` }}>
-                        <div style={{ width: 24, height: 24, borderRadius: "50%", background: isToday ? COLORS.primary : "transparent", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
-                          <span style={{ fontSize: 12, fontWeight: isToday ? 800 : 500, color: isToday ? "#fff" : COLORS.text }}>{day}</span>
-                        </div>
-                        {dayBills.map(b => {
-                          const colorSet = BILL_COLORS[b.label] || { bg: "rgba(97,205,253,0.15)", text: COLORS.primary };
-                          return (
-                            <div key={b.id} onClick={() => setActiveBillDetail(b)} style={{ background: colorSet.bg, borderRadius: 4, padding: "2px 6px", marginBottom: 2, cursor: "pointer", border: b.paid ? `1px solid ${COLORS.success}` : "1px solid transparent" }}>
-                              <p style={{ fontSize: 10, fontWeight: 700, color: colorSet.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.label}{b.paid ? " ✓" : ""}</p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })}
-                </div>
-                </>}
               </div>
 
-              {/* ── Right sidebar (col-4) ── */}
-              <div style={{ gridColumn: "span 4", display: "flex", flexDirection: "column", gap: 20 }}>
-                {/* Total Monthly Obligations */}
-                <div style={{ background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, borderRadius: 20, padding: 24, color: "#fff" }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)", marginBottom: 8 }}>Total Monthly Obligations</p>
-                  <p style={{ fontSize: 34, fontWeight: 900, letterSpacing: "-0.02em", marginBottom: 16 }}>{fmt(totalBillsBudget)}</p>
-                  <div style={{ background: "rgba(0,90,119,0.4)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 18, color: "rgba(255,255,255,0.8)" }}>trending_down</span>
-                    <div>
-                      <p style={{ fontSize: 11, color: "rgba(255,255,255,0.7)" }}>Remaining to pay</p>
-                      <p style={{ fontSize: 16, fontWeight: 800 }}>{fmt(unpaidBills.reduce((s, b) => s + b.budget, 0))}</p>
+              {/* ── Always-visible editable bills list ── */}
+              <div style={{ background: COLORS.card, borderRadius: 20, padding: 28, boxShadow: COLORS.shadowSm, marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: COLORS.text }}>Bills This Month</h3>
+                  <button onClick={() => setNewBillInline({ label: "", budget: "", dueDate: "" })} style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(0,103,136,0.08)", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, color: COLORS.primary, cursor: "pointer" }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 15 }}>add</span>+ Add Bill
+                  </button>
+                </div>
+                {/* Table header */}
+                <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 80px 28px", gap: 8, padding: "8px 12px", background: COLORS.containerLow, borderRadius: 10, marginBottom: 10 }}>
+                  {["Bill Name", "Due Date", "Amount", "Status", "Action", ""].map(h => <span key={h} style={{ fontSize: 11, fontWeight: 700, color: COLORS.subtext, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</span>)}
+                </div>
+                {bills.length === 0 && <p style={{ fontSize: 13, color: COLORS.muted, padding: "16px 0", textAlign: "center" }}>No bills added yet.</p>}
+                {[...bills].sort((a,b) => (a.dueDate||"").localeCompare(b.dueDate||"")).map(b => {
+                  const [y,m,dd] = (b.dueDate||"").split("-").map(Number);
+                  const dDate = new Date(y,m-1,dd); const nowE = new Date(); nowE.setHours(0,0,0,0);
+                  const isOverdueE = !b.paid && dDate < nowE;
+                  const isEL = editingBillCell?.id === b.id && editingBillCell?.field === "label";
+                  const isED = editingBillCell?.id === b.id && editingBillCell?.field === "dueDate";
+                  const isEA = editingBillCell?.id === b.id && editingBillCell?.field === "budget";
+                  const cellInp = { background: COLORS.containerLow, border: `1px solid ${COLORS.primary}`, borderRadius: 6, padding: "4px 8px", fontSize: 13, color: COLORS.text, outline: "none", width: "100%" };
+                  return (
+                    <div key={b.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 80px 28px", gap: 8, padding: "10px 12px", borderRadius: 10, background: b.paid ? COLORS.success + "08" : isOverdueE ? COLORS.danger + "06" : COLORS.containerLow + "60", marginBottom: 6, alignItems: "center", borderLeft: `3px solid ${b.paid ? COLORS.success : isOverdueE ? COLORS.danger : "transparent"}` }}>
+                      {/* Bill Name */}
+                      {isEL ? <input autoFocus defaultValue={b.label} style={cellInp} onBlur={e => { setBills(p => p.map(x => x.id===b.id?{...x,label:e.target.value||x.label}:x)); setEditingBillCell(null); }} onKeyDown={e=>{ if(e.key==="Enter")e.target.blur(); if(e.key==="Escape")setEditingBillCell(null); }} />
+                        : <span onClick={() => setEditingBillCell({id:b.id,field:"label"})} style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, cursor: "text" }}>{b.label}</span>}
+                      {/* Due Date */}
+                      {isED ? <input autoFocus type="date" defaultValue={b.dueDate} style={cellInp} onBlur={e => { if(e.target.value) setBills(p => p.map(x => x.id===b.id?{...x,dueDate:e.target.value}:x)); setEditingBillCell(null); }} onKeyDown={e=>{ if(e.key==="Enter")e.target.blur(); if(e.key==="Escape")setEditingBillCell(null); }} />
+                        : <span onClick={() => setEditingBillCell({id:b.id,field:"dueDate"})} style={{ fontSize: 12, color: isOverdueE ? COLORS.danger : COLORS.subtext, cursor: "text" }}>{fmtDate(b.dueDate)}</span>}
+                      {/* Amount */}
+                      {isEA ? <input autoFocus type="number" defaultValue={b.budget} style={cellInp} onBlur={e => { const v=parseFloat(e.target.value); if(!isNaN(v)&&v>=0) setBills(p=>p.map(x=>x.id===b.id?{...x,budget:v}:x)); setEditingBillCell(null); }} onKeyDown={e=>{ if(e.key==="Enter")e.target.blur(); if(e.key==="Escape")setEditingBillCell(null); }} />
+                        : <span onClick={() => setEditingBillCell({id:b.id,field:"budget"})} style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, cursor: "text" }}>{fmt(b.budget)}</span>}
+                      {/* Status */}
+                      <span style={{ fontSize: 11, fontWeight: 700, color: b.paid ? COLORS.success : isOverdueE ? COLORS.danger : COLORS.subtext, background: (b.paid ? COLORS.success : isOverdueE ? COLORS.danger : COLORS.muted) + "18", borderRadius: 9999, padding: "3px 10px", display: "inline-block" }}>
+                        {b.paid ? "Paid" : isOverdueE ? "Overdue" : "Upcoming"}
+                      </span>
+                      {/* Action */}
+                      {b.paid
+                        ? <button onClick={() => setBills(p => p.map(x => x.id===b.id ? {...x,paid:false,actual:0} : x))} style={{ background: COLORS.containerLow, border:"none", borderRadius:8, padding:"5px 8px", fontSize:11, fontWeight:700, color:COLORS.subtext, cursor:"pointer" }}>Unpay</button>
+                        : <button onClick={() => setBills(p => p.map(x => x.id===b.id ? {...x,paid:true,actual:x.budget} : x))} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:8, padding:"5px 8px", fontSize:11, fontWeight:700, cursor:"pointer" }}>Mark Paid</button>
+                      }
+                      {/* Delete */}
+                      <button onClick={() => setBills(p => p.filter(x => x.id !== b.id))} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 16, padding: 0 }}>×</button>
                     </div>
+                  );
+                })}
+                {/* Inline Add Row */}
+                {newBillInline !== null && (
+                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 80px 28px", gap: 8, padding: "10px 12px", borderRadius: 10, background: COLORS.primary + "08", marginTop: 8, alignItems: "center" }}>
+                    <input autoFocus placeholder="Bill name" value={newBillInline.label} onChange={e => setNewBillInline(p => ({...p, label: e.target.value}))} style={{ ...inpStyleInline, width: "100%" }} />
+                    <input type="date" value={newBillInline.dueDate} onChange={e => setNewBillInline(p => ({...p, dueDate: e.target.value}))} style={{ ...inpStyleInline, width: "100%" }} />
+                    <input type="number" placeholder="Amount" value={newBillInline.budget} onChange={e => setNewBillInline(p => ({...p, budget: e.target.value}))} style={{ ...inpStyleInline, width: "100%" }} />
+                    <span style={{ fontSize: 11, color: COLORS.muted }}>Upcoming</span>
+                    <button onClick={() => { if(!newBillInline.label || !newBillInline.budget) return; setBills(p => [...p, { id: Date.now(), label: newBillInline.label, budget: parseFloat(newBillInline.budget)||0, dueDate: newBillInline.dueDate || `${DEMO_MONTH}-01`, actual: 0, paid: false }]); setNewBillInline(null); }} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:8, padding:"6px 8px", fontSize:11, fontWeight:700, cursor:"pointer" }}>Save</button>
+                    <button onClick={() => setNewBillInline(null)} style={{ background:"none", border:"none", color:COLORS.muted, cursor:"pointer", fontSize:18, padding:0 }}>×</button>
                   </div>
-                </div>
+                )}
+              </div>
 
-                {/* Upcoming Statements */}
-                <div style={{ background: COLORS.card, borderRadius: 20, padding: 24, boxShadow: COLORS.shadowSm }}>
-                  <h4 style={{ fontSize: 15, fontWeight: 700, color: COLORS.text, marginBottom: 16 }}>Statements</h4>
-                  {(() => {
-                    const now2 = new Date(); now2.setHours(0,0,0,0);
-                    const in14 = new Date(now2.getTime() + 14 * 86400000);
-                    const overdueBills2 = unpaidBills.filter(b => { const [y2,m2,d2] = (b.dueDate||"").split("-").map(Number); return new Date(y2,m2-1,d2) < now2; });
-                    const upcomingBills2 = unpaidBills.filter(b => { const [y2,m2,d2] = (b.dueDate||"").split("-").map(Number); const dt = new Date(y2,m2-1,d2); return dt >= now2 && dt <= in14; });
-                    const BillRow = ({b, color}) => (
-                      <div key={b.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: `1px solid ${COLORS.containerLow}` }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <div style={{ width: 30, height: 30, borderRadius: "50%", background: color + "22", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <span className="material-symbols-outlined" style={{ fontSize: 14, color }}>receipt_long</span>
-                          </div>
-                          <div>
-                            <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>{b.label}</p>
-                            <p style={{ fontSize: 11, color }}>{fmtDate(b.dueDate)}</p>
-                          </div>
+              {/* ── Statements panel ── */}
+              <div style={{ background: COLORS.card, borderRadius: 20, padding: 28, boxShadow: COLORS.shadowSm }}>
+                <h4 style={{ fontSize: 15, fontWeight: 700, color: COLORS.text, marginBottom: 16 }}>Statements</h4>
+                {(() => {
+                  const now2 = new Date(); now2.setHours(0,0,0,0);
+                  const in14 = new Date(now2.getTime() + 14 * 86400000);
+                  const overdueBills2 = unpaidBills.filter(b => { const [y2,m2,d2] = (b.dueDate||"").split("-").map(Number); return new Date(y2,m2-1,d2) < now2; });
+                  const upcomingBills2 = unpaidBills.filter(b => { const [y2,m2,d2] = (b.dueDate||"").split("-").map(Number); const dt = new Date(y2,m2-1,d2); return dt >= now2 && dt <= in14; });
+                  const StmtRow = ({b, color}) => (
+                    <div key={b.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: `1px solid ${COLORS.containerLow}` }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 30, height: 30, borderRadius: "50%", background: color + "22", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 14, color }}>receipt_long</span>
                         </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>{fmt(b.budget)}</span>
-                          <button onClick={() => setBills(p => p.map(x => x.id === b.id ? {...x, paid:true, actual:x.budget} : x))} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:9999, padding:"3px 9px", fontSize:10, fontWeight:700, cursor:"pointer" }}>Paid</button>
+                        <div>
+                          <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>{b.label}</p>
+                          <p style={{ fontSize: 11, color }}>{fmtDate(b.dueDate)}</p>
                         </div>
                       </div>
-                    );
-                    return (
-                      <>
-                        {overdueBills2.length > 0 && (
-                          <div style={{ marginBottom: 12 }}>
-                            <p style={{ fontSize: 10, fontWeight: 800, color: COLORS.danger, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>● Overdue</p>
-                            {overdueBills2.map(b => <BillRow key={b.id} b={b} color={COLORS.danger} />)}
-                          </div>
-                        )}
-                        {upcomingBills2.length > 0 && (
-                          <div>
-                            <p style={{ fontSize: 10, fontWeight: 800, color: COLORS.primary, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>● Next 14 Days</p>
-                            {upcomingBills2.map(b => <BillRow key={b.id} b={b} color={COLORS.subtext} />)}
-                          </div>
-                        )}
-                        {overdueBills2.length === 0 && upcomingBills2.length === 0 && <p style={{ fontSize: 13, color: COLORS.muted }}>No upcoming bills in the next 14 days.</p>}
-                      </>
-                    );
-                  })()}
-                </div>
-
-                {/* Savings Sprint */}
-                <div style={{ background: "rgba(97,205,253,0.15)", borderRadius: 20, padding: 24 }}>
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(0,103,136,0.12)", borderRadius: 9999, padding: "4px 12px", marginBottom: 12 }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 14, color: COLORS.primary }}>bolt</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: COLORS.primary }}>Bills Sprint</span>
-                  </div>
-                  <h4 style={{ fontSize: 15, fontWeight: 700, color: COLORS.onSecondaryContainer, marginBottom: 12 }}>Bills Paid Progress</h4>
-                  <div style={{ height: 8, background: "rgba(255,255,255,0.5)", borderRadius: 9999, overflow: "hidden", marginBottom: 8 }}>
-                    <div style={{ width: `${pct(paidBillsTotal, totalBillsBudget || 1)}%`, height: "100%", background: COLORS.primary, borderRadius: 9999 }} />
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: COLORS.onSecondaryContainer }}>
-                    <span style={{ fontWeight: 700 }}>{fmt(paidBillsTotal)} paid</span>
-                    <span>of {fmt(totalBillsBudget)}</span>
-                  </div>
-                </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>{fmt(b.budget)}</span>
+                        <button onClick={() => setBills(p => p.map(x => x.id === b.id ? {...x, paid:true, actual:x.budget} : x))} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:9999, padding:"3px 9px", fontSize:10, fontWeight:700, cursor:"pointer" }}>Paid</button>
+                      </div>
+                    </div>
+                  );
+                  return (
+                    <div style={{ display: "grid", gridTemplateColumns: overdueBills2.length > 0 && upcomingBills2.length > 0 ? "1fr 1fr" : "1fr", gap: 20 }}>
+                      {overdueBills2.length > 0 && (
+                        <div>
+                          <p style={{ fontSize: 10, fontWeight: 800, color: COLORS.danger, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>● Overdue</p>
+                          {overdueBills2.map(b => <StmtRow key={b.id} b={b} color={COLORS.danger} />)}
+                        </div>
+                      )}
+                      {upcomingBills2.length > 0 && (
+                        <div>
+                          <p style={{ fontSize: 10, fontWeight: 800, color: COLORS.primary, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>● Next 14 Days</p>
+                          {upcomingBills2.map(b => <StmtRow key={b.id} b={b} color={COLORS.subtext} />)}
+                        </div>
+                      )}
+                      {overdueBills2.length === 0 && upcomingBills2.length === 0 && <p style={{ fontSize: 13, color: COLORS.muted }}>No upcoming bills in the next 14 days.</p>}
+                    </div>
+                  );
+                })()}
               </div>
-            </div>
             {/* Bill detail popover (BUG #10) */}
             {activeBillDetail && (() => {
               const b = bills.find(x => x.id === activeBillDetail.id) || activeBillDetail;
