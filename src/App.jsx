@@ -669,19 +669,19 @@ export default function App() {
   // monthlySnapshots: { [key]: { income: [], expenses: [], notes: string, billStatus: { [billId]: bool }, expenseBudgets: {} } }
   const DEFAULT_EXPENSE_BUDGETS = { Housing: 1800, Food: 500, Utilities: 300, Transport: 500, Health: 100, Entertainment: 150, Personal: 200, Education: 50, Subscriptions: 0, Other: 120 };
   const [monthlySnapshots, setMonthlySnapshots] = useState({
-    "2025-01": { income: [{ id: 101, label: "Primary Salary", amount: 5500, recurring: true }], expenses: [{ id: 201, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 202, label: "Electricity", amount: 110, category: "Utilities", fixed: true },{ id: 203, label: "Groceries", amount: 320, category: "Food", fixed: false },{ id: 204, label: "Gas", amount: 80, category: "Transport", fixed: false }], notes: "", billStatus: {}, expenseBudgets: DEFAULT_EXPENSE_BUDGETS },
-    "2025-02": { income: [{ id: 111, label: "Primary Salary", amount: 5500, recurring: true }], expenses: [{ id: 211, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 212, label: "Electricity", amount: 98, category: "Utilities", fixed: true },{ id: 213, label: "Groceries", amount: 290, category: "Food", fixed: false },{ id: 214, label: "Dining out", amount: 180, category: "Food", fixed: false },{ id: 215, label: "Gym", amount: 45, category: "Health", fixed: true }], notes: "", billStatus: {}, expenseBudgets: DEFAULT_EXPENSE_BUDGETS },
-    "2025-03": { income: [{ id: 121, label: "Primary Salary", amount: 5500, recurring: true },{ id: 122, label: "Tax Refund", amount: 1200, recurring: false }], expenses: [{ id: 221, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 222, label: "Electricity", amount: 105, category: "Utilities", fixed: true },{ id: 223, label: "Groceries", amount: 340, category: "Food", fixed: false },{ id: 224, label: "Clothing", amount: 210, category: "Personal", fixed: false }], notes: "", billStatus: {}, expenseBudgets: DEFAULT_EXPENSE_BUDGETS },
-    "2025-04": { income: [{ id: 131, label: "Primary Salary", amount: 5500, recurring: true }], expenses: [{ id: 231, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 232, label: "Utilities", amount: 115, category: "Utilities", fixed: true },{ id: 233, label: "Groceries", amount: 310, category: "Food", fixed: false },{ id: 234, label: "Entertainment", amount: 95, category: "Entertainment", fixed: false }], notes: "", billStatus: {}, expenseBudgets: DEFAULT_EXPENSE_BUDGETS },
-    "2025-05": { income: [{ id: 141, label: "Primary Salary", amount: 5500, recurring: true },{ id: 142, label: "Side Freelance", amount: 600, recurring: false }], expenses: [{ id: 241, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 242, label: "Electricity", amount: 130, category: "Utilities", fixed: true },{ id: 243, label: "Groceries", amount: 295, category: "Food", fixed: false },{ id: 244, label: "Car payment", amount: 380, category: "Transport", fixed: true },{ id: 245, label: "Health", amount: 60, category: "Health", fixed: false }], notes: "", billStatus: {}, expenseBudgets: DEFAULT_EXPENSE_BUDGETS },
-    "2025-06": { income: INITIAL_INCOME, expenses: INITIAL_EXPENSES, notes: "", billStatus: {}, expenseBudgets: DEFAULT_EXPENSE_BUDGETS },
-    [DEMO_MONTH]: { income: INITIAL_INCOME, expenses: INITIAL_EXPENSES, notes: "", billStatus: { 4: true }, expenseBudgets: DEFAULT_EXPENSE_BUDGETS },
+    "2025-01": { income: [{ id: 101, label: "Primary Salary", amount: 5500, recurring: true }], expenses: [{ id: 201, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 202, label: "Electricity", amount: 110, category: "Utilities", fixed: true },{ id: 203, label: "Groceries", amount: 320, category: "Food", fixed: false },{ id: 204, label: "Gas", amount: 80, category: "Transport", fixed: false }], notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } },
+    "2025-02": { income: [{ id: 111, label: "Primary Salary", amount: 5500, recurring: true }], expenses: [{ id: 211, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 212, label: "Electricity", amount: 98, category: "Utilities", fixed: true },{ id: 213, label: "Groceries", amount: 290, category: "Food", fixed: false },{ id: 214, label: "Dining out", amount: 180, category: "Food", fixed: false },{ id: 215, label: "Gym", amount: 45, category: "Health", fixed: true }], notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } },
+    "2025-03": { income: [{ id: 121, label: "Primary Salary", amount: 5500, recurring: true },{ id: 122, label: "Tax Refund", amount: 1200, recurring: false }], expenses: [{ id: 221, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 222, label: "Electricity", amount: 105, category: "Utilities", fixed: true },{ id: 223, label: "Groceries", amount: 340, category: "Food", fixed: false },{ id: 224, label: "Clothing", amount: 210, category: "Personal", fixed: false }], notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } },
+    "2025-04": { income: [{ id: 131, label: "Primary Salary", amount: 5500, recurring: true }], expenses: [{ id: 231, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 232, label: "Utilities", amount: 115, category: "Utilities", fixed: true },{ id: 233, label: "Groceries", amount: 310, category: "Food", fixed: false },{ id: 234, label: "Entertainment", amount: 95, category: "Entertainment", fixed: false }], notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } },
+    "2025-05": { income: [{ id: 141, label: "Primary Salary", amount: 5500, recurring: true },{ id: 142, label: "Side Freelance", amount: 600, recurring: false }], expenses: [{ id: 241, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 242, label: "Electricity", amount: 130, category: "Utilities", fixed: true },{ id: 243, label: "Groceries", amount: 295, category: "Food", fixed: false },{ id: 244, label: "Car payment", amount: 380, category: "Transport", fixed: true },{ id: 245, label: "Health", amount: 60, category: "Health", fixed: false }], notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } },
+    "2025-06": { income: INITIAL_INCOME, expenses: INITIAL_EXPENSES, notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } },
+    [DEMO_MONTH]: { income: INITIAL_INCOME, expenses: INITIAL_EXPENSES, notes: "", billStatus: { 4: true }, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } },
   });
   // Sync live income/expenses into snapshots for the currently viewed month
   useEffect(() => {
     setMonthlySnapshots(prev => ({
       ...prev,
-      [viewMonthKey]: { ...(prev[viewMonthKey] || { notes: "", billStatus: {}, expenseBudgets: DEFAULT_EXPENSE_BUDGETS }), income, expenses },
+      [viewMonthKey]: { ...(prev[viewMonthKey] || { notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } }), income, expenses },
     }));
   }, [income, expenses, viewMonthKey]);
   // Month switch: save old month, load new month data
@@ -691,7 +691,7 @@ export default function App() {
     // Save current data to old month
     setMonthlySnapshots(prev => ({
       ...prev,
-      [prevKey]: { ...(prev[prevKey] || { notes: "", billStatus: {}, expenseBudgets: DEFAULT_EXPENSE_BUDGETS }), income: incomeRef.current, expenses: expensesRef.current },
+      [prevKey]: { ...(prev[prevKey] || { notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } }), income: incomeRef.current, expenses: expensesRef.current },
     }));
     // Load new month data
     const snap = monthlySnapshots[viewMonthKey];
@@ -759,11 +759,11 @@ export default function App() {
     return [...set].sort();
   })();
   // Get snapshot for a key (fallback empty)
-  const getSnap = (key) => monthlySnapshots[key] || { income: [], expenses: [], notes: "", billStatus: {}, expenseBudgets: DEFAULT_EXPENSE_BUDGETS };
+  const getSnap = (key) => monthlySnapshots[key] || { income: [], expenses: [], notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } };
   // ── Bill helpers (per-month paid status) ──
   const getBillDueDate = (bill, mk) => { const day = String(bill.dayOfMonth).padStart(2, "0"); return `${mk}-${day}`; };
   const getBillPaid = (bill, mk) => !!(monthlySnapshots[mk]?.billStatus?.[bill.id]);
-  const markBillPaid = (billId, mk, paid = true) => setMonthlySnapshots(prev => ({ ...prev, [mk]: { ...(prev[mk] || { income: [], expenses: [], notes: "", billStatus: {}, expenseBudgets: DEFAULT_EXPENSE_BUDGETS }), billStatus: { ...(prev[mk]?.billStatus || {}), [billId]: paid } } }));
+  const markBillPaid = (billId, mk, paid = true) => setMonthlySnapshots(prev => ({ ...prev, [mk]: { ...(prev[mk] || { income: [], expenses: [], notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } }), billStatus: { ...(prev[mk]?.billStatus || {}), [billId]: paid } } }));
   // ── Per-month expense budgets (Fix 9) ──
   const viewExpenseBudgets = monthlySnapshots[viewMonthKey]?.expenseBudgets || DEFAULT_EXPENSE_BUDGETS;
   const setViewExpenseBudgets = (updater) => setMonthlySnapshots(prev => {
@@ -1563,10 +1563,10 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           // Inline cell helpers
           const EditableText = ({ id, field, value }) => editingCell?.id===id && editingCell?.field===field
             ? <input autoFocus value={value} onChange={e=>updateExpenseField(id,field,e.target.value)} onBlur={()=>setEditingCell(null)} onKeyDown={e=>{if(e.key==="Enter")setEditingCell(null);}} style={{width:"100%",background:COLORS.containerLow,border:"none",borderRadius:6,padding:"3px 6px",fontSize:13,color:COLORS.text,outline:"none"}} />
-            : <span onClick={()=>setEditingCell({id,field})} title="Click to edit" style={{cursor:"text",display:"block",borderRadius:4,padding:"2px 4px"}}>{value||"—"}</span>;
+            : <span onClick={()=>setEditingCell({id,field})} title="Click to edit" style={{cursor:"text",display:"block",borderRadius:4,padding:"2px 4px",fontSize:13}}>{value||"—"}</span>;
           const EditableNum = ({ id, field, value }) => editingCell?.id===id && editingCell?.field===field
             ? <input autoFocus type="number" value={value} onChange={e=>updateExpenseField(id,field,e.target.value)} onBlur={()=>setEditingCell(null)} onKeyDown={e=>{if(e.key==="Enter")setEditingCell(null);}} style={{width:"100%",background:COLORS.containerLow,border:"none",borderRadius:6,padding:"3px 6px",fontSize:13,color:COLORS.text,outline:"none"}} />
-            : <span onClick={()=>setEditingCell({id,field})} title="Click to edit" style={{cursor:"text",display:"block",borderRadius:4,padding:"2px 4px",color:COLORS.text,fontWeight:600}}>{fmt(value)}</span>;
+            : <span onClick={()=>setEditingCell({id,field})} title="Click to edit" style={{cursor:"text",display:"block",borderRadius:4,padding:"2px 4px",color:COLORS.text,fontWeight:600,fontSize:13}}>{fmt(value)}</span>;
           const EditableDate = ({ id, field, value }) => editingCell?.id===id && editingCell?.field===field
             ? <input autoFocus type="date" value={value} onChange={e=>updateExpenseField(id,field,e.target.value)} onBlur={()=>setEditingCell(null)} style={{width:"100%",background:COLORS.containerLow,border:"none",borderRadius:6,padding:"3px 6px",fontSize:12,color:COLORS.text,outline:"none"}} />
             : <span onClick={()=>setEditingCell({id,field})} title="Click to edit" style={{cursor:"text",display:"block",borderRadius:4,padding:"2px 4px",fontSize:12,color:COLORS.subtext}}>{value ? fmtDate(value) : "—"}</span>;
@@ -1593,7 +1593,9 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           const { year: prevY, month0: prevM0 } = parseKey(viewMonthKey);
           const prevMonthKey = monthKey(new Date(prevY, prevM0 - 1, 1).getFullYear(), new Date(prevY, prevM0 - 1, 1).getMonth());
           const prevMonthItemBudgets = itemBudgets[prevMonthKey] || {};
-          const hasPrevPlanned = Object.keys(prevMonthItemBudgets).length > 0;
+          const prevMonthExpBudgets = monthlySnapshots[prevMonthKey]?.expenseBudgets || {};
+          const hasPrevPlanned = Object.keys(prevMonthItemBudgets).length > 0 || Object.values(prevMonthExpBudgets).some(v => v > 0);
+          const currentBudgetsAreDefault = Object.entries(viewExpenseBudgets).every(([k, v]) => v === DEFAULT_EXPENSE_BUDGETS[k]);
 
           const totalPlanned = Object.values(monthItemBudgets).reduce((s,v) => s+(v||0), 0) + Object.values(viewExpenseBudgets).reduce((s,v) => s+v, 0);
           const totalActual = viewTotalExpenses;
@@ -1620,9 +1622,9 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, gap: 20, flexWrap: "wrap" }}>
                 <div>
                   <h2 style={{ fontSize: 22, fontWeight: 800, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 2 }}>{MONTH_FULL[vm0]} {vy} Budget</h2>
-                  <p style={{ fontSize: 13, color: COLORS.subtext }}>{fmt(totalActual)} spent of {fmt(viewTotalIncome)} income{totalPlanned > 0 ? ` · ${fmt(totalPlanned)} planned` : ""}{isCurrentMonth && daysLeft > 0 ? ` · ${daysLeft} days left` : ""}</p>
-                  {hasPrevPlanned && Object.keys(monthItemBudgets).length === 0 && (
-                    <button onClick={() => setItemBudgets(p => ({...p, [viewMonthKey]: {...prevMonthItemBudgets}}))} style={{ marginTop: 6, background: "rgba(0,103,136,0.08)", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: COLORS.primary, cursor: "pointer" }}>
+                  <p style={{ fontSize: 13, color: COLORS.subtext }}>{fmt(totalActual)} spent of {fmt(viewTotalIncome)} income{totalPlanned > 0 ? ` · ${fmt(totalPlanned)} planned` : ""}{isCurrentMonth && daysLeft > 0 ? ` · ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left` : ""}</p>
+                  {hasPrevPlanned && (currentBudgetsAreDefault || Object.keys(monthItemBudgets).length === 0) && (
+                    <button onClick={() => { if (Object.values(prevMonthExpBudgets).some(v => v > 0)) setViewExpenseBudgets({ ...prevMonthExpBudgets }); if (Object.keys(prevMonthItemBudgets).length > 0) setItemBudgets(p => ({...p, [viewMonthKey]: {...prevMonthItemBudgets}})); }} style={{ marginTop: 6, background: "rgba(0,103,136,0.08)", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: COLORS.primary, cursor: "pointer" }}>
                       Copy planned amounts from {MONTH_NAMES[new Date(prevY, prevM0 - 1, 1).getMonth()]}
                     </button>
                   )}
@@ -1761,8 +1763,11 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           <span />
                           {/* due column — empty */}
                           <span />
-                          {/* planned */}
-                          <span style={{ fontSize: 12, fontWeight: 700, color: grpPlanned > 0 ? COLORS.subtext : COLORS.muted }}>{grpPlanned > 0 ? fmt(grpPlanned) : "—"}</span>
+                          {/* planned — editable */}
+                          {editingPlannedKey === `cat-${group.catId}`
+                            ? <input autoFocus type="number" placeholder="0" defaultValue={grpPlanned || ""} onClick={e => e.stopPropagation()} onBlur={ev => { const v = parseFloat(ev.target.value) || 0; setViewExpenseBudgets(prev => ({ ...prev, [group.catId]: v })); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); if (ev.key === "Escape") setEditingPlannedKey(null); }} style={{ width:"100%", background:COLORS.containerLow, border:`1px solid ${COLORS.primary}`, borderRadius:6, padding:"3px 6px", fontSize:12, color:COLORS.text, outline:"none" }} />
+                            : <span onClick={e => { e.stopPropagation(); setEditingPlannedKey(`cat-${group.catId}`); }} title="Click to edit planned budget" style={{ fontSize: 12, fontWeight: 700, color: grpPlanned > 0 ? COLORS.subtext : COLORS.muted, cursor: "text", borderRadius: 4, padding: "2px 4px" }}>{grpPlanned > 0 ? fmt(grpPlanned) : <span style={{ display:"flex", alignItems:"center", gap:3 }}>—<span style={{ fontSize:9, opacity:0.5 }}>✏</span></span>}</span>
+                          }
                           {/* actual */}
                           <span style={{ fontSize: 12, fontWeight: 700, color: utilColor }}>{grpActual > 0 ? fmt(grpActual) : "—"}</span>
                           {/* variance */}
