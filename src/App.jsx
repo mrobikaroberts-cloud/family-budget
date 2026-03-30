@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, ComposedChart, AreaChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { db } from './firebase'
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
 // ── Palette & helpers ─────────────────────────────────────────────────────────
 // Design System: "The Modern Hearth" — Roberts Family Finance
 const COLORS = {
@@ -585,6 +587,11 @@ If date not visible, use today. If unsure of category, use Other.`
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
   const [tab, setTab] = useState("dashboard");
+  const [householdId, setHouseholdId] = useState(() => localStorage.getItem('familyfinance_household_id'));
+  const [firebaseLoading, setFirebaseLoading] = useState(true);
+  const [saveStatus, setSaveStatus] = useState(null); // null | 'saving' | 'saved' | 'error'
+  const saveTimer = useRef(null);
+  const isInitialLoad = useRef(true);
   const [income, setIncome] = useState(INITIAL_INCOME);
   const [expenses, setExpenses] = useState(INITIAL_EXPENSES);
   const [debts, setDebts] = useState(INITIAL_DEBTS);
@@ -666,6 +673,73 @@ export default function App() {
   const todayKey = monthKey(new Date().getFullYear(), new Date().getMonth());
   const [startMonthKey, setStartMonthKey] = useState("2025-01");
   const [activeInsightKey, setActiveInsightKey] = useState(todayKey);
+  // ── Firebase initialization ──
+  useEffect(() => {
+    const init = async () => {
+      try {
+        let hId = localStorage.getItem('familyfinance_household_id');
+        if (!hId) {
+          hId = 'household_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+          localStorage.setItem('familyfinance_household_id', hId);
+          setHouseholdId(hId);
+          setFirebaseLoading(false);
+          isInitialLoad.current = false;
+          return;
+        }
+        setHouseholdId(hId);
+        const docRef = doc(db, 'households', hId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.income) setIncome(data.income);
+          if (data.expenses) setExpenses(data.expenses);
+          if (data.bills) setBills(data.bills);
+          if (data.debts) setDebts(data.debts);
+          if (data.savingsItems) setSavingsItems(data.savingsItems);
+          if (data.monthlySnapshots) setMonthlySnapshots(data.monthlySnapshots);
+          if (data.itemBudgets) setItemBudgets(data.itemBudgets);
+          if (data.goals) setGoals(data.goals);
+          if (data.advisorHistory) setAdvisorHistory(data.advisorHistory);
+          if (data.familyName) setFamilyName(data.familyName);
+        }
+      } catch (err) {
+        console.error('Firebase load error:', err);
+      }
+      setFirebaseLoading(false);
+      setTimeout(() => { isInitialLoad.current = false; }, 1500);
+    };
+    init();
+  }, []);
+  // ── Firebase auto-save (debounced) ──
+  useEffect(() => {
+    if (!householdId || isInitialLoad.current || firebaseLoading) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      setSaveStatus('saving');
+      try {
+        await setDoc(doc(db, 'households', householdId), {
+          income,
+          expenses,
+          bills,
+          debts,
+          savingsItems,
+          monthlySnapshots,
+          itemBudgets,
+          goals,
+          advisorHistory,
+          familyName,
+          updatedAt: serverTimestamp(),
+        });
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus(null), 2000);
+      } catch (err) {
+        console.error('Firebase save error:', err);
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus(null), 4000);
+      }
+    }, 1000);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [income, expenses, bills, debts, savingsItems, monthlySnapshots, itemBudgets, goals, advisorHistory, familyName, householdId, firebaseLoading]);
   // monthlySnapshots: { [key]: { income: [], expenses: [], notes: string, billStatus: { [billId]: bool }, expenseBudgets: {} } }
   const DEFAULT_EXPENSE_BUDGETS = { Housing: 1800, Food: 500, Utilities: 300, Transport: 500, Health: 100, Entertainment: 150, Personal: 200, Education: 50, Kids: 0, Savings: 0, Subscriptions: 0, Other: 120 };
   const [monthlySnapshots, setMonthlySnapshots] = useState({
@@ -1133,6 +1207,19 @@ If the request doesn't map to a clear category goal, still return JSON with newG
     { id: "upload", label: "Upload Receipt" },
     { id: "advisor", label: "AI Advisor" },
   ];
+  if (firebaseLoading) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", background: COLORS.bg, fontFamily: "'Inter', sans-serif" }}>
+        <div style={{ width: 56, height: 56, borderRadius: 16, background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.tertiary})`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+          <span style={{ fontSize: 22, fontWeight: 900, color: "#fff" }}>RF</span>
+        </div>
+        <h2 style={{ fontSize: 20, fontWeight: 800, color: COLORS.sidebarText, marginBottom: 8 }}>FamilyFinance</h2>
+        <div style={{ width: 32, height: 32, border: `3px solid ${COLORS.containerHigh}`, borderTopColor: COLORS.primary, borderRadius: "50%", animation: "spin 1s linear infinite", marginBottom: 12 }} />
+        <p style={{ fontSize: 14, color: COLORS.muted }}>Loading your budget…</p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+      </div>
+    );
+  }
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: COLORS.bg, color: COLORS.text, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <style>{`
@@ -1154,7 +1241,11 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             <div style={{ width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg, #006788, #005a77)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 800, color: "#fff", flexShrink: 0, boxShadow: COLORS.shadowSm }}>
               {familyName.split(" ").map(w => w[0]).join("").slice(0, 2)}
             </div>
-            {!sidebarCollapsed && <h1 style={{ fontSize: 20, fontWeight: 700, color: COLORS.sidebarText, letterSpacing: "-0.02em", lineHeight: 1.2, whiteSpace: "nowrap" }}>{familyName}</h1>}
+            {!sidebarCollapsed && <div><h1 style={{ fontSize: 20, fontWeight: 700, color: COLORS.sidebarText, letterSpacing: "-0.02em", lineHeight: 1.2, whiteSpace: "nowrap" }}>{familyName}</h1>{saveStatus && (
+              <span style={{ fontSize: 11, fontWeight: 600, color: saveStatus === 'saving' ? COLORS.muted : saveStatus === 'saved' ? COLORS.success : COLORS.danger }}>
+                {saveStatus === 'saving' ? '⟳ Saving…' : saveStatus === 'saved' ? '✓ Saved' : '⚠ Not saved'}
+              </span>
+            )}</div>}
           </div>
         </div>
         {/* Nav */}
