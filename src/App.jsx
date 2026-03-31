@@ -734,7 +734,7 @@ export default function App() {
     saveTimer.current = setTimeout(async () => {
       setSaveStatus('saving');
       try {
-        await setDoc(doc(db, 'households', householdId), {
+        const savePromise = setDoc(doc(db, 'households', householdId), {
           income,
           expenses,
           bills,
@@ -747,6 +747,9 @@ export default function App() {
           familyName,
           updatedAt: serverTimestamp(),
         });
+        // Timeout after 10 seconds to prevent stuck "Saving…"
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Save timed out')), 10000));
+        await Promise.race([savePromise, timeout]);
         setSaveStatus('saved');
         setTimeout(() => setSaveStatus(null), 2000);
       } catch (err) {
