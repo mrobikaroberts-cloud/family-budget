@@ -10,5 +10,17 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 }
 
-const app = initializeApp(firebaseConfig)
-export const db = getFirestore(app)
+// Gracefully handle missing Firebase config (e.g. Netlify deploy without env vars)
+let db = null
+try {
+  if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+    const app = initializeApp(firebaseConfig)
+    db = getFirestore(app)
+  } else {
+    console.warn('Firebase config missing — running in offline mode')
+  }
+} catch (err) {
+  console.warn('Firebase init failed:', err.message)
+}
+
+export { db }

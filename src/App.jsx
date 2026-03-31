@@ -677,6 +677,12 @@ export default function App() {
   useEffect(() => {
     const init = async () => {
       try {
+        if (!db) {
+          // No Firebase — run with defaults (offline mode)
+          setFirebaseLoading(false);
+          isInitialLoad.current = false;
+          return;
+        }
         let hId = localStorage.getItem('familyfinance_household_id');
         if (!hId) {
           hId = 'household_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -712,7 +718,7 @@ export default function App() {
   }, []);
   // ── Firebase auto-save (debounced) ──
   useEffect(() => {
-    if (!householdId || isInitialLoad.current || firebaseLoading) return;
+    if (!db || !householdId || isInitialLoad.current || firebaseLoading) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
       setSaveStatus('saving');
