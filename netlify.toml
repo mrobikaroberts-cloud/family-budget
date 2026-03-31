@@ -15,3 +15,8 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+[build.environment]
+  # Firebase web API keys are public-facing (not secret server keys).
+  # Tell Netlify's secrets scanner to allow this value in the built JS bundle.
+  SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "AIzaSyDBVd_ky_xgMoalJ1m9145BqYOsYCCFVRI"
