@@ -230,6 +230,61 @@ const btnPrimary = {
   color: "#fff", border: "none", borderRadius: 12, padding: "14px",
   fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif",
 };
+// ── BudgetBar ─────────────────────────────────────────────────────────────────
+function BudgetBar({ totalIncome, totalPlanned, totalSpent }) {
+  const isOverPlanned = totalIncome > 0 && totalPlanned > totalIncome;
+  const isOverSpent = totalPlanned > 0 && totalSpent > totalPlanned;
+  const plannedPct = totalIncome > 0 ? Math.min(100, (totalPlanned / totalIncome) * 100) : 0;
+  // spent fills within the planned segment
+  const spentWithinPct = totalIncome > 0 ? Math.min(plannedPct, (totalSpent / totalIncome) * 100) : 0;
+  const remaining = totalIncome - totalPlanned;
+  const overBy = Math.abs(remaining);
+  const pillBg = remaining > 0 ? "rgba(52,211,153,0.15)" : remaining === 0 ? "rgba(0,103,136,0.12)" : "rgba(248,113,113,0.15)";
+  const pillColor = remaining > 0 ? "#34D399" : remaining === 0 ? "#006788" : "#F87171";
+  const pillText = remaining > 0 ? `${fmt(remaining)} left to budget` : remaining === 0 ? "Fully budgeted ✓" : `${fmt(overBy)} over-budgeted`;
+  const borderColor = isOverPlanned ? "#F87171" : "rgba(172,179,181,0.2)";
+  const spentColor = isOverSpent ? "#F87171" : "#006788";
+  return (
+    <div style={{ marginBottom: 4 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: COLORS.subtext }}>Budget Status</span>
+        <span style={{ fontSize: 12, fontWeight: 700, background: pillBg, color: pillColor, borderRadius: 9999, padding: "3px 12px", letterSpacing: "-0.01em" }}>{pillText}</span>
+      </div>
+      <div style={{ position: "relative", height: 28, background: COLORS.containerLow, borderRadius: 12, overflow: "hidden", border: `1.5px solid ${borderColor}`, boxShadow: isOverPlanned ? "0 0 10px rgba(248,113,113,0.18)" : "none" }}>
+        {/* Planned fill */}
+        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${plannedPct}%`, background: isOverPlanned ? "rgba(248,113,113,0.28)" : "rgba(0,103,136,0.22)", transition: "width 0.5s ease", borderRadius: "10px 0 0 10px" }} />
+        {/* Spent fill */}
+        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${spentWithinPct}%`, background: spentColor, transition: "width 0.5s ease", borderRadius: "10px 0 0 10px" }} />
+        {/* Inline labels */}
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 12px", pointerEvents: "none" }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.4)", whiteSpace: "nowrap" }}>Spent {fmt(totalSpent)}</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: COLORS.subtext, whiteSpace: "nowrap" }}>Income {fmt(totalIncome)}</span>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 14, marginTop: 6, flexWrap: "wrap" }}>
+        {[
+          { color: spentColor, label: `Spent ${fmt(totalSpent)}` },
+          { color: "rgba(0,103,136,0.45)", label: `Planned ${fmt(totalPlanned)}` },
+        ].map(l => (
+          <span key={l.label} style={{ fontSize: 11, color: COLORS.muted, display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 2, background: l.color, flexShrink: 0, display: "inline-block" }} />{l.label}
+          </span>
+        ))}
+        {isOverPlanned && <span style={{ fontSize: 11, color: "#F87171", fontWeight: 700, marginLeft: "auto" }}>⚠ Over by {fmt(overBy)}</span>}
+        {isOverSpent && !isOverPlanned && <span style={{ fontSize: 11, color: "#F87171", fontWeight: 700, marginLeft: "auto" }}>Overspent by {fmt(totalSpent - totalPlanned)}</span>}
+      </div>
+    </div>
+  );
+}
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function Toast({ info }) {
+  if (!info) return null;
+  return (
+    <div style={{ position: "fixed", bottom: 48, left: "50%", transform: "translateX(-50%)", background: "rgba(22,22,35,0.88)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", color: "#fff", borderRadius: 24, padding: "10px 22px", fontSize: 13, fontWeight: 600, zIndex: 9999, display: "flex", alignItems: "center", gap: 8, boxShadow: "0 8px 32px rgba(0,0,0,0.28)", animation: "toastSlideUp 0.2s ease", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      <span style={{ fontSize: 15 }}>{info.icon}</span>{info.msg}
+    </div>
+  );
+}
 // ── SmartAddModal ─────────────────────────────────────────────────────────────
 function SmartAddModal({ onClose, onManualExpense, onManualIncome, onImportExpenses, onImportIncome }) {
   const [step, setStep] = useState("home"); // home | nl | upload | preview
@@ -661,6 +716,9 @@ export default function App() {
   const [toast5020, setToast5020] = useState("");
   const [billLinkToast, setBillLinkToast] = useState(false);
   const [newBillInline, setNewBillInline] = useState(null); // { label, budget, dayOfMonth } for inline add
+  const [billCarouselIdx, setBillCarouselIdx] = useState(0);
+  const [toastInfo, setToastInfo] = useState(null); // { msg, icon }
+  const toastTimer = useRef(null);
   const pre5020Budgets = useRef(null);
   const pre5020Savings = useRef(null);
   // ── Refs for month-scoped data ──
@@ -966,6 +1024,16 @@ Return plain text bullet points only, no headers.` }]
   const leftForBudgeting = totalIncome - totalBudgeted;
   const leftToSpend2 = totalBudgeted - totalSpent;
   const endingBalance = startingBalance + totalIncome - totalSpent;
+  // ── showToast helper ──
+  const showToast = useCallback((msg, icon = "✓") => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToastInfo({ msg, icon });
+    toastTimer.current = setTimeout(() => setToastInfo(null), 2400);
+  }, []);
+  // ── Budget bar unified totals ──
+  const budgetBarPlanned = expenseBudgetTotal + billsBudgetTotal + debtPayments;
+  const budgetBarSpent = viewTotalExpenses + billsActualTotal;
+  const remainingToBudget = viewTotalIncome - budgetBarPlanned;
   const CHART_COLORS = ["#f472b6","#60a5fa","#a78bfa","#fbbf24","#34d399","#fb923c","#4ade80","#c084fc","#38bdf8","#f97316"];
   const cashFlowData = [
     ...(showIncomeInCharts ? [{ name: "Income", value: totalIncome, color: "#4ade80" }] : []),
@@ -1047,8 +1115,10 @@ Return plain text bullet points only, no headers.` }]
       updateExpenseField(editingExpenseId, "date", newExp.date);
       updateExpenseField(editingExpenseId, "fixed", newExp.fixed);
       setEditingExpenseId(null);
+      showToast(`Updated ${newExp.label}`);
     } else {
       setExpenses(prev => [...prev, { ...newExp, id: Date.now(), amount: parseFloat(newExp.amount) }]);
+      showToast(`Added ${newExp.label} (${fmt(parseFloat(newExp.amount))})`);
     }
     setNewExp({ label: "", amount: "", category: "Food", date: getDefaultDate(viewMonthKey), fixed: false });
     setModal(null);
@@ -1056,17 +1126,19 @@ Return plain text bullet points only, no headers.` }]
   const addIncome = () => {
     if (!newInc.label || !newInc.amount) return;
     setIncome(prev => [...prev, { ...newInc, id: Date.now(), amount: parseFloat(newInc.amount) }]);
+    showToast(`Income added: +${fmt(parseFloat(newInc.amount))}`);
     setNewInc({ label: "", amount: "", date: getDefaultDate(viewMonthKey), recurring: false });
     setModal(null);
   };
   const addDebt = () => {
     if (!newDebt.label || !newDebt.balance) return;
     setDebts(prev => [...prev, { ...newDebt, id: Date.now(), balance: parseFloat(newDebt.balance), minPayment: parseFloat(newDebt.minPayment)||0, interest: parseFloat(newDebt.interest)||0 }]);
+    showToast(`Debt "${newDebt.label}" added`);
     setNewDebt({ label: "", balance: "", minPayment: "", interest: "" });
     setModal(null);
   };
-  const deleteExpenseFromView = (id) => setExpenses(prev => prev.filter(x => x.id !== id));
-  const deleteIncomeFromView = (id) => setIncome(prev => prev.filter(x => x.id !== id));
+  const deleteExpenseFromView = (id) => { setExpenses(prev => prev.filter(x => x.id !== id)); showToast("Item removed", "✕"); };
+  const deleteIncomeFromView = (id) => { setIncome(prev => prev.filter(x => x.id !== id)); showToast("Income removed", "✕"); };
   const updateIncomeField = (id, field, value) => setIncome(prev => prev.map(e => e.id === id ? { ...e, [field]: field === "amount" ? (parseFloat(value) || 0) : value } : e));
   const updateExpenseField = (id, field, value) => setExpenses(prev => prev.map(e => e.id === id ? { ...e, [field]: field === "amount" ? (parseFloat(value) || 0) : value } : e));
   const updateDebtField = (id, field, value) => {
@@ -1252,7 +1324,27 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         input::placeholder, textarea::placeholder { color: #757c7e; }
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; font-family: 'Material Symbols Outlined'; }
         .nav-item:hover { background: #f1f4f5 !important; opacity: 1 !important; }
-        .exp-card:hover { transform: translateY(-2px); transition: transform 0.15s ease; }
+        .exp-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(79,97,116,0.1) !important; transition: all 0.2s ease !important; }
+        button { transition: all 0.18s ease; }
+        button:hover { opacity: 0.88; }
+        button:active { transform: scale(0.97); }
+        @keyframes toastSlideUp { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg) } }
+        @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-6px); } }
+        @keyframes pop-in { 0% { transform: scale(0); opacity: 0; } 80% { transform: scale(1.2); } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+        .cat-scroll { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; padding-bottom: 8px; }
+        .cat-scroll::-webkit-scrollbar { display: none; }
+        .cat-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+        /* Section 11: iOS/macOS refinements */
+        .kpi-num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; letter-spacing: -0.02em; }
+        .card { transition: box-shadow 0.2s ease, transform 0.2s ease; }
+        .card:hover { box-shadow: 0 16px 32px rgba(79,97,116,0.1) !important; }
+        h1, h2, h3 { letter-spacing: -0.02em; }
+        @media (max-width: 768px) {
+          main { padding: 16px !important; }
+          header { padding: 14px 16px 12px !important; }
+        }
       `}</style>
 
       {/* ── SIDEBAR — light, rounded-r-3xl ── */}
@@ -1389,6 +1481,39 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         {/* ── DASHBOARD TAB ── */}
         {tab === "dashboard" && (
           <div style={{ fontSize: 14, color: COLORS.text }}>
+            {/* ── Budget Bar + Net Cash Flow + Pace Indicator ── */}
+            {(() => {
+              const netCashFlow = viewTotalIncome - budgetBarSpent;
+              const now = new Date();
+              const daysInMo = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+              const dayOfMo = now.getDate();
+              const expectedPct = Math.round((dayOfMo / daysInMo) * 100);
+              const actualPct = budgetBarPlanned > 0 ? Math.round((budgetBarSpent / budgetBarPlanned) * 100) : 0;
+              const diff = actualPct - expectedPct;
+              const paceColor = diff > 25 ? "#F87171" : diff > 10 ? "#FBBF24" : "#34D399";
+              const paceLabel = diff > 25 ? `over pace 🔴` : diff > 10 ? `ahead of pace ⚠️` : `on pace ✓`;
+              return (
+                <div style={{ background: COLORS.card, borderRadius: 16, padding: "20px 24px", boxShadow: COLORS.shadowSm, marginBottom: 20 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 24, marginBottom: 16, flexWrap: "wrap" }}>
+                    <div style={{ flex: 1, minWidth: 260 }}>
+                      <BudgetBar totalIncome={viewTotalIncome} totalPlanned={budgetBarPlanned} totalSpent={budgetBarSpent} />
+                      {budgetBarPlanned > 0 && (
+                        <p style={{ fontSize: 12, color: paceColor, marginTop: 8, fontWeight: 500 }}>
+                          Day {dayOfMo} of {daysInMo} — {actualPct}% spent ({paceLabel})
+                        </p>
+                      )}
+                    </div>
+                    <div style={{ background: netCashFlow >= 0 ? "rgba(52,211,153,0.1)" : "rgba(248,113,113,0.1)", borderRadius: 14, padding: "14px 20px", textAlign: "center", minWidth: 140, flexShrink: 0 }}>
+                      <p style={{ fontSize: 10, fontWeight: 700, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Net This Month</p>
+                      <p style={{ fontSize: 26, fontWeight: 900, color: netCashFlow >= 0 ? "#34D399" : "#F87171", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>
+                        {netCashFlow >= 0 ? "+" : "−"}{fmt(Math.abs(netCashFlow))}
+                      </p>
+                      <p style={{ fontSize: 11, color: COLORS.muted, marginTop: 2 }}>{netCashFlow >= 0 ? "surplus" : "deficit"}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
             {/* ── "Show me the Money!" spending capacity section ── */}
             <div style={{ background: COLORS.card, borderRadius: 12, padding: "32px", boxShadow: COLORS.shadow, marginBottom: 28 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
@@ -1481,50 +1606,75 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             })()}
             {/* Bento grid — 12 columns */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 28, paddingBottom: 48 }}>
-              {/* ── ROW 1, COL 1–4: Next Bill Due ── */}
-              <div style={{ gridColumn: "span 4", background: COLORS.secondaryContainer, borderRadius: 12, padding: "32px", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 320 }}>
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
-                    <div style={{ padding: 10, background: `rgba(0,89,117,0.1)`, borderRadius: 16 }}>
-                      <span className="material-symbols-outlined" style={{ color: COLORS.onSecondaryContainer, fontSize: 28 }}>event_upcoming</span>
-                    </div>
-                    {daysUntilBill !== null && (
-                      <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: COLORS.onSecondaryContainer, opacity: 0.6 }}>
-                        {daysUntilBill < 0 ? `OVERDUE ${Math.abs(daysUntilBill)}D` : daysUntilBill === 0 ? "DUE TODAY" : `DUE IN ${daysUntilBill} ${daysUntilBill === 1 ? "DAY" : "DAYS"}`}
-                      </span>
+              {/* ── ROW 1, COL 1–4: Next Bill Due (cycling carousel) ── */}
+              {(() => {
+                const carouselBills = unpaidSorted;
+                const hasBills = carouselBills.length > 0;
+                const safeBillIdx = hasBills ? billCarouselIdx % carouselBills.length : 0;
+                const carouselBill = hasBills ? carouselBills[safeBillIdx] : null;
+                const carouselDaysUntil = carouselBill ? Math.round((carouselBill._due.getTime() - today0.getTime()) / 86400000) : null;
+                return (
+                  <div style={{ gridColumn: "span 4", background: COLORS.secondaryContainer, borderRadius: 12, padding: "28px", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 320, position: "relative" }}>
+                    {/* Arrow buttons */}
+                    {hasBills && carouselBills.length > 1 && (
+                      <>
+                        <button onClick={() => setBillCarouselIdx(p => (p - 1 + carouselBills.length) % carouselBills.length)} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,89,117,0.12)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2, color: COLORS.onSecondaryContainer, fontSize: 16 }}>‹</button>
+                        <button onClick={() => setBillCarouselIdx(p => (p + 1) % carouselBills.length)} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,89,117,0.12)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2, color: COLORS.onSecondaryContainer, fontSize: 16 }}>›</button>
+                      </>
                     )}
-                  </div>
-                  {nextBill ? (
-                    <>
-                      <p style={{ fontSize: 14, fontWeight: 500, color: COLORS.onSecondaryContainer, marginBottom: 4 }}>Next Bill Due</p>
-                      <h4 style={{ fontSize: 24, fontWeight: 700, color: COLORS.onSecondaryContainer, marginBottom: 8, lineHeight: 1.2 }}>{nextBill.label}</h4>
-                      <p style={{ fontSize: 13, color: COLORS.onSecondaryContainer, opacity: 0.7, lineHeight: 1.5 }}>Ensure funds are available in your primary checking account.</p>
-                    </>
-                  ) : (
-                    <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.onSecondaryContainer }}>All bills paid! 🎉</p>
-                  )}
-                </div>
-                {nextBill && (
-                  <div>
-                    <p style={{ fontSize: 10, fontWeight: 700, color: COLORS.onSecondaryContainer, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Amount Due</p>
-                    <p style={{ fontSize: 36, fontWeight: 800, color: COLORS.onSecondaryContainer, marginBottom: 20, letterSpacing: "-0.02em" }}>{fmt(nextBill.budget)}</p>
-                    {payBillConfirm?.id === nextBill.id ? (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                        <p style={{ fontSize: 12, color: COLORS.onSecondaryContainer, textAlign: "center", opacity: 0.8 }}>Mark {nextBill.label} {fmt(nextBill.budget)} as paid?</p>
-                        <div style={{ display: "flex", gap: 8 }}>
-                          <button onClick={() => { setBills(p => p.map(b => b.id === nextBill.id ? { ...b, paid: true, actual: b.budget } : b)); setExpenses(p => [...p, { id: Date.now(), label: nextBill.label, amount: nextBill.budget, category: "Housing", date: todayKey + "-" + new Date().getDate().toString().padStart(2,"0"), fixed: true }]); setPayBillConfirm(null); }} style={{ flex: 1, background: COLORS.onSecondaryContainer, color: "#fff", border: "none", borderRadius: 9999, padding: "11px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Confirm</button>
-                          <button onClick={() => setPayBillConfirm(null)} style={{ flex: 1, background: "rgba(0,89,117,0.15)", color: COLORS.onSecondaryContainer, border: "none", borderRadius: 9999, padding: "11px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                        <div style={{ padding: 10, background: `rgba(0,89,117,0.1)`, borderRadius: 16 }}>
+                          <span className="material-symbols-outlined" style={{ color: COLORS.onSecondaryContainer, fontSize: 28 }}>event_upcoming</span>
                         </div>
+                        {carouselDaysUntil !== null && (
+                          <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: COLORS.onSecondaryContainer, opacity: 0.7 }}>
+                            {carouselDaysUntil < 0 ? `OVERDUE ${Math.abs(carouselDaysUntil)}D` : carouselDaysUntil === 0 ? "DUE TODAY" : `DUE IN ${carouselDaysUntil}D`}
+                          </span>
+                        )}
                       </div>
-                    ) : (
-                      <button onClick={() => setPayBillConfirm(nextBill)}
-                        style={{ width: "100%", background: COLORS.onSecondaryContainer, color: "#fff", border: "none", borderRadius: 9999, padding: "14px", fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: COLORS.shadowSm }}>
-                        Pay Now
-                      </button>
+                      {carouselBill ? (
+                        <>
+                          <p style={{ fontSize: 13, fontWeight: 500, color: COLORS.onSecondaryContainer, marginBottom: 4, opacity: 0.7 }}>Upcoming Bill</p>
+                          <h4 style={{ fontSize: 22, fontWeight: 700, color: COLORS.onSecondaryContainer, marginBottom: 4, lineHeight: 1.2 }}>{carouselBill.label}</h4>
+                          <p style={{ fontSize: 12, color: COLORS.onSecondaryContainer, opacity: 0.65 }}>{fmtDate(getBillDueDate(carouselBill, viewMonthKey))}</p>
+                        </>
+                      ) : (
+                        <div style={{ textAlign: "center", marginTop: 20 }}>
+                          <p style={{ fontSize: 28, marginBottom: 8 }}>🎉</p>
+                          <p style={{ fontSize: 15, fontWeight: 700, color: COLORS.onSecondaryContainer }}>All bills paid this month!</p>
+                          <p style={{ fontSize: 12, color: COLORS.onSecondaryContainer, opacity: 0.65, marginTop: 4 }}>Great job staying on top of your bills.</p>
+                        </div>
+                      )}
+                    </div>
+                    {carouselBill && (
+                      <div>
+                        <p style={{ fontSize: 10, fontWeight: 700, color: COLORS.onSecondaryContainer, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Amount Due</p>
+                        <p style={{ fontSize: 34, fontWeight: 800, color: COLORS.onSecondaryContainer, marginBottom: 16, letterSpacing: "-0.02em" }}>{fmt(carouselBill.budget)}</p>
+                        {payBillConfirm?.id === carouselBill.id ? (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                            <p style={{ fontSize: 12, color: COLORS.onSecondaryContainer, textAlign: "center", opacity: 0.8 }}>Mark {carouselBill.label} as paid?</p>
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <button onClick={() => { markBillPaid(carouselBill.id, viewMonthKey); setPayBillConfirm(null); showToast(`${carouselBill.label} marked as paid`); }} style={{ flex: 1, background: COLORS.onSecondaryContainer, color: "#fff", border: "none", borderRadius: 9999, padding: "11px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Confirm</button>
+                              <button onClick={() => setPayBillConfirm(null)} style={{ flex: 1, background: "rgba(0,89,117,0.15)", color: COLORS.onSecondaryContainer, border: "none", borderRadius: 9999, padding: "11px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button onClick={() => setPayBillConfirm(carouselBill)} style={{ width: "100%", background: COLORS.onSecondaryContainer, color: "#fff", border: "none", borderRadius: 9999, padding: "12px", fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: COLORS.shadowSm }}>Pay Now</button>
+                        )}
+                        {/* Dot indicators */}
+                        {carouselBills.length > 1 && (
+                          <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 12 }}>
+                            {carouselBills.map((_, di) => (
+                              <button key={di} onClick={() => setBillCarouselIdx(di)} style={{ width: di === safeBillIdx ? 16 : 6, height: 6, borderRadius: 9999, background: di === safeBillIdx ? COLORS.onSecondaryContainer : `${COLORS.onSecondaryContainer}50`, border: "none", cursor: "pointer", padding: 0, transition: "all 0.2s" }} />
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
+                );
+              })()}
 
               {/* ── ROW 1, COL 5–12: Cash Flow Summary ── */}
               <div style={{ gridColumn: "span 8", position: "relative", overflow: "hidden", background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, borderRadius: 12, padding: "40px", color: "#fff", boxShadow: COLORS.shadow, minHeight: 320 }}>
@@ -1555,59 +1705,65 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 </div>
               </div>
 
-              {/* ── ROW 2: Spending by Category (full width) ── */}
-              <div style={{ gridColumn: "span 12", background: COLORS.containerLow, borderRadius: 12, padding: "40px", position: "relative" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 32 }}>
+              {/* ── ROW 2: Spending by Category (horizontally scrollable) ── */}
+              <div style={{ gridColumn: "span 12", background: COLORS.containerLow, borderRadius: 12, padding: "32px", position: "relative" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
                   <div>
-                    <h4 style={{ fontSize: 22, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>Spending by Category</h4>
-                    <p style={{ fontSize: 14, color: COLORS.subtext }}>Track where our money goes as a family</p>
+                    <h4 style={{ fontSize: 20, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>Spending by Category</h4>
+                    <p style={{ fontSize: 13, color: COLORS.subtext }}>Track where our money goes — scroll to see all categories</p>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      {[
-                        { dir: "prev", icon: "chevron_left", fn: () => setExpenseCardPage(p => Math.max(0, p - 1)) },
-                        { dir: "next", icon: "chevron_right", fn: () => setExpenseCardPage(p => Math.min(Math.max(0, Math.ceil(viewCatExpenseCards.length / 3) - 1), p + 1)) },
-                      ].map(btn => (
-                        <button key={btn.dir} onClick={btn.fn} style={{ width: 40, height: 40, borderRadius: "50%", background: COLORS.card, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: COLORS.shadowSm, color: COLORS.primary }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>{btn.icon}</span>
-                        </button>
-                      ))}
-                    </div>
-                    <button onClick={() => setTab("transactions")} style={{ background: COLORS.card, border: "none", borderRadius: 9999, padding: "9px 20px", fontSize: 13, fontWeight: 700, color: COLORS.primary, cursor: "pointer", boxShadow: COLORS.shadowSm }}>
-                      View All Transactions
-                    </button>
-                  </div>
+                  <button onClick={() => setTab("transactions")} style={{ background: COLORS.card, border: "none", borderRadius: 9999, padding: "8px 18px", fontSize: 13, fontWeight: 700, color: COLORS.primary, cursor: "pointer", boxShadow: COLORS.shadowSm }}>
+                    View Budget →
+                  </button>
                 </div>
                 {viewCatExpenseCards.length === 0 ? (
-                  <p style={{ fontSize: 14, color: COLORS.muted }}>No expenses yet. Add a transaction to get started.</p>
+                  <div style={{ textAlign: "center", padding: "32px 0", color: COLORS.muted }}>
+                    <p style={{ fontSize: 22, marginBottom: 8 }}>📊</p>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text, marginBottom: 4 }}>No budget categories set up yet</p>
+                    <p style={{ fontSize: 13, color: COLORS.muted }}>Head to Family Budget to start planning.</p>
+                  </div>
                 ) : (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24 }}>
-                    {viewCatExpenseCards.slice(expenseCardPage * 3, expenseCardPage * 3 + 3).map(([cat, amt]) => {
-                      const topExpense = [...viewExpenses].filter(e => e.category === cat).sort((a, b) => b.amount - a.amount)[0];
-                      const budgetPct = viewExpenseBudgets[cat] ? Math.round(pct(amt, viewExpenseBudgets[cat])) : null;
-                      return (
-                        <div key={cat} className="exp-card" style={{ background: COLORS.card, borderRadius: 12, padding: "24px", boxShadow: COLORS.shadowSm, cursor: "default" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
-                            <div style={{ width: 48, height: 48, borderRadius: 14, background: CATEGORY_ICON_BG[cat] || "#eaeef0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                              <span className="material-symbols-outlined" style={{ fontSize: 24, color: CATEGORY_ICON_COLOR[cat] || COLORS.subtext }}>{CATEGORY_ICONS[cat] || "category"}</span>
+                  <div style={{ display: "flex", gap: 16, overflowX: "auto", scrollSnapType: "x mandatory", scrollBehavior: "smooth", paddingBottom: 8, msOverflowStyle: "none", scrollbarWidth: "none" }}>
+                    <style>{`.cat-scroll::-webkit-scrollbar { display: none; }`}</style>
+                    {/* Sort by planned amount desc, then by spent amount */}
+                    {[...viewCatExpenseCards]
+                      .sort((a, b) => {
+                        const plannedA = viewExpenseBudgets[a[0]] || 0;
+                        const plannedB = viewExpenseBudgets[b[0]] || 0;
+                        if (plannedB !== plannedA) return plannedB - plannedA;
+                        return b[1] - a[1];
+                      })
+                      .map(([cat, amt]) => {
+                        const budget = viewExpenseBudgets[cat] || 0;
+                        const budgetPct = budget > 0 ? Math.round(pct(amt, budget)) : null;
+                        const isOver = budget > 0 && amt > budget;
+                        const barColor = isOver ? "#F87171" : COLORS.primary;
+                        const topExpense = [...viewExpenses].filter(e => e.category === cat).sort((a, b) => b.amount - a.amount)[0];
+                        return (
+                          <div key={cat} className="exp-card" style={{ flexShrink: 0, width: 200, scrollSnapAlign: "start", background: COLORS.card, borderRadius: 14, padding: "18px", boxShadow: COLORS.shadowSm, border: isOver ? `1.5px solid #F87171` : `1.5px solid transparent`, cursor: "default" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                              <div style={{ width: 40, height: 40, borderRadius: 12, background: CATEGORY_ICON_BG[cat] || "#eaeef0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                <span className="material-symbols-outlined" style={{ fontSize: 20, color: CATEGORY_ICON_COLOR[cat] || COLORS.subtext }}>{CATEGORY_ICONS[cat] || "category"}</span>
+                              </div>
+                              <div style={{ minWidth: 0 }}>
+                                <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{CAT_LABEL[cat] || cat}</p>
+                                <p style={{ fontSize: 11, color: COLORS.subtext, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{topExpense ? topExpense.label : "—"}</p>
+                              </div>
                             </div>
-                            <div>
-                              <p style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>{cat}</p>
-                              <p style={{ fontSize: 12, color: COLORS.subtext }}>{topExpense ? topExpense.label : "—"}</p>
-                            </div>
+                            <p style={{ fontSize: 22, fontWeight: 800, color: COLORS.text, letterSpacing: "-0.02em", marginBottom: 8 }}>{fmt(amt)}</p>
+                            {budget > 0 && (
+                              <>
+                                <div style={{ height: 6, background: COLORS.containerLow, borderRadius: 9999, overflow: "hidden", marginBottom: 4 }}>
+                                  <div style={{ width: `${Math.min(100, pct(amt, budget))}%`, height: "100%", background: barColor, borderRadius: 9999, transition: "width 0.5s ease" }} />
+                                </div>
+                                <p style={{ fontSize: 11, color: isOver ? "#F87171" : COLORS.muted }}>
+                                  {isOver ? `Over by ${fmt(amt - budget)}` : `${fmt(budget - amt)} left of ${fmt(budget)}`}
+                                </p>
+                              </>
+                            )}
+                            {budget === 0 && <p style={{ fontSize: 11, color: COLORS.muted }}>No budget set</p>}
                           </div>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-                            <span style={{ fontSize: 24, fontWeight: 700, color: COLORS.text, letterSpacing: "-0.02em" }}>{fmt(amt)}</span>
-                            <div style={{ textAlign: "right" }}>
-                              {budgetPct !== null && (
-                                <p style={{ fontSize: 10, fontWeight: 700, color: budgetPct > 100 ? COLORS.danger : budgetPct > 80 ? COLORS.warning : COLORS.secondary, textTransform: "uppercase", letterSpacing: "0.05em" }}>{budgetPct}% of {fmt(viewExpenseBudgets[cat])}</p>
-                              )}
-                              {viewExpenseBudgets[cat] > 0 && <p style={{ fontSize: 11, color: COLORS.muted }}>{fmt(viewExpenseBudgets[cat] - amt)} left</p>}
-                              <p style={{ fontSize: 12, fontWeight: 500, color: COLORS.subtext }}>{topExpense ? fmtDate(topExpense.date) : ""}</p>
-                            </div>
-                          </div>
-                        </div>
-                      );
+                        );
                     })}
                   </div>
                 )}
@@ -1749,6 +1905,10 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           })();
           return (
             <div style={{ paddingBottom: 48 }}>
+              {/* ── Budget Bar for Family Budget page ── */}
+              <div style={{ background: COLORS.card, borderRadius: 14, padding: "16px 20px", boxShadow: COLORS.shadowSm, marginBottom: 16 }}>
+                <BudgetBar totalIncome={viewTotalIncome} totalPlanned={budgetBarPlanned} totalSpent={budgetBarSpent} />
+              </div>
               {/* ── Page header ── */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, gap: 20, flexWrap: "wrap" }}>
                 <div>
@@ -1874,8 +2034,10 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     const grpExp = sortExp(viewExpenses.filter(e => e.category === group.catId));
                     const grpActual = grpExp.reduce((s,e) => s+e.amount, 0);
                     const grpPlanned = viewExpenseBudgets[group.catId] || 0;
+                    const grpItemsPlannedSum = grpExp.reduce((s, e) => s + (monthItemBudgets[`exp-${e.id}`] || 0), 0);
+                    const effectivePlanned = grpItemsPlannedSum > 0 ? grpItemsPlannedSum : grpPlanned;
                     const isCollapsed = collapsedCategories[group.catId];
-                    const util = grpPlanned > 0 ? Math.round((grpActual / grpPlanned) * 100) : null;
+                    const util = effectivePlanned > 0 ? Math.round((grpActual / effectivePlanned) * 100) : null;
                     const utilColor = util === null ? COLORS.muted : util > 100 ? COLORS.danger : util >= 80 ? COLORS.warning : COLORS.success;
                     const usedLabels = grpExp.map(e => e.label.toLowerCase());
                     const unusedTemplates = group.templateItems.filter(t => !usedLabels.some(l => l.includes(t.split(/[/(]/)[0].trim().toLowerCase())));
@@ -1897,15 +2059,20 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           <span />
                           {/* due column — empty */}
                           <span />
-                          {/* planned — editable */}
-                          {editingPlannedKey === `cat-${group.catId}`
-                            ? <input autoFocus type="number" placeholder="0" defaultValue={grpPlanned || ""} onClick={e => e.stopPropagation()} onBlur={ev => { const v = parseFloat(ev.target.value) || 0; setViewExpenseBudgets(prev => ({ ...prev, [group.catId]: v })); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); if (ev.key === "Escape") setEditingPlannedKey(null); }} style={{ width:"100%", background:COLORS.containerLow, border:`1px solid ${COLORS.primary}`, borderRadius:6, padding:"3px 6px", fontSize:12, color:COLORS.text, outline:"none" }} />
-                            : <span onClick={e => { e.stopPropagation(); setEditingPlannedKey(`cat-${group.catId}`); }} title="Click to edit planned budget" style={{ fontSize: 12, fontWeight: 700, color: grpPlanned > 0 ? COLORS.subtext : COLORS.muted, cursor: "text", borderRadius: 4, padding: "2px 4px" }}>{viewExpenseBudgets[group.catId] != null ? fmt(grpPlanned) : <span style={{ display:"flex", alignItems:"center", gap:3 }}>—<span style={{ fontSize:9, opacity:0.5 }}>✏</span></span>}</span>
+                          {/* planned — editable category budget, auto-sum from items shown when available */}
+                          {grpItemsPlannedSum > 0
+                            ? <span title={`Auto-sum of ${grpExp.length} item budgets${grpPlanned > 0 ? ` (category cap: ${fmt(grpPlanned)})` : ""}`} style={{ fontSize: 12, fontWeight: 700, color: COLORS.subtext, display: "flex", alignItems: "center", gap: 4 }}>
+                                {fmt(grpItemsPlannedSum)}
+                                <span style={{ fontSize: 9, color: COLORS.muted, background: COLORS.containerHigh, borderRadius: 3, padding: "1px 4px" }}>Σ</span>
+                              </span>
+                            : editingPlannedKey === `cat-${group.catId}`
+                              ? <input autoFocus type="number" placeholder="0" defaultValue={grpPlanned || ""} onClick={e => e.stopPropagation()} onBlur={ev => { const v = parseFloat(ev.target.value) || 0; setViewExpenseBudgets(prev => ({ ...prev, [group.catId]: v })); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); if (ev.key === "Escape") setEditingPlannedKey(null); }} style={{ width:"100%", background:COLORS.containerLow, border:`1px solid ${COLORS.primary}`, borderRadius:6, padding:"3px 6px", fontSize:12, color:COLORS.text, outline:"none" }} />
+                              : <span onClick={e => { e.stopPropagation(); setEditingPlannedKey(`cat-${group.catId}`); }} title="Click to edit category budget" style={{ fontSize: 12, fontWeight: 700, color: grpPlanned > 0 ? COLORS.subtext : COLORS.muted, cursor: "text", borderRadius: 4, padding: "2px 4px" }}>{grpPlanned > 0 ? fmt(grpPlanned) : <span style={{ display:"flex", alignItems:"center", gap:3 }}>—<span style={{ fontSize:9, opacity:0.5 }}>✏</span></span>}</span>
                           }
                           {/* actual */}
                           <span style={{ fontSize: 12, fontWeight: 700, color: utilColor }}>{grpActual > 0 ? fmt(grpActual) : "—"}</span>
                           {/* variance */}
-                          {(() => { const grpVar = grpPlanned > 0 ? grpPlanned - grpActual : null; return <span style={{ fontSize: 12, fontWeight: 700, color: grpVar === null ? COLORS.muted : grpVar >= 0 ? COLORS.success : COLORS.danger }}>{grpVar === null ? "—" : grpVar > 0 ? `+${fmt(grpVar)}` : fmt(grpVar)}</span>; })()}
+                          {(() => { const grpVar = effectivePlanned > 0 ? effectivePlanned - grpActual : null; return <span style={{ fontSize: 12, fontWeight: 700, color: grpVar === null ? COLORS.muted : grpVar >= 0 ? COLORS.success : COLORS.danger }}>{grpVar === null ? "—" : grpVar > 0 ? `+${fmt(grpVar)}` : fmt(grpVar)}</span>; })()}
                           {/* actions col — chevron */}
                           <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.muted, transition: "transform .2s", transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)", textAlign: "center" }}>expand_more</span>
                         </div>
@@ -1998,110 +2165,41 @@ If the request doesn't map to a clear category goal, still return JSON with newG
 
                 {/* ── Right sidebar (col-4) ── */}
                 <div style={{ gridColumn: "span 4", display: "flex", flexDirection: "column", gap: 14 }}>
-                  {/* Bills */}
-                  <div style={{ background: COLORS.card, borderRadius: 20, padding: 22, boxShadow: COLORS.shadowSm }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div style={{ padding: "6px 8px", background: "rgba(97,205,253,0.2)", borderRadius: 10 }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: 17, color: COLORS.primary }}>receipt_long</span>
-                        </div>
-                        <h3 style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>Bills</h3>
+                  {/* Bills summary card — links to Bill Calendar */}
+                  <div style={{ background: "rgba(97,205,253,0.12)", borderRadius: 16, padding: "16px 18px", border: `1px solid rgba(0,103,136,0.12)` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.primary }}>receipt_long</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>Bills</span>
                       </div>
-                      <button onClick={() => setModal("addBill")} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.primary }}>add_circle</span>
-                      </button>
+                      <button onClick={() => setTab("weekly")} style={{ fontSize: 11, fontWeight: 700, color: COLORS.primary, background: "none", border: "none", cursor: "pointer" }}>Manage →</button>
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                      {bills.map(b => {
-                        const bDueDate = getBillDueDate(b, viewMonthKey);
-                        const [bY,bM,bD] = bDueDate.split("-").map(Number);
-                        const bDate = new Date(bY,bM-1,bD);
-                        const bPaid = getBillPaid(b, viewMonthKey);
-                        const isOverdue = !bPaid && bDate < today0;
-                        const borderColor = bPaid ? COLORS.success : isOverdue ? COLORS.danger : "transparent";
-                        const sbInp = { background: COLORS.containerHigh, border: `1px solid ${COLORS.primary}`, borderRadius: 6, outline: "none", color: COLORS.text };
-                        const isEL = editingBillCell?.id === b.id && editingBillCell?.field === "label";
-                        const isED = editingBillCell?.id === b.id && editingBillCell?.field === "dueDate";
-                        const isEA = editingBillCell?.id === b.id && editingBillCell?.field === "budget";
-                        return (
-                          <div key={b.id} style={{ background: COLORS.containerLow, borderRadius: 10, padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", borderLeft: `3px solid ${borderColor}`, gap: 8 }}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              {isEL
-                                ? <input autoFocus defaultValue={b.label} style={{ ...sbInp, fontSize: 13, fontWeight: 600, padding: "2px 6px", width: "100%" }} onBlur={e => { setBills(p => p.map(x => x.id === b.id ? {...x, label: e.target.value || x.label} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
-                                : <p onClick={() => setEditingBillCell({id: b.id, field: "label"})} title="Click to edit" style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, cursor: "text" }}>{b.label}</p>
-                              }
-                              {isED
-                                ? <input autoFocus type="number" min="1" max="31" defaultValue={b.dayOfMonth} style={{ ...sbInp, fontSize: 11, padding: "1px 4px", marginTop: 2, width: 50 }} onBlur={e => { const v = parseInt(e.target.value); if (v >= 1 && v <= 31) setBills(p => p.map(x => x.id === b.id ? {...x, dayOfMonth: v} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
-                                : <p onClick={() => setEditingBillCell({id: b.id, field: "dueDate"})} title="Click to edit" style={{ fontSize: 11, color: isOverdue ? COLORS.danger : COLORS.subtext, cursor: "text" }}>{fmtDate(bDueDate)}</p>
-                              }
-                            </div>
-                            <div style={{ textAlign: "right", flexShrink: 0 }}>
-                              {isEA
-                                ? <input autoFocus type="number" defaultValue={b.budget} style={{ ...sbInp, fontSize: 13, fontWeight: 700, padding: "2px 6px", width: 72, textAlign: "right" }} onBlur={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v >= 0) setBills(p => p.map(x => x.id === b.id ? {...x, budget: v} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
-                                : <p onClick={() => setEditingBillCell({id: b.id, field: "budget"})} title="Click to edit" style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, cursor: "text" }}>{fmt(b.budget)}</p>
-                              }
-                              {bPaid
-                                ? <span style={{ fontSize: 10, fontWeight: 700, color: COLORS.success }}>Paid ✓</span>
-                                : <span style={{ fontSize: 10, fontWeight: 700, color: isOverdue ? COLORS.danger : COLORS.muted, animation: isOverdue ? "pulse 2s infinite" : "none" }}>{isOverdue ? "Overdue" : "Due"}</span>
-                              }
-                            </div>
-                            {!bPaid && (
-                              <button onClick={() => markBillPaid(b.id, viewMonthKey)} title="Mark as paid" style={{ background: `rgba(0,103,136,0.1)`, border: "none", color: COLORS.primary, cursor: "pointer", fontSize: 11, fontWeight: 700, padding: "3px 7px", borderRadius: 6, flexShrink: 0 }}>Pay ✓</button>
-                            )}
-                            <button onClick={() => setBills(p => p.filter(x => x.id !== b.id))} title="Delete" style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 16, padding: 0, flexShrink: 0, lineHeight: 1 }}>×</button>
-                          </div>
-                        );
-                      })}
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <div><p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 2 }}>Total</p><p style={{ fontSize: 15, fontWeight: 800, color: COLORS.text }}>{fmt(billsBudgetTotal)}</p></div>
+                      <div style={{ textAlign: "right" }}><p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 2 }}>Paid</p><p style={{ fontSize: 15, fontWeight: 800, color: COLORS.success }}>{fmt(billsActualTotal)}</p></div>
+                      <div style={{ textAlign: "right" }}><p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 2 }}>Remaining</p><p style={{ fontSize: 15, fontWeight: 800, color: COLORS.warning }}>{fmt(billsBudgetTotal - billsActualTotal)}</p></div>
                     </div>
+                    {bills.length === 0 && (
+                      <p style={{ fontSize: 12, color: COLORS.muted, marginTop: 8 }}>No bills added yet. Add your first bill on the Bill Calendar.</p>
+                    )}
                   </div>
-
-
-                  {/* Debts — with inline editing and × */}
-                  <div style={{ background: COLORS.card, borderRadius: 20, padding: 22, boxShadow: COLORS.shadowSm }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div style={{ padding: "6px 8px", background: "rgba(172,49,73,0.1)", borderRadius: 10 }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: 17, color: COLORS.danger }}>account_balance</span>
-                        </div>
-                        <h3 style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>Debts</h3>
+                  {/* Debt summary card — links to Debts tab */}
+                  <div style={{ background: "rgba(172,49,73,0.06)", borderRadius: 16, padding: "16px 18px", border: `1px solid rgba(172,49,73,0.1)` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.danger }}>credit_card</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>Debts</span>
                       </div>
-                      <button onClick={() => setModal("addDebt")} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.primary }}>add_circle</span>
-                      </button>
+                      <button onClick={() => setTab("debts")} style={{ fontSize: 11, fontWeight: 700, color: COLORS.danger, background: "none", border: "none", cursor: "pointer" }}>Manage →</button>
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-                      {debts.map((d, idx) => (
-                        <div key={d.id}>
-                          {idx > 0 && <div style={{ height: 1, background: COLORS.containerLow, margin: "8px 0" }} />}
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <DebtText id={d.id} field="label" value={d.label} style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, display: "block", marginBottom: 2 }} />
-                              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                <DebtText id={d.id} field="interest" value={d.interest} style={{ fontSize: 11, color: COLORS.subtext }} />
-                                <span style={{ fontSize: 11, color: COLORS.subtext }}>% APR</span>
-                              </div>
-                            </div>
-                            <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 8 }}>
-                              <span style={{ fontSize: 14, fontWeight: 800, color: COLORS.danger, display: "block", cursor: "text" }} onClick={() => setEditingDebtCell({id: d.id, field: "balance"})}>{editingDebtCell?.id === d.id && editingDebtCell?.field === "balance" ? <input autoFocus defaultValue={d.balance} onBlur={e => { updateDebtField(d.id,"balance",parseFloat(e.target.value)||0); setEditingDebtCell(null); }} onKeyDown={e=>{if(e.key==="Enter")e.target.blur();}} style={{width:80,background:COLORS.containerLow,border:"none",borderRadius:6,padding:"2px 6px",fontSize:13,color:COLORS.text,outline:"none",textAlign:"right"}} /> : fmt(d.balance)}</span>
-                              {d.minPayment > 0 && <span style={{ fontSize: 10, color: COLORS.muted, display: "block" }}>~{Math.ceil(d.balance / d.minPayment)} mo. to payoff</span>}
-                              <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end", marginTop: 2 }}>
-                                {payExtraDebtId === d.id
-                                  ? <span style={{ display:"flex", alignItems:"center", gap:4 }}>
-                                      <input id={`pe-${d.id}`} autoFocus type="number" placeholder="$" style={{ width:60, background:COLORS.containerLow, border:"none", borderRadius:6, padding:"2px 6px", fontSize:11, color:COLORS.text, outline:"none" }} onKeyDown={e=>{if(e.key==="Escape")setPayExtraDebtId(null);}} />
-                                      <button onClick={()=>{ const v=parseFloat(document.getElementById(`pe-${d.id}`)?.value)||0; if(v>0){ updateDebtField(d.id,"balance",Math.max(0,d.balance-v)); const today=new Date().toISOString().slice(0,10); setExpenses(prev=>[...prev,{id:Date.now(),label:`Extra payment: ${d.label}`,amount:v,category:"Other",date:today,fixed:false}]); } setPayExtraDebtId(null); }} style={{background:COLORS.primary,color:"#fff",border:"none",borderRadius:6,padding:"2px 8px",fontSize:11,fontWeight:700,cursor:"pointer"}}>Pay</button>
-                                      <button onClick={()=>setPayExtraDebtId(null)} style={{background:"none",border:"none",color:COLORS.muted,cursor:"pointer",fontSize:14,padding:0}}>×</button>
-                                    </span>
-                                  : <button onClick={() => setPayExtraDebtId(d.id)} style={{ fontSize: 11, color: COLORS.primary, background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0 }}>Pay Extra</button>
-                                }
-                                <button onClick={() => setDebts(prev => prev.filter(x => x.id !== d.id))} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 14, padding: 0 }}>×</button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <div><p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 2 }}>Total Owed</p><p style={{ fontSize: 15, fontWeight: 800, color: COLORS.danger }}>{fmt(totalDebt)}</p></div>
+                      <div style={{ textAlign: "right" }}><p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 2 }}>Min/mo</p><p style={{ fontSize: 15, fontWeight: 800, color: COLORS.text }}>{fmt(debtPayments)}</p></div>
                     </div>
+                    {debts.length === 0 && (
+                      <p style={{ fontSize: 12, color: COLORS.muted, marginTop: 8 }}>No debts tracked yet. Add a debt to start your payoff plan.</p>
+                    )}
                   </div>
-
                   {/* Savings — with inline editing, × , and +/- controls */}
                   <div style={{ background: COLORS.card, borderRadius: 20, padding: 22, boxShadow: COLORS.shadowSm }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
@@ -2111,11 +2209,17 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         </div>
                         <h3 style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>Savings</h3>
                       </div>
-                      <button onClick={() => setSavingsItems(prev => [...prev, { id: Date.now(), label: "New Goal", expected: 100, actual: 0 }])} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
+                      <button onClick={() => { setSavingsItems(prev => [...prev, { id: Date.now(), label: "New Goal", expected: 100, actual: 0 }]); showToast("Savings goal added"); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
                         <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.primary }}>add_circle</span>
                       </button>
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                      {savingsItems.length === 0 && (
+                        <div style={{ textAlign: "center", padding: "16px 0" }}>
+                          <p style={{ fontSize: 13, color: COLORS.muted, marginBottom: 6 }}>No savings goals yet.</p>
+                          <p style={{ fontSize: 12, color: COLORS.muted }}>Tap + to add your first goal — house, vacation, emergency fund.</p>
+                        </div>
+                      )}
                       {savingsItems.map(s => {
                         const goalReached = s.expected > 0 && s.actual >= s.expected;
                         const savPct = pct(s.actual, s.expected || 1);
@@ -2128,7 +2232,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                                 {fmt(s.actual)} /&nbsp;
                                 <SavText id={s.id} field="expected" value={s.expected} style={{ fontSize: 12, color: COLORS.subtext, display: "inline" }} />
                               </span>
-                              <button onClick={() => setSavingsItems(prev => prev.filter(x => x.id !== s.id))} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 14, padding: 0 }}>×</button>
+                              <button onClick={() => { setSavingsItems(prev => prev.filter(x => x.id !== s.id)); showToast(`${s.label} goal removed`, "✕"); }} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 14, padding: 0 }}>×</button>
                             </div>
                           </div>
                           <div style={{ height: 6, background: COLORS.containerLow, borderRadius: 9999, overflow: "hidden", marginBottom: goalReached ? 4 : 6 }}>
@@ -2138,7 +2242,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           {addingSavingsId === s.id
                             ? <div style={{ display:"flex", gap:6, alignItems:"center" }}>
                                 <input id={`sav-inp-${s.id}`} autoFocus type="number" placeholder={savingsMode === "add" ? "Contribute" : "Withdraw"} style={{ flex:1, background:COLORS.containerLow, border:"none", borderRadius:8, padding:"5px 8px", fontSize:12, color:COLORS.text, outline:"none" }} onKeyDown={e=>{if(e.key==="Escape"){ setAddingSavingsId(null); setSavingsMode(null); }}} />
-                                <button onClick={()=>{ const v=parseFloat(document.getElementById(`sav-inp-${s.id}`)?.value)||0; if(v>0){ if(savingsMode==="add"){ updateSavingsField(s.id,"actual",s.actual+v); setExpenses(prev=>[...prev,{id:Date.now(),label:`${s.label} savings`,amount:v,category:"Savings",date:new Date().toISOString().slice(0,10),fixed:false}]); } else { updateSavingsField(s.id,"actual",Math.max(0,s.actual-v)); } } setAddingSavingsId(null); setSavingsMode(null); }} style={{background:savingsMode==="add"?COLORS.primary:`rgba(172,49,73,0.12)`,color:savingsMode==="add"?"#fff":COLORS.danger,border:"none",borderRadius:8,padding:"5px 10px",fontSize:12,fontWeight:700,cursor:"pointer"}}>✓</button>
+                                <button onClick={()=>{ const v=parseFloat(document.getElementById(`sav-inp-${s.id}`)?.value)||0; if(v>0){ if(savingsMode==="add"){ updateSavingsField(s.id,"actual",s.actual+v); setExpenses(prev=>[...prev,{id:Date.now(),label:`${s.label} savings`,amount:v,category:"Savings",date:new Date().toISOString().slice(0,10),fixed:false}]); showToast(`Contributed ${fmt(v)} to ${s.label}`); } else { updateSavingsField(s.id,"actual",Math.max(0,s.actual-v)); showToast(`Withdrew ${fmt(v)} from ${s.label}`, "−"); } } setAddingSavingsId(null); setSavingsMode(null); }} style={{background:savingsMode==="add"?COLORS.primary:`rgba(172,49,73,0.12)`,color:savingsMode==="add"?"#fff":COLORS.danger,border:"none",borderRadius:8,padding:"5px 10px",fontSize:12,fontWeight:700,cursor:"pointer"}}>✓</button>
                                 <button onClick={()=>{ setAddingSavingsId(null); setSavingsMode(null); }} style={{background:"none",border:"none",color:COLORS.muted,cursor:"pointer",fontSize:16,padding:"0 4px"}}>×</button>
                               </div>
                             : <div style={{ display: "flex", gap: 6 }}>
@@ -2273,7 +2377,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>{fmt(b.budget)}</span>
                           <span style={{ fontSize: 11, fontWeight: 700, color: bPaidL ? COLORS.success : isOverdueL ? COLORS.danger : COLORS.subtext, background: (bPaidL ? COLORS.success : isOverdueL ? COLORS.danger : COLORS.muted) + "18", borderRadius: 9999, padding: "2px 8px" }}>{bPaidL ? "Paid" : isOverdueL ? "Overdue" : "Upcoming"}</span>
                           {!bPaidL ? <button onClick={() => markBillPaid(b.id, calMk)} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:9999, padding:"4px 8px", fontSize:11, fontWeight:700, cursor:"pointer" }}>Mark Paid</button> : <span style={{ fontSize: 14, color: COLORS.success }}>✓</span>}
-                          <button onClick={() => setBills(p => p.filter(x => x.id !== b.id))} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 16, padding: 0 }}>×</button>
+                          <button onClick={() => { setBills(p => p.filter(x => x.id !== b.id)); showToast(`${b.label} removed`, "✕"); }} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 16, padding: 0 }}>×</button>
                         </div>
                       );
                     })}
@@ -2322,7 +2426,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       {/* Action */}
                       {bPaidE
                         ? <button onClick={() => markBillPaid(b.id, calMk, false)} style={{ background: COLORS.containerLow, border:"none", borderRadius:8, padding:"5px 8px", fontSize:11, fontWeight:700, color:COLORS.subtext, cursor:"pointer" }}>Unpay</button>
-                        : <button onClick={() => markBillPaid(b.id, calMk)} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:8, padding:"5px 8px", fontSize:11, fontWeight:700, cursor:"pointer" }}>Mark Paid</button>
+                        : <button onClick={() => { markBillPaid(b.id, calMk); showToast(`${b.label} marked as paid`); }} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:8, padding:"5px 8px", fontSize:11, fontWeight:700, cursor:"pointer" }}>Mark Paid</button>
                       }
                       {/* Delete */}
                       <button onClick={() => setBills(p => p.filter(x => x.id !== b.id))} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 16, padding: 0 }}>×</button>
@@ -2336,7 +2440,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     <input type="number" min="1" max="31" placeholder="Day" value={newBillInline.dayOfMonth} onChange={e => setNewBillInline(p => ({...p, dayOfMonth: e.target.value}))} style={{ ...inpStyleInline, width: "100%" }} />
                     <input type="number" placeholder="Amount" value={newBillInline.budget} onChange={e => setNewBillInline(p => ({...p, budget: e.target.value}))} style={{ ...inpStyleInline, width: "100%" }} />
                     <span style={{ fontSize: 11, color: COLORS.muted }}>Upcoming</span>
-                    <button onClick={() => { if(!newBillInline.label || !newBillInline.budget) return; setBills(p => [...p, { id: Date.now(), label: newBillInline.label, budget: parseFloat(newBillInline.budget)||0, dayOfMonth: parseInt(newBillInline.dayOfMonth)||1 }]); setNewBillInline(null); }} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:8, padding:"6px 8px", fontSize:11, fontWeight:700, cursor:"pointer" }}>Save</button>
+                    <button onClick={() => { if(!newBillInline.label || !newBillInline.budget) return; setBills(p => [...p, { id: Date.now(), label: newBillInline.label, budget: parseFloat(newBillInline.budget)||0, dayOfMonth: parseInt(newBillInline.dayOfMonth)||1 }]); showToast(`Bill "${newBillInline.label}" added`); setNewBillInline(null); }} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:8, padding:"6px 8px", fontSize:11, fontWeight:700, cursor:"pointer" }}>Save</button>
                     <button onClick={() => setNewBillInline(null)} style={{ background:"none", border:"none", color:COLORS.muted, cursor:"pointer", fontSize:18, padding:0 }}>×</button>
                   </div>
                 )}
@@ -3002,6 +3106,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           <Field label="Day of Month"><input style={inputStyle} type="number" min="1" max="31" value={newBill.dayOfMonth} onChange={e => setNewBill(p=>({...p,dayOfMonth:e.target.value}))} placeholder="e.g. 15" /></Field>
           <button disabled={!newBill.label || !newBill.budget || !newBill.dayOfMonth} onClick={() => {
             setBills(p => [...p, { id: Date.now(), label: newBill.label, dayOfMonth: parseInt(newBill.dayOfMonth)||1, budget: parseFloat(newBill.budget)||0 }]);
+            showToast(`Bill "${newBill.label}" added`);
             setNewBill({ label: "", budget: "", dayOfMonth: "" }); setModal(null);
           }} style={{ ...btnPrimary, opacity: (!newBill.label || !newBill.budget || !newBill.dayOfMonth) ? 0.5 : 1 }}>Add Bill</button>
         </Modal>
@@ -3024,6 +3129,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         </Modal>
       )}
       </div>{/* end main column */}
+      {/* ── Toast Notification ── */}
+      <Toast info={toastInfo} />
     </div>
   );
 }
