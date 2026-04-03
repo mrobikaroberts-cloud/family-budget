@@ -6,48 +6,48 @@ import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
 // Design System: "The Modern Hearth" — Roberts Family Finance
 const COLORS = {
   // Surface hierarchy (tonal layering — no harsh borders)
-  bg: "#f8fafb",
-  surface: "#f8fafb",
+  bg: "#f7f9fb",
+  surface: "#f7f9fb",
   card: "#ffffff",                 // surface-container-lowest
-  containerLow: "#f1f4f5",         // surface-container-low
-  container: "#eaeef0",            // surface-container
-  containerHigh: "#e4e9eb",        // surface-container-high
-  containerHighest: "#dde4e6",     // surface-container-highest
-  // Brand — Deep Teal primary
-  primary: "#006788",
-  primaryDim: "#005a77",
-  primaryContainer: "#61cdfd",
-  primaryFixed: "#51bfef",
-  // Secondary — Coral / light blue container
-  secondary: "#176684",
-  secondaryContainer: "#c0e8ff",   // Next Bill Due card bg
-  onSecondaryContainer: "#005975",
-  // Tertiary — Indigo / mint (Shared Goal)
-  tertiary: "#555b93",
-  tertiaryContainer: "#babfff",
-  onTertiaryContainer: "#33396f",
+  containerLow: "#eef2f5",         // surface-container-low
+  container: "#e5eaee",            // surface-container
+  containerHigh: "#dce2e7",        // surface-container-high
+  containerHighest: "#d3dbe0",     // surface-container-highest
+  // Brand — Vivid Teal primary
+  primary: "#0078a8",
+  primaryDim: "#006a96",
+  primaryContainer: "#4dc8f7",
+  primaryFixed: "#38b8e8",
+  // Secondary — Richer blue
+  secondary: "#0d7ea6",
+  secondaryContainer: "#b0e4ff",   // Next Bill Due card bg
+  onSecondaryContainer: "#005f80",
+  // Tertiary — Bolder Indigo
+  tertiary: "#4a52a8",
+  tertiaryContainer: "#a8aeff",
+  onTertiaryContainer: "#2e347a",
   // Sidebar — light with deep slate active
-  sidebarBg: "#f8fafb",
-  sidebarActive: "#4f6174",        // deep slate
-  sidebarText: "#4f6174",
+  sidebarBg: "#f7f9fb",
+  sidebarActive: "#3d5068",        // deeper slate
+  sidebarText: "#3d5068",
   // Semantic
-  accent: "#006788",
-  accentWarm: "#f59e0b",
-  accentBlue: "#006788",
-  accentPurple: "#555b93",
-  danger: "#ac3149",
-  warning: "#f97316",
-  success: "#006788",
+  accent: "#0078a8",
+  accentWarm: "#e8930a",
+  accentBlue: "#0078a8",
+  accentPurple: "#4a52a8",
+  danger: "#c5283d",
+  warning: "#f06810",
+  success: "#0a8a6a",
   // Typography
-  text: "#2d3435",                 // on-surface
-  subtext: "#596062",              // on-surface-variant
-  muted: "#757c7e",                // outline
+  text: "#1e2d2f",                 // on-surface (deeper)
+  subtext: "#4a5658",              // on-surface-variant
+  muted: "#6b7578",                // outline
   // Inputs
-  inputBg: "#f1f4f5",
-  border: "rgba(172,179,181,0.15)", // ghost border (outline-variant @15%)
-  // Shadows — long-soft ambient
-  shadow: "0 12px 24px rgba(79,97,116,0.06)",
-  shadowSm: "0 4px 12px rgba(79,97,116,0.04)",
+  inputBg: "#eef2f5",
+  border: "rgba(160,172,178,0.18)", // ghost border (outline-variant @18%)
+  // Shadows — slightly more pronounced
+  shadow: "0 12px 28px rgba(60,80,104,0.08)",
+  shadowSm: "0 4px 14px rgba(60,80,104,0.05)",
 };
 const fmt = (n) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
@@ -115,6 +115,7 @@ const CATEGORIES = [
   { id: "Savings", label: "Savings & Investments" },
   { id: "Kids", label: "Kids & Family" },
   { id: "Subscriptions", label: "Subscriptions" },
+  { id: "Travel", label: "Travel & Experiences" },
   { id: "Other", label: "Other" },
 ];
 const CAT_LABEL = Object.fromEntries(CATEGORIES.map(c => [c.id, c.label]));
@@ -128,9 +129,10 @@ const SPENDING_PLAN_GROUPS = [
   { catId: "Personal",      label: "Personal Spending",       icon: "person",             templateItems: ["Clothing", "Grooming (haircuts, skincare)", "Subscriptions (Netflix, Spotify)", "Hobbies", "Personal care"] },
   { catId: "Entertainment", label: "Relationship / Lifestyle",icon: "celebration",        templateItems: ["Date nights", "Gifts (spouse, family, friends)", "Celebrations / holidays", "Experiences (trips, outings)"] },
   { catId: "Education",     label: "Work / Professional",     icon: "work",               templateItems: ["Courses / certifications", "Work clothes", "Tools / software", "Commuting extras", "Networking"] },
-  { catId: "Other",         label: "Travel & Experiences",    icon: "flight",             templateItems: ["Flights", "Hotels", "Activities", "Travel food", "Travel insurance"] },
+  { catId: "Travel",        label: "Travel & Experiences",    icon: "flight",             templateItems: ["Flights", "Hotels", "Activities", "Travel food", "Travel insurance"] },
   { catId: "Savings",       label: "Giving",                  icon: "volunteer_activism", templateItems: ["Donations / charity", "Tithing", "Family support"] },
   { catId: "Subscriptions", label: "Subscriptions & Streaming", icon: "subscriptions",    templateItems: ["Netflix", "Spotify", "Amazon Prime", "Disney+", "YouTube Premium", "Apple services", "Google services", "Other streaming"] },
+  { catId: "Other",         label: "Other",                   icon: "category",           templateItems: ["Miscellaneous", "Uncategorized"] },
 ];
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const MONTH_FULL  = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -240,10 +242,10 @@ function BudgetBar({ totalIncome, totalPlanned, totalSpent }) {
   const remaining = totalIncome - totalPlanned;
   const overBy = Math.abs(remaining);
   const pillBg = remaining > 0 ? "rgba(52,211,153,0.15)" : remaining === 0 ? "rgba(0,103,136,0.12)" : "rgba(248,113,113,0.15)";
-  const pillColor = remaining > 0 ? "#34D399" : remaining === 0 ? "#006788" : "#F87171";
+  const pillColor = remaining > 0 ? "#34D399" : remaining === 0 ? "#0078a8" : "#F87171";
   const pillText = remaining > 0 ? `${fmt(remaining)} left to budget` : remaining === 0 ? "Fully budgeted ✓" : `${fmt(overBy)} over-budgeted`;
   const borderColor = isOverPlanned ? "#F87171" : "rgba(172,179,181,0.2)";
-  const spentColor = isOverSpent ? "#F87171" : "#006788";
+  const spentColor = isOverSpent ? "#F87171" : "#0078a8";
   return (
     <div style={{ marginBottom: 4 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -330,7 +332,7 @@ Return ONLY valid JSON (no markdown) with this shape:
     {
       "label": "description",
       "amount": 0.00,
-      "category": "one of: Housing|Food|Utilities|Transport|Health|Entertainment|Personal|Education|Savings|Kids|Other. Hints: daycare/childcare/diapers/preschool/baby/toys/school supplies → Kids; doctor/pharmacy/copay/hospital/prescription/dental/vision → Health; netflix/spotify/gym/movie/games → Entertainment; mortgage/rent → Housing",
+      "category": "one of: Housing|Food|Utilities|Transport|Health|Entertainment|Personal|Education|Savings|Kids|Travel|Subscriptions|Other. Hints: daycare/childcare/diapers/preschool/baby/toys/school supplies → Kids; doctor/pharmacy/copay/hospital/prescription/dental/vision → Health; netflix/spotify/gym/movie/games → Entertainment; mortgage/rent → Housing; flights/hotels/vacation → Travel; netflix/spotify/streaming → Subscriptions",
       "date": "YYYY-MM-DD",
       "fixed": true | false,
       "recurring": true | false
@@ -397,7 +399,7 @@ Extract ALL individual line items or transactions. Return ONLY valid JSON (no ma
     {
       "label": "item description",
       "amount": 0.00,
-      "category": "Housing|Food|Utilities|Transport|Health|Entertainment|Personal|Education|Savings|Kids|Other (Kids=daycare/childcare/diapers/baby/school; Health=doctor/pharmacy/copay/dental)",
+      "category": "Housing|Food|Utilities|Transport|Health|Entertainment|Personal|Education|Savings|Kids|Travel|Subscriptions|Other (Kids=daycare/childcare/diapers/baby/school; Health=doctor/pharmacy/copay/dental; Travel=flights/hotels/vacation)",
       "date": "YYYY-MM-DD",
       "fixed": false,
       "recurring": false
@@ -729,17 +731,15 @@ export default function App() {
   expensesRef.current = expenses;
   // ── Monthly insights state ──
   const todayKey = monthKey(new Date().getFullYear(), new Date().getMonth());
-  const [startMonthKey, setStartMonthKey] = useState("2025-01");
+  const [startMonthKey, setStartMonthKey] = useState("2026-01");
   const [activeInsightKey, setActiveInsightKey] = useState(todayKey);
+  const [insightsMonthsOpen, setInsightsMonthsOpen] = useState(true);
   // monthlySnapshots and DEFAULT_EXPENSE_BUDGETS must be declared before Firebase useEffects that reference them
-  const DEFAULT_EXPENSE_BUDGETS = { Housing: 1800, Food: 500, Utilities: 300, Transport: 500, Health: 100, Entertainment: 150, Personal: 200, Education: 50, Kids: 0, Savings: 0, Subscriptions: 0, Other: 120 };
+  const DEFAULT_EXPENSE_BUDGETS = { Housing: 1800, Food: 500, Utilities: 300, Transport: 500, Health: 100, Entertainment: 150, Personal: 200, Education: 50, Kids: 0, Savings: 0, Subscriptions: 0, Travel: 120, Other: 0 };
   const [monthlySnapshots, setMonthlySnapshots] = useState({
-    "2025-01": { income: [{ id: 101, label: "Primary Salary", amount: 5500, recurring: true }], expenses: [{ id: 201, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 202, label: "Electricity", amount: 110, category: "Utilities", fixed: true },{ id: 203, label: "Groceries", amount: 320, category: "Food", fixed: false },{ id: 204, label: "Gas", amount: 80, category: "Transport", fixed: false }], notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } },
-    "2025-02": { income: [{ id: 111, label: "Primary Salary", amount: 5500, recurring: true }], expenses: [{ id: 211, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 212, label: "Electricity", amount: 98, category: "Utilities", fixed: true },{ id: 213, label: "Groceries", amount: 290, category: "Food", fixed: false },{ id: 214, label: "Dining out", amount: 180, category: "Food", fixed: false },{ id: 215, label: "Gym", amount: 45, category: "Health", fixed: true }], notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } },
-    "2025-03": { income: [{ id: 121, label: "Primary Salary", amount: 5500, recurring: true },{ id: 122, label: "Tax Refund", amount: 1200, recurring: false }], expenses: [{ id: 221, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 222, label: "Electricity", amount: 105, category: "Utilities", fixed: true },{ id: 223, label: "Groceries", amount: 340, category: "Food", fixed: false },{ id: 224, label: "Clothing", amount: 210, category: "Personal", fixed: false }], notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } },
-    "2025-04": { income: [{ id: 131, label: "Primary Salary", amount: 5500, recurring: true }], expenses: [{ id: 231, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 232, label: "Utilities", amount: 115, category: "Utilities", fixed: true },{ id: 233, label: "Groceries", amount: 310, category: "Food", fixed: false },{ id: 234, label: "Entertainment", amount: 95, category: "Entertainment", fixed: false }], notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } },
-    "2025-05": { income: [{ id: 141, label: "Primary Salary", amount: 5500, recurring: true },{ id: 142, label: "Side Freelance", amount: 600, recurring: false }], expenses: [{ id: 241, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 242, label: "Electricity", amount: 130, category: "Utilities", fixed: true },{ id: 243, label: "Groceries", amount: 295, category: "Food", fixed: false },{ id: 244, label: "Car payment", amount: 380, category: "Transport", fixed: true },{ id: 245, label: "Health", amount: 60, category: "Health", fixed: false }], notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } },
-    "2025-06": { income: INITIAL_INCOME, expenses: INITIAL_EXPENSES, notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } },
+    "2026-01": { income: [{ id: 101, label: "Primary Salary", amount: 5500, recurring: true }], expenses: [{ id: 201, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 202, label: "Electricity", amount: 110, category: "Utilities", fixed: true },{ id: 203, label: "Groceries", amount: 320, category: "Food", fixed: false },{ id: 204, label: "Gas", amount: 80, category: "Transport", fixed: false }], notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } },
+    "2026-02": { income: [{ id: 111, label: "Primary Salary", amount: 5500, recurring: true }], expenses: [{ id: 211, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 212, label: "Electricity", amount: 98, category: "Utilities", fixed: true },{ id: 213, label: "Groceries", amount: 290, category: "Food", fixed: false },{ id: 214, label: "Dining out", amount: 180, category: "Food", fixed: false },{ id: 215, label: "Gym", amount: 45, category: "Health", fixed: true }], notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } },
+    "2026-03": { income: [{ id: 121, label: "Primary Salary", amount: 5500, recurring: true },{ id: 122, label: "Tax Refund", amount: 1200, recurring: false }], expenses: [{ id: 221, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 222, label: "Electricity", amount: 105, category: "Utilities", fixed: true },{ id: 223, label: "Groceries", amount: 340, category: "Food", fixed: false },{ id: 224, label: "Clothing", amount: 210, category: "Personal", fixed: false }], notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } },
     [DEMO_MONTH]: { income: INITIAL_INCOME, expenses: INITIAL_EXPENSES, notes: "", billStatus: { 4: true }, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } },
   });
   // ── Firebase initialization ──
@@ -925,11 +925,8 @@ export default function App() {
     if (window.location.hash !== newHash) window.history.replaceState(null, "", newHash);
   }, [tab, viewMonthKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const twelveMonths = build12Months(startMonthKey);
-  // All insight months: merge twelveMonths with every key in monthlySnapshots, sorted
-  const allInsightMonths = (() => {
-    const set = new Set([...twelveMonths, ...Object.keys(monthlySnapshots)]);
-    return [...set].sort();
-  })();
+  // All insight months: only Jan–Dec 2026
+  const allInsightMonths = Array.from({ length: 12 }, (_, i) => monthKey(2026, i));
   // Get snapshot for a key (fallback empty)
   const getSnap = (key) => monthlySnapshots[key] || { income: [], expenses: [], notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } };
   // ── Bill helpers (per-month paid status) ──
@@ -1006,7 +1003,7 @@ Return plain text bullet points only, no headers.` }]
   const debtPayments = debts.reduce((s, d) => s + d.minPayment, 0);
   // 50/30/20
   const needs = expenses.filter(e => ["Housing","Utilities","Transport","Health"].includes(e.category)).reduce((s,e)=>s+e.amount,0);
-  const wants = expenses.filter(e => ["Food","Entertainment","Personal","Education","Other"].includes(e.category)).reduce((s,e)=>s+e.amount,0);
+  const wants = expenses.filter(e => ["Food","Entertainment","Personal","Education","Travel","Other"].includes(e.category)).reduce((s,e)=>s+e.amount,0);
   const savings = expenses.filter(e => e.category === "Savings").reduce((s, e) => s + e.amount, 0);
   // category totals
   const catTotals = {};
@@ -1086,9 +1083,9 @@ Return plain text bullet points only, no headers.` }]
   const totalDebtPayments = debts.reduce((s, d) => s + parseFloat(d.minPayment || 0), 0);
   const totalDebtBalance = debts.reduce((s, d) => s + parseFloat(d.balance || 0), 0);
   const spentPct = Math.round(pct(totalExpenses, totalIncome));
-  const CATEGORY_ICONS = { Housing: "home", Food: "restaurant", Transport: "directions_car", Utilities: "bolt", Health: "medication", Entertainment: "movie", Personal: "person", Education: "school", Kids: "child_care", Subscriptions: "subscriptions", Other: "category" };
-  const CATEGORY_ICON_BG = { Housing: "rgba(97,205,253,0.2)", Food: "rgba(192,232,255,0.3)", Transport: "rgba(186,191,255,0.3)", Utilities: "rgba(192,232,255,0.3)", Health: "rgba(186,191,255,0.3)", Entertainment: "rgba(186,191,255,0.3)", Personal: "rgba(186,191,255,0.3)", Education: "rgba(97,205,253,0.2)", Kids: "rgba(192,232,255,0.3)", Subscriptions: "rgba(186,191,255,0.3)", Other: "#eaeef0" };
-  const CATEGORY_ICON_COLOR = { Housing: COLORS.primary, Food: COLORS.secondary, Transport: COLORS.tertiary, Utilities: COLORS.secondary, Health: COLORS.tertiary, Entertainment: COLORS.tertiary, Personal: COLORS.tertiary, Education: COLORS.primary, Kids: COLORS.secondary, Subscriptions: COLORS.tertiary, Other: COLORS.subtext };
+  const CATEGORY_ICONS = { Housing: "home", Food: "restaurant", Transport: "directions_car", Utilities: "bolt", Health: "medication", Entertainment: "movie", Personal: "person", Education: "school", Kids: "child_care", Subscriptions: "subscriptions", Travel: "flight", Other: "category" };
+  const CATEGORY_ICON_BG = { Housing: "rgba(97,205,253,0.2)", Food: "rgba(192,232,255,0.3)", Transport: "rgba(186,191,255,0.3)", Utilities: "rgba(192,232,255,0.3)", Health: "rgba(186,191,255,0.3)", Entertainment: "rgba(186,191,255,0.3)", Personal: "rgba(186,191,255,0.3)", Education: "rgba(97,205,253,0.2)", Kids: "rgba(192,232,255,0.3)", Subscriptions: "rgba(186,191,255,0.3)", Travel: "rgba(186,191,255,0.3)", Other: "#eaeef0" };
+  const CATEGORY_ICON_COLOR = { Housing: COLORS.primary, Food: COLORS.secondary, Transport: COLORS.tertiary, Utilities: COLORS.secondary, Health: COLORS.tertiary, Entertainment: COLORS.tertiary, Personal: COLORS.tertiary, Education: COLORS.primary, Kids: COLORS.secondary, Subscriptions: COLORS.tertiary, Travel: COLORS.tertiary, Other: COLORS.subtext };
   // ── View-month derived values (income/expenses are now always month-scoped) ──
   const viewExpenses = expenses;
   const viewIncome = income;
@@ -1162,12 +1159,12 @@ Return plain text bullet points only, no headers.` }]
       if (isPDF) {
         contentBlocks = [
           { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } },
-          { type: "text", text: "Extract all expense line items from this receipt/bill. Return ONLY a JSON array like: [{\"label\":\"...\",\"amount\":0.00,\"category\":\"Food\",\"date\":\"YYYY-MM-DD\"}]. Guess category from: Housing,Food,Utilities,Transport,Health,Entertainment,Personal,Other. If date missing use today. No markdown, just JSON array." }
+          { type: "text", text: "Extract all expense line items from this receipt/bill. Return ONLY a JSON array like: [{\"label\":\"...\",\"amount\":0.00,\"category\":\"Food\",\"date\":\"YYYY-MM-DD\"}]. Guess category from: Housing,Food,Utilities,Transport,Health,Entertainment,Personal,Travel,Other. If date missing use today. No markdown, just JSON array." }
         ];
       } else if (isImage) {
         contentBlocks = [
           { type: "image", source: { type: "base64", media_type: file.type, data: base64 } },
-          { type: "text", text: "Extract all expense line items from this receipt/bill image. Return ONLY a JSON array like: [{\"label\":\"...\",\"amount\":0.00,\"category\":\"Food\",\"date\":\"YYYY-MM-DD\"}]. Guess category from: Housing,Food,Utilities,Transport,Health,Entertainment,Personal,Other. If date missing use today. No markdown, just JSON array." }
+          { type: "text", text: "Extract all expense line items from this receipt/bill image. Return ONLY a JSON array like: [{\"label\":\"...\",\"amount\":0.00,\"category\":\"Food\",\"date\":\"YYYY-MM-DD\"}]. Guess category from: Housing,Food,Utilities,Transport,Health,Entertainment,Personal,Travel,Other. If date missing use today. No markdown, just JSON array." }
         ];
       } else {
         setParseResult({ error: "Please upload a PDF or image file." });
@@ -1352,7 +1349,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         {/* Family branding */}
         <div style={{ padding: sidebarCollapsed ? "20px 0" : "24px 24px 40px", display: "flex", justifyContent: sidebarCollapsed ? "center" : "flex-start" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg, #006788, #005a77)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 800, color: "#fff", flexShrink: 0, boxShadow: COLORS.shadowSm }}>
+            <div style={{ width: 56, height: 56, borderRadius: "50%", background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 800, color: "#fff", flexShrink: 0, boxShadow: COLORS.shadowSm }}>
               {familyName.split(" ").map(w => w[0]).join("").slice(0, 2)}
             </div>
             {!sidebarCollapsed && <div><h1 style={{ fontSize: 20, fontWeight: 700, color: COLORS.sidebarText, letterSpacing: "-0.02em", lineHeight: 1.2, whiteSpace: "nowrap" }}>{familyName}</h1>{saveStatus && (
@@ -1896,77 +1893,26 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           })();
           return (
             <div style={{ paddingBottom: 48 }}>
-              {/* ── Budget Bar for Family Budget page ── */}
-              <div style={{ background: COLORS.card, borderRadius: 14, padding: "16px 20px", boxShadow: COLORS.shadowSm, marginBottom: 16 }}>
-                <BudgetBar totalIncome={viewTotalIncome} totalPlanned={budgetBarPlanned} totalSpent={budgetBarSpent} />
-              </div>
               {/* ── Page header ── */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, gap: 20, flexWrap: "wrap" }}>
-                <div>
-                  <h2 style={{ fontSize: 22, fontWeight: 800, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 2 }}>{MONTH_FULL[vm0]} {vy} Budget</h2>
-                  <p style={{ fontSize: 13, color: COLORS.subtext }}>{fmt(totalActual)} spent of {fmt(viewTotalIncome)} income{totalPlanned > 0 ? ` · ${fmt(totalPlanned)} planned` : ""}{isCurrentMonth && daysLeft > 0 ? ` · ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left` : ""}</p>
-                  {hasPrevPlanned && (currentBudgetsAreDefault || Object.keys(monthItemBudgets).length === 0) && (
-                    <button onClick={() => { if (Object.values(prevMonthExpBudgets).some(v => v > 0)) setViewExpenseBudgets({ ...prevMonthExpBudgets }); if (Object.keys(prevMonthItemBudgets).length > 0) setItemBudgets(p => ({...p, [viewMonthKey]: {...prevMonthItemBudgets}})); }} style={{ marginTop: 6, background: "rgba(0,103,136,0.08)", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: COLORS.primary, cursor: "pointer" }}>
-                      Copy planned amounts from {MONTH_NAMES[new Date(prevY, prevM0 - 1, 1).getMonth()]}
-                    </button>
-                  )}
-                </div>
-                {/* Income summary — top right */}
-                <div style={{ background: "rgba(192,232,255,0.3)", borderRadius: 16, padding: "16px 20px", minWidth: 260 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ padding: "5px 7px", background: "rgba(23,102,132,0.12)", borderRadius: 8 }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.secondary }}>trending_up</span>
-                      </div>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.text }}>Income</span>
-                    </div>
-                    <button onClick={() => setModal("addIncome")} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.primary }}>add_circle</span>
-                    </button>
-                  </div>
-                  {viewIncome.map(i => (
-                    <div key={i.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 14, color: COLORS.subtext, flexShrink: 0 }}>work</span>
-                        {editingIncomeCell?.id === i.id && editingIncomeCell?.field === "label"
-                          ? <input autoFocus value={i.label} onChange={e => updateIncomeField(i.id, "label", e.target.value)} onBlur={() => setEditingIncomeCell(null)} onKeyDown={e => { if (e.key === "Enter") setEditingIncomeCell(null); }} style={{ flex:1, background:COLORS.containerLow, border:"none", borderRadius:6, padding:"2px 6px", fontSize:12, color:COLORS.text, outline:"none" }} />
-                          : <span onClick={() => setEditingIncomeCell({id:i.id, field:"label"})} title="Click to edit" style={{ fontSize: 12, fontWeight: 500, color: COLORS.text, cursor:"text", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{i.label}{i.recurring ? " ↺" : ""}</span>
-                        }
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                        {editingIncomeCell?.id === i.id && editingIncomeCell?.field === "amount"
-                          ? <input autoFocus type="number" defaultValue={i.amount} onBlur={e => { updateIncomeField(i.id, "amount", e.target.value); setEditingIncomeCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }} style={{ width:80, background:COLORS.containerLow, border:"none", borderRadius:6, padding:"2px 6px", fontSize:13, color:COLORS.text, outline:"none" }} />
-                          : <span onClick={() => setEditingIncomeCell({id:i.id, field:"amount"})} title="Click to edit" style={{ fontSize: 13, fontWeight: 700, color: COLORS.secondary, cursor:"text" }}>+{fmt(i.amount)}</span>
-                        }
-                        <button onClick={() => deleteIncomeFromView(i.id)} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
-                      </div>
-                    </div>
-                  ))}
-                  <div style={{ borderTop: `1px solid rgba(23,102,132,0.15)`, marginTop: 8, paddingTop: 8, display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: 12, color: COLORS.subtext }}>Total Monthly</span>
-                    <span style={{ fontSize: 16, fontWeight: 800, color: COLORS.secondary }}>{fmt(viewTotalIncome)}</span>
-                  </div>
-                </div>
+              <div style={{ marginBottom: 12 }}>
+                <h2 style={{ fontSize: 22, fontWeight: 800, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 2 }}>{MONTH_FULL[vm0]} {vy} Budget</h2>
+                <p style={{ fontSize: 13, color: COLORS.subtext }}>{fmt(totalActual)} spent of {fmt(viewTotalIncome)} income{totalPlanned > 0 ? ` · ${fmt(totalPlanned)} planned` : ""}{isCurrentMonth && daysLeft > 0 ? ` · ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left` : ""}</p>
+                {hasPrevPlanned && (currentBudgetsAreDefault || Object.keys(monthItemBudgets).length === 0) && (
+                  <button onClick={() => { if (Object.values(prevMonthExpBudgets).some(v => v > 0)) setViewExpenseBudgets({ ...prevMonthExpBudgets }); if (Object.keys(prevMonthItemBudgets).length > 0) setItemBudgets(p => ({...p, [viewMonthKey]: {...prevMonthItemBudgets}})); }} style={{ marginTop: 6, background: "rgba(0,103,136,0.08)", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: COLORS.primary, cursor: "pointer" }}>
+                    Copy planned amounts from {MONTH_NAMES[new Date(prevY, prevM0 - 1, 1).getMonth()]}
+                  </button>
+                )}
               </div>
               {/* ── Main grid ── */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 24 }}>
                 {/* ── Spending Plan Table (col-8) ── */}
                 <div style={{ gridColumn: "span 8", background: COLORS.card, borderRadius: 20, padding: 28, boxShadow: COLORS.shadowSm }}>
-                  {/* ── Budget bar ── */}
+                  {/* ── Unified Budget Status Bar ── */}
                   <div style={{ paddingBottom: 14, marginBottom: 14, borderBottom: "0.5px solid rgba(172,179,181,0.3)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: COLORS.text }}>{fmt(totalActual)} spent of {fmt(viewTotalIncome)} income{totalPlanned > 0 ? ` · ${fmt(totalPlanned)} planned` : ""}</span>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <button onClick={() => { setAdvisorMsg(`My budget health: ${healthStatus.label}. I've spent ${fmt(totalActual)} of ${fmt(viewTotalIncome)} income (${usedPctBar}%). ${isCurrentMonth ? `${daysLeft} days left in the month.` : ""} Please give me specific advice.`); pendingAdvisorSend.current = true; setTab("advisor"); }} style={{ fontSize: 11, fontWeight: 700, color: healthStatus.color, background: healthStatus.bg, border: "none", borderRadius: 9999, padding: "3px 10px", cursor: "pointer" }}>{healthStatus.label}</button>
-                        <span style={{ fontSize: 12, fontWeight: 800, color: barColor }}>{usedPctBar}%</span>
-                      </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <button onClick={() => { setAdvisorMsg(`My budget health: ${healthStatus.label}. I've spent ${fmt(totalActual)} of ${fmt(viewTotalIncome)} income (${usedPctBar}%). ${isCurrentMonth ? `${daysLeft} days left in the month.` : ""} Please give me specific advice.`); pendingAdvisorSend.current = true; setTab("advisor"); }} style={{ fontSize: 11, fontWeight: 700, color: healthStatus.color, background: healthStatus.bg, border: "none", borderRadius: 9999, padding: "3px 10px", cursor: "pointer" }}>{healthStatus.label}</button>
                     </div>
-                    <div style={{ height: 8, background: COLORS.containerLow, borderRadius: 9999, overflow: "visible", position: "relative" }}>
-                      <div style={{ width: `${Math.min(100, usedPctBar)}%`, height: "100%", background: barColor, borderRadius: 9999, transition: "width .4s" }} />
-                      {plannedPctBar > 0 && plannedPctBar < 100 && (
-                        <div style={{ position: "absolute", top: -2, left: `${plannedPctBar}%`, width: 2, height: 12, background: COLORS.primary, borderRadius: 2, opacity: 0.6 }} title={`Planned: ${fmt(totalPlanned)}`} />
-                      )}
-                    </div>
+                    <BudgetBar totalIncome={viewTotalIncome} totalPlanned={budgetBarPlanned} totalSpent={budgetBarSpent} />
                     {/* 50/30/20 toggle row */}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1977,9 +1923,9 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                             pre5020Savings.current = savingsItems.map(s => ({ ...s }));
                             const inc = viewTotalIncome;
                             const needs = Math.round(inc * 0.50 / 5); // Housing, Utilities, Food, Transport, Health
-                            const wants = Math.round(inc * 0.30 / 5); // Entertainment, Personal, Kids, Education, Subscriptions
+                            const wants = Math.round(inc * 0.30 / 6); // Entertainment, Personal, Kids, Education, Subscriptions, Travel
                             const saves = Math.round(inc * 0.20 / 2); // Other, Savings
-                            setViewExpenseBudgets({ Housing: needs, Utilities: needs, Food: needs, Transport: needs, Health: needs, Entertainment: wants, Personal: wants, Kids: wants, Education: wants, Subscriptions: wants, Other: saves, Savings: saves });
+                            setViewExpenseBudgets({ Housing: needs, Utilities: needs, Food: needs, Transport: needs, Health: needs, Entertainment: wants, Personal: wants, Kids: wants, Education: wants, Subscriptions: wants, Travel: wants, Other: saves, Savings: saves });
                             if (savingsItems.length > 0) setSavingsItems(p => [{ ...p[0], expected: Math.round(inc*0.20) }, ...p.slice(1)]);
                             setToggle5020(true);
                           } else {
@@ -2156,6 +2102,42 @@ If the request doesn't map to a clear category goal, still return JSON with newG
 
                 {/* ── Right sidebar (col-4) ── */}
                 <div style={{ gridColumn: "span 4", display: "flex", flexDirection: "column", gap: 14 }}>
+                  {/* Income card */}
+                  <div style={{ background: "rgba(192,232,255,0.3)", borderRadius: 16, padding: "16px 18px", border: `1px solid rgba(0,103,136,0.12)` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ padding: "5px 7px", background: "rgba(23,102,132,0.12)", borderRadius: 8 }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.secondary }}>trending_up</span>
+                        </div>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>Income</span>
+                      </div>
+                      <button onClick={() => setModal("addIncome")} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.primary }}>add_circle</span>
+                      </button>
+                    </div>
+                    {viewIncome.map(i => (
+                      <div key={i.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 14, color: COLORS.subtext, flexShrink: 0 }}>work</span>
+                          {editingIncomeCell?.id === i.id && editingIncomeCell?.field === "label"
+                            ? <input autoFocus value={i.label} onChange={e => updateIncomeField(i.id, "label", e.target.value)} onBlur={() => setEditingIncomeCell(null)} onKeyDown={e => { if (e.key === "Enter") setEditingIncomeCell(null); }} style={{ flex:1, background:COLORS.containerLow, border:"none", borderRadius:6, padding:"2px 6px", fontSize:12, color:COLORS.text, outline:"none" }} />
+                            : <span onClick={() => setEditingIncomeCell({id:i.id, field:"label"})} title="Click to edit" style={{ fontSize: 12, fontWeight: 500, color: COLORS.text, cursor:"text", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{i.label}{i.recurring ? " ↺" : ""}</span>
+                          }
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                          {editingIncomeCell?.id === i.id && editingIncomeCell?.field === "amount"
+                            ? <input autoFocus type="number" defaultValue={i.amount} onBlur={e => { updateIncomeField(i.id, "amount", e.target.value); setEditingIncomeCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }} style={{ width:80, background:COLORS.containerLow, border:"none", borderRadius:6, padding:"2px 6px", fontSize:13, color:COLORS.text, outline:"none" }} />
+                            : <span onClick={() => setEditingIncomeCell({id:i.id, field:"amount"})} title="Click to edit" style={{ fontSize: 13, fontWeight: 700, color: COLORS.secondary, cursor:"text" }}>+{fmt(i.amount)}</span>
+                          }
+                          <button onClick={() => deleteIncomeFromView(i.id)} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
+                        </div>
+                      </div>
+                    ))}
+                    <div style={{ borderTop: `1px solid rgba(23,102,132,0.15)`, marginTop: 8, paddingTop: 8, display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 12, color: COLORS.subtext }}>Total Monthly</span>
+                      <span style={{ fontSize: 16, fontWeight: 800, color: COLORS.secondary }}>{fmt(viewTotalIncome)}</span>
+                    </div>
+                  </div>
                   {/* Bills summary card — links to Bill Calendar */}
                   <div style={{ background: "rgba(97,205,253,0.12)", borderRadius: 16, padding: "16px 18px", border: `1px solid rgba(0,103,136,0.12)` }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -2540,61 +2522,55 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, flexWrap: "wrap", gap: 14 }}>
               <div>
                 <h2 style={{ fontWeight: 800, fontSize: 24, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 4 }}>Monthly Insights</h2>
-                <p style={{ color: COLORS.subtext, fontSize: 14 }}>All months · Click any month for details & AI analysis</p>
-              </div>
-              {/* Start month picker */}
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 12, color: COLORS.muted }}>Budget starts:</span>
-                <select
-                  value={startMonthKey}
-                  onChange={e => setStartMonthKey(e.target.value)}
-                  style={{ ...selectStyle, width: "auto", padding: "6px 12px", fontSize: 13 }}
-                >
-                  {Array.from({ length: 24 }, (_, i) => {
-                    const d = new Date(2024, i, 1);
-                    const k = monthKey(d.getFullYear(), d.getMonth());
-                    return <option key={k} value={k}>{MONTH_FULL[d.getMonth()]} {d.getFullYear()}</option>;
-                  })}
-                </select>
+                <p style={{ color: COLORS.subtext, fontSize: 14 }}>January – December 2026 · Click any month for details & AI analysis</p>
               </div>
             </div>
-            {/* All-months mini-card strip */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10, marginBottom: 28 }}>
-              {allInsightMonths.map((key) => {
-                const { month0, year } = parseKey(key);
-                const s = monthStats(key);
-                const isActive = key === activeInsightKey;
-                const isToday = key === todayKey;
-                const isFuture = key > todayKey;
-                const hasData = s.hasData;
-                const netColor = s.net >= 0 ? COLORS.success : COLORS.danger;
-                return (
-                  <button key={key} onClick={() => setActiveInsightKey(key)} style={{
-                    background: isActive ? COLORS.accentBlue + "22" : COLORS.card,
-                    border: `1.5px ${isFuture && !hasData ? "dashed" : "solid"} ${isActive ? COLORS.accentBlue : isToday ? COLORS.accent + "66" : COLORS.border}`,
-                    borderRadius: 14, padding: "14px 12px", cursor: "pointer", textAlign: "left",
-                    boxShadow: isActive ? `0 0 16px ${COLORS.accentBlue}33` : "none",
-                    transition: "all .2s", position: "relative",
-                  }}>
-                    {isToday && <div style={{ position: "absolute", top: 8, right: 8, width: 6, height: 6, borderRadius: "50%", background: COLORS.accent }} />}
-                    <p style={{ fontSize: 11, fontWeight: 800, color: isActive ? COLORS.accentBlue : COLORS.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>
-                      {MONTH_NAMES[month0]} {String(year).slice(2)}
-                    </p>
-                    {hasData ? (
-                      <>
-                        <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, marginBottom: 2 }}>{fmt(s.exp)}</p>
-                        <p style={{ fontSize: 11, color: netColor }}>{s.net >= 0 ? "+" : ""}{fmt(s.net)}</p>
-                        {/* Tiny bar */}
-                        <div style={{ marginTop: 8, background: COLORS.border, borderRadius: 99, height: 3 }}>
-                          <div style={{ width: `${Math.min(100, s.inc > 0 ? (s.exp/s.inc)*100 : 0)}%`, background: s.exp > s.inc ? COLORS.danger : COLORS.accent, height: "100%", borderRadius: 99 }} />
-                        </div>
-                      </>
-                    ) : (
-                      <p style={{ fontSize: 11, color: COLORS.border, marginTop: 6 }}>No data</p>
-                    )}
-                  </button>
-                );
-              })}
+            {/* Collapsible all-months section */}
+            <div style={{ marginBottom: 28 }}>
+              <button onClick={() => setInsightsMonthsOpen(p => !p)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, padding: "6px 0", marginBottom: insightsMonthsOpen ? 12 : 0 }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 18, color: COLORS.muted, transition: "transform .2s", transform: insightsMonthsOpen ? "rotate(0deg)" : "rotate(-90deg)" }}>expand_more</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.sidebarText }}>All Months</span>
+                <span style={{ fontSize: 11, color: COLORS.muted }}>({allInsightMonths.filter(k => monthStats(k).hasData).length} with data)</span>
+              </button>
+              {insightsMonthsOpen && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10 }}>
+                  {allInsightMonths.map((key) => {
+                    const { month0, year } = parseKey(key);
+                    const s = monthStats(key);
+                    const isActive = key === activeInsightKey;
+                    const isToday = key === todayKey;
+                    const isFuture = key > todayKey;
+                    const hasData = s.hasData;
+                    const netColor = s.net >= 0 ? COLORS.success : COLORS.danger;
+                    return (
+                      <button key={key} onClick={() => setActiveInsightKey(key)} style={{
+                        background: isActive ? COLORS.accentBlue + "22" : COLORS.card,
+                        border: `1.5px ${isFuture && !hasData ? "dashed" : "solid"} ${isActive ? COLORS.accentBlue : isToday ? COLORS.accent + "66" : COLORS.border}`,
+                        borderRadius: 14, padding: "14px 12px", cursor: "pointer", textAlign: "left",
+                        boxShadow: isActive ? `0 0 16px ${COLORS.accentBlue}33` : "none",
+                        transition: "all .2s", position: "relative",
+                      }}>
+                        {isToday && <div style={{ position: "absolute", top: 8, right: 8, width: 6, height: 6, borderRadius: "50%", background: COLORS.accent }} />}
+                        <p style={{ fontSize: 11, fontWeight: 800, color: isActive ? COLORS.accentBlue : COLORS.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>
+                          {MONTH_NAMES[month0]} {String(year).slice(2)}
+                        </p>
+                        {hasData ? (
+                          <>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, marginBottom: 2 }}>{fmt(s.exp)}</p>
+                            <p style={{ fontSize: 11, color: netColor }}>{s.net >= 0 ? "+" : ""}{fmt(s.net)}</p>
+                            {/* Tiny bar */}
+                            <div style={{ marginTop: 8, background: COLORS.border, borderRadius: 99, height: 3 }}>
+                              <div style={{ width: `${Math.min(100, s.inc > 0 ? (s.exp/s.inc)*100 : 0)}%`, background: s.exp > s.inc ? COLORS.danger : COLORS.accent, height: "100%", borderRadius: 99 }} />
+                            </div>
+                          </>
+                        ) : (
+                          <p style={{ fontSize: 11, color: COLORS.border, marginTop: 6 }}>No data</p>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
             {/* Detail panel for activeInsightKey */}
             {(() => {
@@ -2745,7 +2721,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           {(() => {
                             const debtMins = debts.reduce((s,d) => s+d.minPayment, 0);
                             const needs2 = snap.expenses.filter(e => ["Housing","Utilities","Transport","Health"].includes(e.category)).reduce((s,e)=>s+e.amount,0) + debtMins;
-                            const wants2 = snap.expenses.filter(e => ["Food","Entertainment","Personal","Education","Other"].includes(e.category)).reduce((s,e)=>s+e.amount,0);
+                            const wants2 = snap.expenses.filter(e => ["Food","Entertainment","Personal","Education","Travel","Other"].includes(e.category)).reduce((s,e)=>s+e.amount,0);
                             const sav2 = snap.expenses.filter(e => e.category === "Savings").reduce((s2,e) => s2+e.amount, 0);
                             return (
                               <>
@@ -3109,8 +3085,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           </Field>
           <Field label="Budget Start Month">
             <select style={selectStyle} value={startMonthKey} onChange={e => setStartMonthKey(e.target.value)}>
-              {Array.from({ length: 24 }, (_, i) => {
-                const d = new Date(2024, i, 1);
+              {Array.from({ length: 12 }, (_, i) => {
+                const d = new Date(2026, i, 1);
                 const k = monthKey(d.getFullYear(), d.getMonth());
                 return <option key={k} value={k}>{MONTH_FULL[d.getMonth()]} {d.getFullYear()}</option>;
               })}
