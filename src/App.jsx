@@ -1030,10 +1030,6 @@ Return plain text bullet points only, no headers.` }]
     setToastInfo({ msg, icon });
     toastTimer.current = setTimeout(() => setToastInfo(null), 2400);
   }, []);
-  // ── Budget bar unified totals ──
-  const budgetBarPlanned = expenseBudgetTotal + billsBudgetTotal + debtPayments;
-  const budgetBarSpent = viewTotalExpenses + billsActualTotal;
-  const remainingToBudget = viewTotalIncome - budgetBarPlanned;
   const CHART_COLORS = ["#f472b6","#60a5fa","#a78bfa","#fbbf24","#34d399","#fb923c","#4ade80","#c084fc","#38bdf8","#f97316"];
   const cashFlowData = [
     ...(showIncomeInCharts ? [{ name: "Income", value: totalIncome, color: "#4ade80" }] : []),
@@ -1101,6 +1097,10 @@ Return plain text bullet points only, no headers.` }]
   const viewSpentPct = Math.round(pct(viewTotalExpenses, viewTotalIncome || 1));
   const viewCatTotals = CATEGORIES.reduce((acc, c) => ({ ...acc, [c.id]: viewExpenses.filter(e => e.category === c.id).reduce((s, e) => s + e.amount, 0) }), {});
   const viewCatExpenseCards = Object.entries(viewCatTotals).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+  // ── Budget bar unified totals (must be after viewTotalExpenses/viewTotalIncome) ──
+  const budgetBarPlanned = expenseBudgetTotal + billsBudgetTotal + debtPayments;
+  const budgetBarSpent = viewTotalExpenses + billsActualTotal;
+  const remainingToBudget = viewTotalIncome - budgetBarPlanned;
   // ── Add forms state ──
   const [newExp, setNewExp] = useState({ label: "", amount: "", category: "Food", date: getDefaultDate(viewMonthKey), fixed: false });
   const [newInc, setNewInc] = useState({ label: "", amount: "", date: getDefaultDate(viewMonthKey), recurring: false });
