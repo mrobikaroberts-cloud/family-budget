@@ -1481,7 +1481,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         {/* ── DASHBOARD TAB ── */}
         {tab === "dashboard" && (
           <div style={{ fontSize: 14, color: COLORS.text }}>
-            {/* ── Budget Bar + Net Cash Flow + Pace Indicator ── */}
+            {/* ── Unified Budget Overview ── */}
             {(() => {
               const netCashFlow = viewTotalIncome - budgetBarSpent;
               const now = new Date();
@@ -1492,54 +1492,45 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               const diff = actualPct - expectedPct;
               const paceColor = diff > 25 ? "#F87171" : diff > 10 ? "#FBBF24" : "#34D399";
               const paceLabel = diff > 25 ? `over pace 🔴` : diff > 10 ? `ahead of pace ⚠️` : `on pace ✓`;
+              const { month0, year } = parseKey(viewMonthKey);
               return (
-                <div style={{ background: COLORS.card, borderRadius: 16, padding: "20px 24px", boxShadow: COLORS.shadowSm, marginBottom: 20 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 24, marginBottom: 16, flexWrap: "wrap" }}>
-                    <div style={{ flex: 1, minWidth: 260 }}>
-                      <BudgetBar totalIncome={viewTotalIncome} totalPlanned={budgetBarPlanned} totalSpent={budgetBarSpent} />
+                <div style={{ background: COLORS.card, borderRadius: 16, padding: "28px 28px 24px", boxShadow: COLORS.shadow, marginBottom: 24 }}>
+                  {/* Header: title + income total */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+                    <div>
+                      <h2 style={{ fontSize: 22, fontWeight: 800, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 4 }}>Show me the Money!</h2>
+                      <p style={{ fontSize: 13, color: COLORS.subtext }}>Your budget for {MONTH_FULL[month0]} {year}</p>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <p style={{ fontSize: 10, fontWeight: 700, color: COLORS.subtext, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Total Income</p>
+                      <p style={{ fontSize: 28, fontWeight: 800, color: COLORS.primary, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{fmt(viewTotalIncome)}</p>
+                    </div>
+                  </div>
+                  {/* Budget bar */}
+                  <BudgetBar totalIncome={viewTotalIncome} totalPlanned={budgetBarPlanned} totalSpent={budgetBarSpent} />
+                  {/* Bottom row: pace + net cash flow */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, flexWrap: "wrap", gap: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
                       {budgetBarPlanned > 0 && (
-                        <p style={{ fontSize: 12, color: paceColor, marginTop: 8, fontWeight: 500 }}>
+                        <p style={{ fontSize: 12, color: paceColor, fontWeight: 600, margin: 0 }}>
                           Day {dayOfMo} of {daysInMo} — {actualPct}% spent ({paceLabel})
                         </p>
                       )}
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 700, color: COLORS.primary, background: "rgba(0,103,136,0.08)", borderRadius: 9999, padding: "4px 12px" }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>receipt_long</span>
+                        {fmt(viewTotalExpenses)} expenses · {fmt(billsActualTotal)} bills paid
+                      </span>
                     </div>
-                    <div style={{ background: netCashFlow >= 0 ? "rgba(52,211,153,0.1)" : "rgba(248,113,113,0.1)", borderRadius: 14, padding: "14px 20px", textAlign: "center", minWidth: 140, flexShrink: 0 }}>
-                      <p style={{ fontSize: 10, fontWeight: 700, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Net This Month</p>
-                      <p style={{ fontSize: 26, fontWeight: 900, color: netCashFlow >= 0 ? "#34D399" : "#F87171", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>
+                    <div style={{ background: netCashFlow >= 0 ? "rgba(52,211,153,0.1)" : "rgba(248,113,113,0.1)", borderRadius: 12, padding: "10px 18px", textAlign: "center", flexShrink: 0 }}>
+                      <p style={{ fontSize: 9, fontWeight: 700, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 2 }}>Net This Month</p>
+                      <p style={{ fontSize: 22, fontWeight: 900, color: netCashFlow >= 0 ? "#34D399" : "#F87171", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums", margin: 0 }}>
                         {netCashFlow >= 0 ? "+" : "−"}{fmt(Math.abs(netCashFlow))}
                       </p>
-                      <p style={{ fontSize: 11, color: COLORS.muted, marginTop: 2 }}>{netCashFlow >= 0 ? "surplus" : "deficit"}</p>
                     </div>
                   </div>
                 </div>
               );
             })()}
-            {/* ── "Show me the Money!" spending capacity section ── */}
-            <div style={{ background: COLORS.card, borderRadius: 12, padding: "32px", boxShadow: COLORS.shadow, marginBottom: 28 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
-                <div>
-                  <h2 style={{ fontSize: 24, fontWeight: 800, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 4 }}>Show me the Money!</h2>
-                  <p style={{ fontSize: 14, color: COLORS.subtext }}>Your overall spending capacity for {(() => { const { month0, year } = parseKey(viewMonthKey); return `${MONTH_FULL[month0]} ${year}`; })()}</p>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: COLORS.subtext, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Total Spending Power</p>
-                  <p style={{ fontSize: 30, fontWeight: 800, color: COLORS.primary, letterSpacing: "-0.02em" }}>{fmt(viewTotalIncome)}</p>
-                </div>
-              </div>
-              <div style={{ height: 16, background: COLORS.container, borderRadius: 9999, overflow: "hidden", marginBottom: 16 }}>
-                <div style={{ width: `${viewSpentPct}%`, height: "100%", background: COLORS.primary, borderRadius: 9999, transition: "width 0.5s" }} />
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                  <span style={{ fontSize: 22, fontWeight: 700, color: COLORS.text }}>{fmt(viewTotalExpenses)}</span>
-                  <span style={{ fontSize: 14, color: COLORS.subtext }}>of {fmt(viewTotalIncome)}</span>
-                </div>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: `rgba(0,103,136,0.1)`, borderRadius: 9999, padding: "6px 14px", fontSize: 13, fontWeight: 700, color: COLORS.primary }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>trending_up</span>
-                  {viewSpentPct}% spent
-                </span>
-              </div>
-            </div>
 
             {/* Month-to-month comparison strip */}
             {(() => {
