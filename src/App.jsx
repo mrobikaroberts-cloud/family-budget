@@ -1032,14 +1032,22 @@ export default function App() {
   const twelveMonths = build12Months(startMonthKey);
   // All insight months: only Jan–Dec 2026
   const allInsightMonths = Array.from({ length: 12 }, (_, i) => monthKey(2026, i));
+  // ── Normalise expense budgets (ensure all catIds present) ──
+  const normaliseExpenseBudgets = (budgets) => {
+    const result = { ...budgets };
+    for (const cat of CATEGORIES) {
+      if (result[cat.id] === undefined) result[cat.id] = DEFAULT_EXPENSE_BUDGETS[cat.id] ?? 0;
+    }
+    return result;
+  };
   // Get snapshot for a key (fallback empty)
-  const getSnap = (key) => monthlySnapshots[key] || { income: [], expenses: [], notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } };
+  const getSnap = (key) => { const s = monthlySnapshots[key] || { income: [], expenses: [], notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } }; return { ...s, expenseBudgets: normaliseExpenseBudgets(s.expenseBudgets || DEFAULT_EXPENSE_BUDGETS) }; };
   // ── Bill helpers (per-month paid status) ──
   const getBillDueDate = (bill, mk) => { const day = String(bill.dayOfMonth).padStart(2, "0"); return `${mk}-${day}`; };
   const getBillPaid = (bill, mk) => !!(monthlySnapshots[mk]?.billStatus?.[bill.id]);
   const markBillPaid = (billId, mk, paid = true) => setMonthlySnapshots(prev => ({ ...prev, [mk]: { ...(prev[mk] || { income: [], expenses: [], notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } }), billStatus: { ...(prev[mk]?.billStatus || {}), [billId]: paid } } }));
   // ── Per-month expense budgets (Fix 9) ──
-  const viewExpenseBudgets = monthlySnapshots[viewMonthKey]?.expenseBudgets || DEFAULT_EXPENSE_BUDGETS;
+  const viewExpenseBudgets = normaliseExpenseBudgets(monthlySnapshots[viewMonthKey]?.expenseBudgets || DEFAULT_EXPENSE_BUDGETS);
   const setViewExpenseBudgets = (updater) => setMonthlySnapshots(prev => {
     const oldBudgets = prev[viewMonthKey]?.expenseBudgets || DEFAULT_EXPENSE_BUDGETS;
     const newBudgets = typeof updater === "function" ? updater(oldBudgets) : updater;
@@ -1106,10 +1114,10 @@ Return plain text bullet points only, no headers.` }]
   const variableExpenses = totalExpenses - fixedExpenses;
   const leftover = totalIncome - totalExpenses;
   const debtPayments = debts.reduce((s, d) => s + d.minPayment, 0);
-  // 50/30/20
-  const needs = expenses.filter(e => ["Housing","Utilities","Transport","Health"].includes(e.category)).reduce((s,e)=>s+e.amount,0);
-  const wants = expenses.filter(e => ["Food","Entertainment","Personal","Education","Travel","Other"].includes(e.category)).reduce((s,e)=>s+e.amount,0);
-  const savings = expenses.filter(e => e.category === "Savings").reduce((s, e) => s + e.amount, 0);
+  // 50/30/20 actual spending breakdown
+  const needs = expenses.filter(e => ["Housing","Utilities","Food","Transport","Health"].includes(e.category)).reduce((s,e)=>s+e.amount,0);
+  const wants = expenses.filter(e => ["Entertainment","Personal","Kids","Education","Subscriptions","Travel"].includes(e.category)).reduce((s,e)=>s+e.amount,0);
+  const savings = expenses.filter(e => ["Other","Savings"].includes(e.category)).reduce((s, e) => s + e.amount, 0);
   // category totals
   const catTotals = {};
   CATEGORIES.forEach(c => { catTotals[c.id] = expenses.filter(e => e.category === c.id).reduce((s,e)=>s+e.amount,0); });
@@ -2002,27 +2010,28 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           const { year: prevY, month0: prevM0 } = parseKey(viewMonthKey);
           const prevMonthKey = monthKey(new Date(prevY, prevM0 - 1, 1).getFullYear(), new Date(prevY, prevM0 - 1, 1).getMonth());
           const prevMonthItemBudgets = itemBudgets[prevMonthKey] || {};
-          const prevMonthExpBudgets = monthlySnapshots[prevMonthKey]?.expenseBudgets || {};
+          const prevMonthExpBudgets = normaliseExpenseBudgets(monthlySnapshots[prevMonthKey]?.expenseBudgets || {});
           const hasPrevPlanned = Object.keys(prevMonthItemBudgets).length > 0 || Object.values(prevMonthExpBudgets).some(v => v > 0);
-          const currentBudgetsAreDefault = Object.entries(viewExpenseBudgets).every(([k, v]) => v === DEFAULT_EXPENSE_BUDGETS[k]);
+          const currentBudgetsAreDefault = CATEGORIES.every(cat => (viewExpenseBudgets[cat.id] ?? 0) === (DEFAULT_EXPENSE_BUDGETS[cat.id] ?? 0));
+          const prevHasCustomBudgets = !CATEGORIES.every(cat => (prevMonthExpBudgets[cat.id] ?? 0) === (DEFAULT_EXPENSE_BUDGETS[cat.id] ?? 0));
+          const showCopyButton = (hasPrevPlanned || prevHasCustomBudgets) && currentBudgetsAreDefault;
 
-          const totalPlanned = Object.values(monthItemBudgets).reduce((s,v) => s+(v||0), 0) + Object.values(viewExpenseBudgets).reduce((s,v) => s+v, 0);
+          const totalPlanned = CATEGORIES.reduce((sum, cat) => sum + (viewExpenseBudgets[cat.id] ?? 0), 0);
           const totalActual = viewTotalExpenses;
-          const remainToSpend = viewTotalIncome > 0 ? viewTotalIncome - totalActual : totalPlanned - totalActual;
-          const barMax = viewTotalIncome > 0 ? viewTotalIncome : (totalPlanned || 1);
-          const usedPctBar = Math.min(110, Math.round((totalActual / barMax) * 100));
-          const plannedPctBar = barMax > 0 ? Math.min(100, Math.round((totalPlanned / barMax) * 100)) : 0;
-          const barColor = usedPctBar > 100 ? COLORS.danger : usedPctBar > plannedPctBar ? COLORS.warning : COLORS.success;
+          const pctSpent = viewTotalIncome > 0 ? Math.round((totalActual / viewTotalIncome) * 100) : 0;
+          const pctPlanned = viewTotalIncome > 0 ? Math.round((totalPlanned / viewTotalIncome) * 100) : 0;
+          const isOverBudget = totalActual > totalPlanned && totalPlanned > 0;
+          const isOverIncome = totalActual > viewTotalIncome && viewTotalIncome > 0;
           const plannedCount = Object.keys(monthItemBudgets).length;
           const now2 = new Date();
           const isCurrentMonth = vy === now2.getFullYear() && vm0 === now2.getMonth();
           const daysInMonth2 = new Date(vy, vm0 + 1, 0).getDate();
           const daysLeft = isCurrentMonth ? Math.max(0, daysInMonth2 - now2.getDate()) : 0;
           const healthStatus = (() => {
-            if (totalActual > viewTotalIncome && viewTotalIncome > 0) return { label: "Over Budget", color: COLORS.danger, bg: COLORS.danger + "15" };
-            if (usedPctBar > 90) return { label: "Watch Spending", color: COLORS.warning, bg: COLORS.warning + "15" };
-            if (usedPctBar > 75) return { label: "Watch Spending", color: COLORS.warning, bg: COLORS.warning + "15" };
-            if (plannedCount < 3) return { label: "Start Planning", color: COLORS.primary, bg: COLORS.primary + "15" };
+            if (isOverIncome) return { label: "Overspent", color: COLORS.danger, bg: COLORS.danger + "15" };
+            if (isOverBudget) return { label: "Over Budget", color: COLORS.warning, bg: COLORS.warning + "15" };
+            if (pctSpent > 90) return { label: "Watch Spending", color: COLORS.warning, bg: COLORS.warning + "15" };
+            if (totalPlanned === 0) return { label: "Start Planning", color: COLORS.primary, bg: COLORS.primary + "15" };
             return { label: "On Track", color: COLORS.success, bg: COLORS.success + "15" };
           })();
           return (
@@ -2031,7 +2040,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               <div style={{ marginBottom: 12 }}>
                 <h2 style={{ fontSize: 22, fontWeight: 800, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 2 }}>{MONTH_FULL[vm0]} {vy} Budget</h2>
                 <p style={{ fontSize: 13, color: COLORS.subtext }}>{fmt(totalActual)} spent of {fmt(viewTotalIncome)} income{totalPlanned > 0 ? ` · ${fmt(totalPlanned)} planned` : ""}{isCurrentMonth && daysLeft > 0 ? ` · ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left` : ""}</p>
-                {hasPrevPlanned && (currentBudgetsAreDefault || Object.keys(monthItemBudgets).length === 0) && (
+                {showCopyButton && (
                   <button onClick={() => { if (Object.values(prevMonthExpBudgets).some(v => v > 0)) setViewExpenseBudgets({ ...prevMonthExpBudgets }); if (Object.keys(prevMonthItemBudgets).length > 0) setItemBudgets(p => ({...p, [viewMonthKey]: {...prevMonthItemBudgets}})); }} style={{ marginTop: 6, background: "rgba(0,103,136,0.08)", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: COLORS.primary, cursor: "pointer" }}>
                     Copy planned amounts from {MONTH_NAMES[new Date(prevY, prevM0 - 1, 1).getMonth()]}
                   </button>
@@ -2044,9 +2053,9 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   {/* ── Unified Budget Status Bar ── */}
                   <div style={{ paddingBottom: 14, marginBottom: 14, borderBottom: "0.5px solid rgba(172,179,181,0.3)" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <button onClick={() => { setAdvisorMsg(`My budget health: ${healthStatus.label}. I've spent ${fmt(totalActual)} of ${fmt(viewTotalIncome)} income (${usedPctBar}%). ${isCurrentMonth ? `${daysLeft} days left in the month.` : ""} Please give me specific advice.`); pendingAdvisorSend.current = true; setTab("advisor"); }} style={{ fontSize: 11, fontWeight: 700, color: healthStatus.color, background: healthStatus.bg, border: "none", borderRadius: 9999, padding: "3px 10px", cursor: "pointer" }}>{healthStatus.label}</button>
+                      <button onClick={() => { setAdvisorMsg(`My budget health: ${healthStatus.label}. I've spent ${fmt(totalActual)} of ${fmt(viewTotalIncome)} income (${pctSpent}%). ${isCurrentMonth ? `${daysLeft} days left in the month.` : ""} Please give me specific advice.`); pendingAdvisorSend.current = true; setTab("advisor"); }} style={{ fontSize: 11, fontWeight: 700, color: healthStatus.color, background: healthStatus.bg, border: "none", borderRadius: 9999, padding: "3px 10px", cursor: "pointer" }}>{healthStatus.label}</button>
                     </div>
-                    <BudgetBar totalIncome={viewTotalIncome} totalPlanned={budgetBarPlanned} totalSpent={budgetBarSpent} />
+                    <BudgetBar totalIncome={viewTotalIncome} totalPlanned={totalPlanned} totalSpent={totalActual} />
                     {/* 50/30/20 toggle row */}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -2056,10 +2065,14 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                             pre5020Budgets.current = { ...viewExpenseBudgets };
                             pre5020Savings.current = savingsItems.map(s => ({ ...s }));
                             const inc = viewTotalIncome;
-                            const needs = Math.round(inc * 0.50 / 5); // Housing, Utilities, Food, Transport, Health
-                            const wants = Math.round(inc * 0.30 / 6); // Entertainment, Personal, Kids, Education, Subscriptions, Travel
-                            const saves = Math.round(inc * 0.20 / 2); // Other, Savings
-                            setViewExpenseBudgets({ Housing: needs, Utilities: needs, Food: needs, Transport: needs, Health: needs, Entertainment: wants, Personal: wants, Kids: wants, Education: wants, Subscriptions: wants, Travel: wants, Other: saves, Savings: saves });
+                            const needsAmt = Math.round(inc * 0.50 / 5);
+                            const wantsAmt = Math.round(inc * 0.30 / 6);
+                            const savesAmt = Math.round(inc * 0.20 / 2);
+                            setViewExpenseBudgets({
+                              Housing: needsAmt, Utilities: needsAmt, Food: needsAmt, Transport: needsAmt, Health: needsAmt,
+                              Entertainment: wantsAmt, Personal: wantsAmt, Kids: wantsAmt, Education: wantsAmt, Subscriptions: wantsAmt, Travel: wantsAmt,
+                              Other: savesAmt, Savings: savesAmt
+                            });
                             if (savingsItems.length > 0) setSavingsItems(p => [{ ...p[0], expected: Math.round(inc*0.20) }, ...p.slice(1)]);
                             setToggle5020(true);
                           } else {
@@ -2104,7 +2117,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   {SPENDING_PLAN_GROUPS.map(group => {
                     const grpExp = sortExp(viewExpenses.filter(e => e.category === group.catId));
                     const grpActual = grpExp.reduce((s,e) => s+e.amount, 0);
-                    const grpPlanned = viewExpenseBudgets[group.catId] || 0;
+                    const grpPlanned = viewExpenseBudgets[group.catId] ?? 0;
                     const grpItemsPlannedSum = grpExp.reduce((s, e) => s + (monthItemBudgets[`exp-${e.id}`] || 0), 0);
                     const effectivePlanned = grpItemsPlannedSum > 0 ? grpItemsPlannedSum : grpPlanned;
                     const isCollapsed = collapsedCategories[group.catId];
@@ -2138,12 +2151,12 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                               </span>
                             : editingPlannedKey === `cat-${group.catId}`
                               ? <input autoFocus type="number" placeholder="0" defaultValue={grpPlanned || ""} onClick={e => e.stopPropagation()} onBlur={ev => { const v = parseFloat(ev.target.value) || 0; setViewExpenseBudgets(prev => ({ ...prev, [group.catId]: v })); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); if (ev.key === "Escape") setEditingPlannedKey(null); }} style={{ width:"100%", background:COLORS.containerLow, border:`1px solid ${COLORS.primary}`, borderRadius:6, padding:"3px 6px", fontSize:12, color:COLORS.text, outline:"none" }} />
-                              : <span onClick={e => { e.stopPropagation(); setEditingPlannedKey(`cat-${group.catId}`); }} title="Click to edit category budget" style={{ fontSize: 12, fontWeight: 700, color: grpPlanned > 0 ? COLORS.subtext : COLORS.muted, cursor: "text", borderRadius: 4, padding: "2px 4px" }}>{grpPlanned > 0 ? fmt(grpPlanned) : <span style={{ display:"flex", alignItems:"center", gap:3 }}>—<span style={{ fontSize:9, opacity:0.5 }}>✏</span></span>}</span>
+                              : <span onClick={e => { e.stopPropagation(); setEditingPlannedKey(`cat-${group.catId}`); }} title="Click to edit category budget" style={{ fontSize: 12, fontWeight: 700, color: grpPlanned > 0 ? COLORS.subtext : COLORS.muted, cursor: "text", borderRadius: 4, padding: "2px 4px" }}>{viewExpenseBudgets[group.catId] != null ? fmt(grpPlanned) : <span style={{ display:"flex", alignItems:"center", gap:3 }}>—<span style={{ fontSize:9, opacity:0.5 }}>✏</span></span>}</span>
                           }
                           {/* actual */}
                           <span style={{ fontSize: 12, fontWeight: 700, color: utilColor }}>{grpActual > 0 ? fmt(grpActual) : "—"}</span>
                           {/* variance */}
-                          {(() => { const grpVar = effectivePlanned > 0 ? effectivePlanned - grpActual : null; return <span style={{ fontSize: 12, fontWeight: 700, color: grpVar === null ? COLORS.muted : grpVar >= 0 ? COLORS.success : COLORS.danger }}>{grpVar === null ? "—" : grpVar > 0 ? `+${fmt(grpVar)}` : fmt(grpVar)}</span>; })()}
+                          {(() => { const left = grpPlanned - grpActual; const showDash = grpPlanned === 0 && grpActual === 0; return <span style={{ fontSize: 12, fontWeight: 700, color: showDash ? COLORS.muted : left >= 0 ? COLORS.success : COLORS.danger }}>{showDash ? "—" : left > 0 ? `+${fmt(left)}` : fmt(left)}</span>; })()}
                           {/* actions col — chevron */}
                           <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.muted, transition: "transform .2s", transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)", textAlign: "center" }}>expand_more</span>
                         </div>
@@ -2154,11 +2167,22 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                             {grpExp.map(e => {
                               const expPlanned = monthItemBudgets[`exp-${e.id}`] || 0;
                               const expVar = expPlanned > 0 ? expPlanned - e.amount : null;
+                              // BUG 8: For fixed expenses, construct due date within viewed month
+                              const displayDate = (() => {
+                                if (e.date) {
+                                  const [ey, em] = e.date.split("-").map(Number);
+                                  if (ey === vy && em === vm0 + 1) return e.date; // already correct month
+                                  if (e.fixed) { const day = e.date.split("-")[2]; return `${viewMonthKey}-${day}`; }
+                                  return e.date;
+                                }
+                                if (e.fixed) return `${viewMonthKey}-01`;
+                                return e.date;
+                              })();
                               return (
                               <div key={e.id} style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "7px 10px", alignItems: "center", borderRadius: 8, background: COLORS.card, marginBottom: 2, boxShadow: COLORS.shadowSm }}>
                                 <EditableText id={e.id} field="label" value={e.label} />
                                 <span style={{ fontSize: 11, fontWeight: 600, color: e.fixed ? COLORS.subtext : COLORS.muted, background: e.fixed ? COLORS.containerHigh : COLORS.containerLow, borderRadius: 9999, padding: "2px 7px", justifySelf: "start" }}>{e.fixed ? "Fixed" : "Variable"}</span>
-                                <EditableDate id={e.id} field="date" value={e.date} />
+                                <EditableDate id={e.id} field="date" value={displayDate} />
                                 {editingPlannedKey === `exp-${e.id}`
                                   ? <input autoFocus type="number" placeholder="0" defaultValue={expPlanned || ""} onBlur={ev => { const v = parseFloat(ev.target.value) || 0; if (v) setMonthItemBudget(`exp-${e.id}`, v); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); if (ev.key === "Escape") setEditingPlannedKey(null); }} style={{ width:"100%", background:COLORS.containerLow, border:`1px solid ${COLORS.primary}`, borderRadius:6, padding:"3px 6px", fontSize:12, color:COLORS.text, outline:"none" }} />
                                   : <span onClick={() => setEditingPlannedKey(`exp-${e.id}`)} title="Click to set planned budget" style={{ fontSize: 12, color: expPlanned ? COLORS.subtext : COLORS.muted, cursor: "text", display:"block", borderRadius:4, padding:"2px 4px" }}>{expPlanned ? fmt(expPlanned) : <span style={{ display:"flex", alignItems:"center", gap:3 }}>—<span style={{ fontSize:9, opacity:0.5 }}>✏</span></span>}</span>
@@ -2854,9 +2878,9 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           <h4 style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}>50 / 30 / 20</h4>
                           {(() => {
                             const debtMins = debts.reduce((s,d) => s+d.minPayment, 0);
-                            const needs2 = snap.expenses.filter(e => ["Housing","Utilities","Transport","Health"].includes(e.category)).reduce((s,e)=>s+e.amount,0) + debtMins;
-                            const wants2 = snap.expenses.filter(e => ["Food","Entertainment","Personal","Education","Travel","Other"].includes(e.category)).reduce((s,e)=>s+e.amount,0);
-                            const sav2 = snap.expenses.filter(e => e.category === "Savings").reduce((s2,e) => s2+e.amount, 0);
+                            const needs2 = snap.expenses.filter(e => ["Housing","Utilities","Food","Transport","Health"].includes(e.category)).reduce((s,e)=>s+e.amount,0) + debtMins;
+                            const wants2 = snap.expenses.filter(e => ["Entertainment","Personal","Kids","Education","Subscriptions","Travel"].includes(e.category)).reduce((s,e)=>s+e.amount,0);
+                            const sav2 = snap.expenses.filter(e => ["Other","Savings"].includes(e.category)).reduce((s2,e) => s2+e.amount, 0);
                             return (
                               <>
                                 {[
