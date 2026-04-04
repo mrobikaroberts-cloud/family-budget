@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, ComposedChart, AreaChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { db } from './firebase'
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, getDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore'
 // ── Palette & helpers ─────────────────────────────────────────────────────────
 // Design System: "The Modern Hearth" — Roberts Family Finance
 const COLORS = {
@@ -645,6 +645,11 @@ If date not visible, use today. If unsure of category, use Other.`
 export default function App() {
   const [tab, setTab] = useState("dashboard");
   const [householdId, setHouseholdId] = useState(() => localStorage.getItem('familyfinance_household_id'));
+  const [householdCode, setHouseholdCode] = useState(() => localStorage.getItem('familyfinance_household_code'));
+  const [joinScreen, setJoinScreen] = useState(false); // show join/create screen
+  const [joinCode, setJoinCode] = useState('');
+  const [joinError, setJoinError] = useState('');
+  const [joinLoading, setJoinLoading] = useState(false);
   const [firebaseLoading, setFirebaseLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState(null); // null | 'saving' | 'saved' | 'error'
   const saveTimer = useRef(null);
@@ -747,21 +752,35 @@ export default function App() {
     const init = async () => {
       try {
         if (!db) {
-          // No Firebase — run with defaults (offline mode)
           setFirebaseLoading(false);
           isInitialLoad.current = false;
           return;
         }
         let hId = localStorage.getItem('familyfinance_household_id');
         if (!hId) {
-          hId = 'household_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-          localStorage.setItem('familyfinance_household_id', hId);
-          setHouseholdId(hId);
+          // No household — show join screen
           setFirebaseLoading(false);
+          setJoinScreen(true);
           isInitialLoad.current = false;
           return;
         }
         setHouseholdId(hId);
+        // Migration: generate code for existing households that don't have one
+        let code = localStorage.getItem('familyfinance_household_code');
+        if (!code) {
+          const docSnap = await getDoc(doc(db, 'households', hId));
+          if (docSnap.exists() && docSnap.data().code) {
+            code = docSnap.data().code;
+          } else {
+            code = generateHouseholdCode();
+            // Save code to household doc and create reverse lookup
+            await setDoc(doc(db, 'households', hId), { code }, { merge: true });
+            await setDoc(doc(db, 'householdCodes', code), { householdId: hId });
+          }
+          localStorage.setItem('familyfinance_household_code', code);
+          setHouseholdCode(code);
+        }
+        // Load data
         const docRef = doc(db, 'households', hId);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
@@ -831,6 +850,92 @@ export default function App() {
       setTimeout(() => setSaveStatus(null), 4000);
     }
   };
+  // Generate a 6-char household code like "RF-4829"
+  function generateHouseholdCode() {
+    const num = Math.floor(1000 + Math.random() * 9000);
+    return `RF-${num}`;
+  }
+  // Create a new household with code
+  async function handleCreateHousehold() {
+    setJoinLoading(true);
+    try {
+      const hId = 'household_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      const code = generateHouseholdCode();
+      if (db) {
+        await setDoc(doc(db, 'households', hId), { code, createdAt: serverTimestamp() });
+        await setDoc(doc(db, 'householdCodes', code), { householdId: hId });
+      }
+      localStorage.setItem('familyfinance_household_id', hId);
+      localStorage.setItem('familyfinance_household_code', code);
+      setHouseholdId(hId);
+      setHouseholdCode(code);
+      setJoinScreen(false);
+      isInitialLoad.current = false;
+    } catch (err) {
+      console.error('Create household error:', err);
+      setJoinError('Failed to create household. Please try again.');
+    }
+    setJoinLoading(false);
+  }
+  // Join existing household by code
+  async function handleJoinHousehold() {
+    const code = joinCode.trim().toUpperCase();
+    if (!code) { setJoinError('Please enter a household code'); return; }
+    setJoinLoading(true);
+    setJoinError('');
+    try {
+      if (!db) { setJoinError('Firebase not available'); setJoinLoading(false); return; }
+      const codeDoc = await getDoc(doc(db, 'householdCodes', code));
+      if (!codeDoc.exists()) { setJoinError('Invalid code. Check and try again.'); setJoinLoading(false); return; }
+      const hId = codeDoc.data().householdId;
+      // Verify household exists
+      const hDoc = await getDoc(doc(db, 'households', hId));
+      if (!hDoc.exists()) { setJoinError('Household not found.'); setJoinLoading(false); return; }
+      // Check for PIN
+      const hData = hDoc.data();
+      if (hData.pinHash) {
+        // PIN required — prompt for it
+        const pin = prompt('This household requires a PIN. Enter 4-digit PIN:');
+        if (!pin) { setJoinLoading(false); return; }
+        const encoder = new TextEncoder();
+        const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(pin));
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        if (hashHex !== hData.pinHash) { setJoinError('Incorrect PIN.'); setJoinLoading(false); return; }
+      }
+      localStorage.setItem('familyfinance_household_id', hId);
+      localStorage.setItem('familyfinance_household_code', code);
+      setHouseholdId(hId);
+      setHouseholdCode(code);
+      // Load data
+      if (hData.income) setIncome(hData.income);
+      if (hData.expenses) setExpenses(hData.expenses);
+      if (hData.bills) setBills(hData.bills);
+      if (hData.debts) setDebts(hData.debts);
+      if (hData.savingsItems) setSavingsItems(hData.savingsItems);
+      if (hData.monthlySnapshots) setMonthlySnapshots(hData.monthlySnapshots);
+      if (hData.itemBudgets) setItemBudgets(hData.itemBudgets);
+      if (hData.goals) setGoals(hData.goals);
+      if (hData.advisorHistory) setAdvisorHistory(hData.advisorHistory);
+      if (hData.familyName) setFamilyName(hData.familyName);
+      setJoinScreen(false);
+      isInitialLoad.current = false;
+    } catch (err) {
+      console.error('Join household error:', err);
+      setJoinError('Failed to join. Please try again.');
+    }
+    setJoinLoading(false);
+  }
+  // Reset household — generate new ID and code
+  async function handleResetHousehold() {
+    if (!confirm('This will disconnect you from the current household and create a new one. Continue?')) return;
+    localStorage.removeItem('familyfinance_household_id');
+    localStorage.removeItem('familyfinance_household_code');
+    setHouseholdId(null);
+    setHouseholdCode(null);
+    setJoinScreen(true);
+    setModal(null);
+  }
   // Migration: backfill missing catIds in existing snapshots' expenseBudgets
   useEffect(() => {
     setMonthlySnapshots(prev => {
@@ -1298,6 +1403,35 @@ If the request doesn't map to a clear category goal, still return JSON with newG
     { id: "upload", label: "Upload Receipt" },
     { id: "advisor", label: "AI Advisor" },
   ];
+  if (joinScreen) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", background: COLORS.bg, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
+        <div style={{ width: 56, height: 56, borderRadius: 16, background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.tertiary})`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+          <span style={{ fontSize: 22, fontWeight: 900, color: "#fff" }}>RF</span>
+        </div>
+        <h2 style={{ fontSize: 24, fontWeight: 800, color: COLORS.sidebarText, marginBottom: 4 }}>Welcome to FamilyFinance</h2>
+        <p style={{ fontSize: 14, color: COLORS.muted, marginBottom: 32 }}>Track your family budget together</p>
+        <div style={{ width: 360, maxWidth: "90vw" }}>
+          <button onClick={handleCreateHousehold} disabled={joinLoading} style={{ width: "100%", padding: "14px 20px", fontSize: 15, fontWeight: 700, background: COLORS.primary, color: "#fff", border: "none", borderRadius: 12, cursor: "pointer", marginBottom: 24, opacity: joinLoading ? 0.6 : 1 }}>
+            Start Fresh Household
+          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+            <div style={{ flex: 1, height: 1, background: COLORS.containerHigh }} />
+            <span style={{ fontSize: 12, color: COLORS.muted, fontWeight: 600 }}>or join existing</span>
+            <div style={{ flex: 1, height: 1, background: COLORS.containerHigh }} />
+          </div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+            <input value={joinCode} onChange={e => { setJoinCode(e.target.value.toUpperCase()); setJoinError(''); }} placeholder="e.g. RF-4829" maxLength={7} style={{ flex: 1, padding: "12px 14px", fontSize: 15, fontWeight: 600, letterSpacing: "0.05em", background: COLORS.inputBg, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.text, textAlign: "center", fontFamily: "'Plus Jakarta Sans', sans-serif" }} onKeyDown={e => { if (e.key === 'Enter') handleJoinHousehold(); }} />
+            <button onClick={handleJoinHousehold} disabled={joinLoading || !joinCode.trim()} style={{ padding: "12px 20px", fontSize: 14, fontWeight: 700, background: COLORS.primary, color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", opacity: (joinLoading || !joinCode.trim()) ? 0.5 : 1 }}>
+              Join
+            </button>
+          </div>
+          {joinError && <p style={{ fontSize: 12, color: COLORS.danger, fontWeight: 600, marginTop: 4 }}>{joinError}</p>}
+        </div>
+      </div>
+    );
+  }
   if (firebaseLoading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", background: COLORS.bg, fontFamily: "'Inter', sans-serif" }}>
@@ -3092,6 +3226,21 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               })}
             </select>
           </Field>
+          <div style={{ borderTop: `1px solid ${COLORS.border}`, marginTop: 16, paddingTop: 16 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>Household Access</p>
+            {householdCode ? (
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                  <span style={{ fontSize: 24, fontWeight: 800, letterSpacing: "0.08em", color: COLORS.primary, fontFamily: "monospace" }}>{householdCode}</span>
+                  <button onClick={() => { navigator.clipboard.writeText(householdCode); setToastInfo({ msg: "Code copied!", icon: "content_copy" }); }} style={{ fontSize: 11, fontWeight: 600, background: COLORS.containerLow, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "4px 10px", cursor: "pointer", color: COLORS.subtext }}>Copy code</button>
+                </div>
+                <p style={{ fontSize: 12, color: COLORS.muted, lineHeight: 1.5 }}>Enter this code on any browser or device to access your budget.</p>
+              </div>
+            ) : (
+              <p style={{ fontSize: 12, color: COLORS.muted }}>No household code available (offline mode)</p>
+            )}
+            <button onClick={handleResetHousehold} style={{ marginTop: 12, fontSize: 12, fontWeight: 600, background: "none", border: `1px solid ${COLORS.danger}40`, borderRadius: 8, padding: "6px 12px", color: COLORS.danger, cursor: "pointer" }}>Reset household</button>
+          </div>
           <button onClick={() => setModal(null)} style={btnPrimary}>Save Settings</button>
         </Modal>
       )}
