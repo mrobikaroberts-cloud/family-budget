@@ -1212,7 +1212,14 @@ Return plain text bullet points only, no headers.` }]
   const viewCatTotals = CATEGORIES.reduce((acc, c) => ({ ...acc, [c.id]: viewExpenses.filter(e => e.category === c.id).reduce((s, e) => s + e.amount, 0) }), {});
   const viewCatExpenseCards = Object.entries(viewCatTotals).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
   // ── Budget bar unified totals (must be after viewTotalExpenses/viewTotalIncome) ──
-  const budgetBarPlanned = expenseBudgetTotal;
+  // Planned total: use item-level budgets when available, else category-level
+  const monthItemBudgetsGlobal = itemBudgets[viewMonthKey] || {};
+  const budgetBarPlanned = SPENDING_PLAN_GROUPS.reduce((sum, group) => {
+    const grpExp = viewExpenses.filter(e => e.category === group.catId);
+    const grpItemsSum = grpExp.reduce((s, e) => s + (monthItemBudgetsGlobal[`exp-${e.id}`] || 0), 0);
+    const grpCatBudget = viewExpenseBudgets[group.catId] ?? 0;
+    return sum + (grpItemsSum > 0 ? grpItemsSum : grpCatBudget);
+  }, 0);
   const budgetBarSpent = viewTotalExpenses;
   const remainingToBudget = viewTotalIncome - budgetBarPlanned;
   // ── Add forms state ──
