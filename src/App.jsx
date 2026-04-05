@@ -235,17 +235,20 @@ const btnPrimary = {
 // ── BudgetBar ─────────────────────────────────────────────────────────────────
 function BudgetBar({ totalIncome, totalPlanned, totalSpent }) {
   const isOverPlanned = totalIncome > 0 && totalPlanned > totalIncome;
-  const isOverSpent = totalPlanned > 0 && totalSpent > totalPlanned;
+  const isOverIncome = totalIncome > 0 && totalSpent > totalIncome;
+  // Only flag "over budget" if a meaningful budget is set (>10% of income) and exceeded
+  const hasMeaningfulBudget = totalPlanned > 0 && totalIncome > 0 && (totalPlanned / totalIncome) > 0.10;
+  const isOverBudget = hasMeaningfulBudget && totalSpent > totalPlanned;
   const plannedPct = totalIncome > 0 ? Math.min(100, (totalPlanned / totalIncome) * 100) : 0;
-  // spent fills within the planned segment
-  const spentWithinPct = totalIncome > 0 ? Math.min(plannedPct, (totalSpent / totalIncome) * 100) : 0;
+  // spent fills relative to income (not clamped to planned)
+  const spentPct = totalIncome > 0 ? Math.min(100, (totalSpent / totalIncome) * 100) : 0;
   const remaining = totalIncome - totalPlanned;
   const overBy = Math.abs(remaining);
   const pillBg = remaining > 0 ? "rgba(52,211,153,0.15)" : remaining === 0 ? "rgba(0,103,136,0.12)" : "rgba(248,113,113,0.15)";
   const pillColor = remaining > 0 ? "#34D399" : remaining === 0 ? "#0078a8" : "#F87171";
   const pillText = remaining > 0 ? `${fmt(remaining)} left to budget` : remaining === 0 ? "Fully budgeted ✓" : `${fmt(overBy)} over-budgeted`;
   const borderColor = isOverPlanned ? "#F87171" : "rgba(172,179,181,0.2)";
-  const spentColor = isOverSpent ? "#F87171" : "#0078a8";
+  const spentColor = isOverIncome ? "#F87171" : isOverBudget ? "#FBBF24" : "#0078a8";
   return (
     <div style={{ marginBottom: 4 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -254,9 +257,9 @@ function BudgetBar({ totalIncome, totalPlanned, totalSpent }) {
       </div>
       <div style={{ position: "relative", height: 28, background: COLORS.containerLow, borderRadius: 12, overflow: "hidden", border: `1.5px solid ${borderColor}`, boxShadow: isOverPlanned ? "0 0 10px rgba(248,113,113,0.18)" : "none" }}>
         {/* Planned fill */}
-        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${plannedPct}%`, background: isOverPlanned ? "rgba(248,113,113,0.28)" : "rgba(0,103,136,0.22)", transition: "width 0.5s ease", borderRadius: "10px 0 0 10px" }} />
+        {plannedPct > 0 && <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${plannedPct}%`, background: isOverPlanned ? "rgba(248,113,113,0.28)" : "rgba(0,103,136,0.22)", transition: "width 0.5s ease", borderRadius: "10px 0 0 10px" }} />}
         {/* Spent fill */}
-        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${spentWithinPct}%`, background: spentColor, transition: "width 0.5s ease", borderRadius: "10px 0 0 10px" }} />
+        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${spentPct}%`, background: spentColor, transition: "width 0.5s ease", borderRadius: "10px 0 0 10px" }} />
         {/* Inline labels */}
         <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 12px", pointerEvents: "none" }}>
           <span style={{ fontSize: 11, fontWeight: 700, color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.4)", whiteSpace: "nowrap" }}>Spent {fmt(totalSpent)}</span>
@@ -273,7 +276,8 @@ function BudgetBar({ totalIncome, totalPlanned, totalSpent }) {
           </span>
         ))}
         {isOverPlanned && <span style={{ fontSize: 11, color: "#F87171", fontWeight: 700, marginLeft: "auto" }}>⚠ Over by {fmt(overBy)}</span>}
-        {isOverSpent && !isOverPlanned && <span style={{ fontSize: 11, color: "#F87171", fontWeight: 700, marginLeft: "auto" }}>Overspent by {fmt(totalSpent - totalPlanned)}</span>}
+        {isOverIncome && <span style={{ fontSize: 11, color: "#F87171", fontWeight: 700, marginLeft: "auto" }}>Overspent by {fmt(totalSpent - totalIncome)}</span>}
+        {isOverBudget && !isOverIncome && <span style={{ fontSize: 11, color: "#FBBF24", fontWeight: 700, marginLeft: "auto" }}>Over budget by {fmt(totalSpent - totalPlanned)}</span>}
       </div>
     </div>
   );
@@ -1208,8 +1212,8 @@ Return plain text bullet points only, no headers.` }]
   const viewCatTotals = CATEGORIES.reduce((acc, c) => ({ ...acc, [c.id]: viewExpenses.filter(e => e.category === c.id).reduce((s, e) => s + e.amount, 0) }), {});
   const viewCatExpenseCards = Object.entries(viewCatTotals).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
   // ── Budget bar unified totals (must be after viewTotalExpenses/viewTotalIncome) ──
-  const budgetBarPlanned = expenseBudgetTotal + billsBudgetTotal + debtPayments;
-  const budgetBarSpent = viewTotalExpenses + billsActualTotal;
+  const budgetBarPlanned = expenseBudgetTotal;
+  const budgetBarSpent = viewTotalExpenses;
   const remainingToBudget = viewTotalIncome - budgetBarPlanned;
   // ── Add forms state ──
   const [newExp, setNewExp] = useState({ label: "", amount: "", category: "Food", date: getDefaultDate(viewMonthKey), fixed: false });
@@ -1627,7 +1631,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               const daysInMo = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
               const dayOfMo = now.getDate();
               const expectedPct = Math.round((dayOfMo / daysInMo) * 100);
-              const actualPct = budgetBarPlanned > 0 ? Math.round((budgetBarSpent / budgetBarPlanned) * 100) : 0;
+              const actualPct = viewTotalIncome > 0 ? Math.round((budgetBarSpent / viewTotalIncome) * 100) : 0;
               const diff = actualPct - expectedPct;
               const paceColor = diff > 25 ? "#F87171" : diff > 10 ? "#FBBF24" : "#34D399";
               const paceLabel = diff > 25 ? `over pace 🔴` : diff > 10 ? `ahead of pace ⚠️` : `on pace ✓`;
