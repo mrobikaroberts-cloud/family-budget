@@ -2020,11 +2020,17 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           const prevHasCustomBudgets = !CATEGORIES.every(cat => (prevMonthExpBudgets[cat.id] ?? 0) === (DEFAULT_EXPENSE_BUDGETS[cat.id] ?? 0));
           const showCopyButton = (hasPrevPlanned || prevHasCustomBudgets) && currentBudgetsAreDefault;
 
-          const totalPlanned = CATEGORIES.reduce((sum, cat) => sum + (viewExpenseBudgets[cat.id] ?? 0), 0);
+          const totalPlanned = SPENDING_PLAN_GROUPS.reduce((sum, group) => {
+            const grpExp = viewExpenses.filter(e => e.category === group.catId);
+            const grpItemsSum = grpExp.reduce((s, e) => s + (monthItemBudgets[`exp-${e.id}`] || 0), 0);
+            const grpCatBudget = viewExpenseBudgets[group.catId] ?? 0;
+            return sum + (grpItemsSum > 0 ? grpItemsSum : grpCatBudget);
+          }, 0);
           const totalActual = viewTotalExpenses;
           const pctSpent = viewTotalIncome > 0 ? Math.round((totalActual / viewTotalIncome) * 100) : 0;
           const pctPlanned = viewTotalIncome > 0 ? Math.round((totalPlanned / viewTotalIncome) * 100) : 0;
-          const isOverBudget = totalActual > totalPlanned && totalPlanned > 0;
+          const hasMeaningfulBudget = totalPlanned > 0 && viewTotalIncome > 0 && (totalPlanned / viewTotalIncome) > 0.10;
+          const isOverBudget = hasMeaningfulBudget && totalActual > totalPlanned;
           const isOverIncome = totalActual > viewTotalIncome && viewTotalIncome > 0;
           const plannedCount = Object.keys(monthItemBudgets).length;
           const now2 = new Date();
@@ -2160,7 +2166,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           {/* actual */}
                           <span style={{ fontSize: 12, fontWeight: 700, color: utilColor }}>{grpActual > 0 ? fmt(grpActual) : "—"}</span>
                           {/* variance */}
-                          {(() => { const left = grpPlanned - grpActual; const showDash = grpPlanned === 0 && grpActual === 0; return <span style={{ fontSize: 12, fontWeight: 700, color: showDash ? COLORS.muted : left >= 0 ? COLORS.success : COLORS.danger }}>{showDash ? "—" : left > 0 ? `+${fmt(left)}` : fmt(left)}</span>; })()}
+                          {(() => { const left = effectivePlanned - grpActual; const showDash = effectivePlanned === 0 && grpActual === 0; return <span style={{ fontSize: 12, fontWeight: 700, color: showDash ? COLORS.muted : left >= 0 ? COLORS.success : COLORS.danger }}>{showDash ? "—" : left > 0 ? `+${fmt(left)}` : fmt(left)}</span>; })()}
                           {/* actions col — chevron */}
                           <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.muted, transition: "transform .2s", transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)", textAlign: "center" }}>expand_more</span>
                         </div>
