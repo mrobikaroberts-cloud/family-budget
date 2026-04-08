@@ -2,8 +2,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, ComposedChart, AreaChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { db } from './firebase'
 import { doc, setDoc, getDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore'
-// ── Palette & helpers ─────────────────────────────────────────────────────────
-// Design System: "The Modern Hearth" — Roberts Family Finance
+// ── Design System: "The Modern Hearth" — Roberts Family Finance ───────────────
 const COLORS = {
   // Surface hierarchy (tonal layering — no harsh borders)
   bg: "#f7f9fb",
@@ -13,6 +12,7 @@ const COLORS = {
   container: "#e5eaee",            // surface-container
   containerHigh: "#dce2e7",        // surface-container-high
   containerHighest: "#d3dbe0",     // surface-container-highest
+  neutral: "#eaeef0",              // category icon fallback bg
   // Brand — Vivid Teal primary
   primary: "#0078a8",
   primaryDim: "#006a96",
@@ -30,7 +30,7 @@ const COLORS = {
   sidebarBg: "#f7f9fb",
   sidebarActive: "#3d5068",        // deeper slate
   sidebarText: "#3d5068",
-  // Semantic
+  // Semantic — text/strong (use for labels and copy)
   accent: "#0078a8",
   accentWarm: "#e8930a",
   accentBlue: "#0078a8",
@@ -38,6 +38,13 @@ const COLORS = {
   danger: "#c5283d",
   warning: "#f06810",
   success: "#0a8a6a",
+  // Semantic — UI fills (progress bars, pills, indicator dots)
+  successFill: "#34D399",          // emerald-400 — bar/pill fills
+  dangerFill: "#F87171",           // red-400    — bar/pill fills
+  warningFill: "#FBBF24",          // amber-400  — bar/pill fills
+  successFillBg: "rgba(52,211,153,0.15)",
+  dangerFillBg: "rgba(248,113,113,0.15)",
+  primaryFillBg: "rgba(0,120,168,0.12)",
   // Typography
   text: "#1e2d2f",                 // on-surface (deeper)
   subtext: "#4a5658",              // on-surface-variant
@@ -48,7 +55,14 @@ const COLORS = {
   // Shadows — slightly more pronounced
   shadow: "0 12px 28px rgba(60,80,104,0.08)",
   shadowSm: "0 4px 14px rgba(60,80,104,0.05)",
+  shadowLg: "0 24px 48px rgba(0,0,0,0.12)",
 };
+// ── Typography scale ──────────────────────────────────────────────────────────
+const FS = { "2xs": 9, xs: 11, sm: 12, base: 13, md: 14, lg: 15, xl: 16, "2xl": 18, "3xl": 20, "4xl": 22, "5xl": 24 };
+// ── Border-radius scale ───────────────────────────────────────────────────────
+const R = { xs: 4, sm: 6, md: 8, lg: 10, xl: 12, "2xl": 14, "3xl": 16, "4xl": 20, "5xl": 24, pill: 9999, circle: "50%" };
+// ── Spacing scale (margin / padding / gap) ────────────────────────────────────
+const S = { "2xs": 2, xs: 4, sm: 6, md: 8, lg: 12, xl: 16, "2xl": 20, "3xl": 24, "4xl": 28, "5xl": 32 };
 const fmt = (n) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 const pct = (val, total) => (total === 0 ? 0 : Math.min(100, (val / total) * 100));
@@ -148,10 +162,10 @@ const build12Months = (startKey) => {
 // ── ProgressBar ───────────────────────────────────────────────────────────────
 function ProgressBar({ value, max, color }) {
   const p = pct(value, max);
-  const barColor = p >= 100 ? COLORS.danger : p >= 80 ? COLORS.warning : color || COLORS.accent;
+  const barColor = p >= 100 ? COLORS.dangerFill : p >= 80 ? COLORS.warningFill : color || COLORS.primary;
   return (
-    <div style={{ background: COLORS.border, borderRadius: 99, height: 6, overflow: "hidden" }}>
-      <div style={{ width: `${p}%`, background: barColor, height: "100%", borderRadius: 99, transition: "width .4s ease" }} />
+    <div style={{ background: COLORS.containerLow, borderRadius: R.pill, height: 6, overflow: "hidden" }}>
+      <div style={{ width: `${p}%`, background: barColor, height: "100%", borderRadius: R.pill, transition: "width .4s ease" }} />
     </div>
   );
 }
@@ -160,16 +174,16 @@ function CategoryCard({ name, spent, goal, color }) {
   const p = goal ? pct(spent, goal) : null;
   const borderColor =
     p === null ? COLORS.border :
-    p >= 100 ? COLORS.danger :
-    p >= 80  ? COLORS.warning :
-    p <= 50  ? COLORS.success :
+    p >= 100 ? COLORS.dangerFill :
+    p >= 80  ? COLORS.warningFill :
+    p <= 50  ? COLORS.successFill :
     COLORS.border;
   return (
     <div style={{
       background: COLORS.card,
       border: `1.5px solid ${borderColor}`,
-      borderRadius: 14,
-      padding: "14px 16px",
+      borderRadius: R["2xl"],
+      padding: `${S.lg}px ${S.xl}px`,
       transition: "border-color .3s ease",
       boxShadow: borderColor !== COLORS.border ? `0 0 12px ${borderColor}33` : "none",
     }}>
@@ -182,7 +196,7 @@ function CategoryCard({ name, spent, goal, color }) {
           <ProgressBar value={spent} max={goal} color={color} />
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5 }}>
             <span style={{ fontSize: 11, color: COLORS.muted }}>Limit: {fmt(goal)}</span>
-            <span style={{ fontSize: 11, color: borderColor === COLORS.danger ? COLORS.danger : borderColor === COLORS.warning ? COLORS.warning : COLORS.success }}>
+            <span style={{ fontSize: FS.xs, color: borderColor === COLORS.dangerFill ? COLORS.danger : borderColor === COLORS.warningFill ? COLORS.warning : COLORS.success }}>
               {p.toFixed(0)}%
             </span>
           </div>
@@ -195,17 +209,17 @@ function CategoryCard({ name, spent, goal, color }) {
 function Modal({ title, onClose, children }) {
   return (
     <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1000,
-      display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000,
+      display: "flex", alignItems: "center", justifyContent: "center", padding: S.xl,
     }} onClick={onClose}>
       <div style={{
-        background: COLORS.card, borderRadius: 24, padding: 32, width: "100%",
+        background: COLORS.card, borderRadius: R["5xl"], padding: S["5xl"], width: "100%",
         maxWidth: 480, maxHeight: "90vh", overflowY: "auto",
-        boxShadow: "0 24px 48px rgba(0,0,0,0.12)",
+        boxShadow: COLORS.shadowLg,
       }} onClick={e => e.stopPropagation()}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-          <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, color: COLORS.text, fontSize: 20, margin: 0 }}>{title}</h2>
-          <button onClick={onClose} style={{ background: COLORS.containerHigh, border: "none", color: COLORS.subtext, borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, lineHeight: 1 }}>×</button>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: S["3xl"] }}>
+          <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, color: COLORS.text, fontSize: FS["3xl"], margin: 0 }}>{title}</h2>
+          <button onClick={onClose} style={{ background: COLORS.containerHigh, border: "none", color: COLORS.subtext, borderRadius: R.circle, width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: FS["2xl"], lineHeight: 1 }}>×</button>
         </div>
         {children}
       </div>
@@ -215,22 +229,22 @@ function Modal({ title, onClose, children }) {
 // ── Input helper ──────────────────────────────────────────────────────────────
 function Field({ label, children }) {
   return (
-    <div style={{ marginBottom: 16 }}>
-      <label style={{ display: "block", fontSize: 11, color: COLORS.subtext, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700 }}>{label}</label>
+    <div style={{ marginBottom: S.xl }}>
+      <label style={{ display: "block", fontSize: FS.xs, color: COLORS.subtext, marginBottom: S.sm, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700 }}>{label}</label>
       {children}
     </div>
   );
 }
 const inputStyle = {
   width: "100%", background: COLORS.containerLow, border: "none",
-  borderRadius: 12, padding: "12px 16px", color: COLORS.text, fontSize: 14,
+  borderRadius: R.xl, padding: `${S.lg}px ${S.xl}px`, color: COLORS.text, fontSize: FS.md,
   fontFamily: "'Plus Jakarta Sans', sans-serif", outline: "none", boxSizing: "border-box",
 };
 const selectStyle = { ...inputStyle, appearance: "none" };
 const btnPrimary = {
   width: "100%", background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`,
-  color: "#fff", border: "none", borderRadius: 12, padding: "14px",
-  fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif",
+  color: "#fff", border: "none", borderRadius: R.xl, padding: `${S.lg}px`,
+  fontSize: FS.md, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif",
 };
 // ── BudgetBar ─────────────────────────────────────────────────────────────────
 function BudgetBar({ totalIncome, totalPlanned, totalSpent }) {
@@ -244,40 +258,40 @@ function BudgetBar({ totalIncome, totalPlanned, totalSpent }) {
   const spentPct = totalIncome > 0 ? Math.min(100, (totalSpent / totalIncome) * 100) : 0;
   const remaining = totalIncome - totalPlanned;
   const overBy = Math.abs(remaining);
-  const pillBg = remaining > 0 ? "rgba(52,211,153,0.15)" : remaining === 0 ? "rgba(0,103,136,0.12)" : "rgba(248,113,113,0.15)";
-  const pillColor = remaining > 0 ? "#34D399" : remaining === 0 ? "#0078a8" : "#F87171";
+  const pillBg = remaining > 0 ? COLORS.successFillBg : remaining === 0 ? COLORS.primaryFillBg : COLORS.dangerFillBg;
+  const pillColor = remaining > 0 ? COLORS.successFill : remaining === 0 ? COLORS.primary : COLORS.dangerFill;
   const pillText = remaining > 0 ? `${fmt(remaining)} left to budget` : remaining === 0 ? "Fully budgeted ✓" : `${fmt(overBy)} over-budgeted`;
-  const borderColor = isOverPlanned ? "#F87171" : "rgba(172,179,181,0.2)";
-  const spentColor = isOverIncome ? "#F87171" : isOverBudget ? "#FBBF24" : "#0078a8";
+  const borderColor = isOverPlanned ? COLORS.dangerFill : "rgba(172,179,181,0.2)";
+  const spentColor = isOverIncome ? COLORS.dangerFill : isOverBudget ? COLORS.warningFill : COLORS.primary;
   return (
-    <div style={{ marginBottom: 4 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: COLORS.subtext }}>Budget Status</span>
-        <span style={{ fontSize: 12, fontWeight: 700, background: pillBg, color: pillColor, borderRadius: 9999, padding: "3px 12px", letterSpacing: "-0.01em" }}>{pillText}</span>
+    <div style={{ marginBottom: S.xs }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: S.md }}>
+        <span style={{ fontSize: FS.sm, fontWeight: 700, color: COLORS.subtext }}>Budget Status</span>
+        <span style={{ fontSize: FS.sm, fontWeight: 700, background: pillBg, color: pillColor, borderRadius: R.pill, padding: `3px ${S.lg}px`, letterSpacing: "-0.01em" }}>{pillText}</span>
       </div>
-      <div style={{ position: "relative", height: 28, background: COLORS.containerLow, borderRadius: 12, overflow: "hidden", border: `1.5px solid ${borderColor}`, boxShadow: isOverPlanned ? "0 0 10px rgba(248,113,113,0.18)" : "none" }}>
+      <div style={{ position: "relative", height: 28, background: COLORS.containerLow, borderRadius: R.xl, overflow: "hidden", border: `1.5px solid ${borderColor}`, boxShadow: isOverPlanned ? `0 0 10px ${COLORS.dangerFill}30` : "none" }}>
         {/* Planned fill */}
-        {plannedPct > 0 && <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${plannedPct}%`, background: isOverPlanned ? "rgba(248,113,113,0.28)" : "rgba(0,103,136,0.22)", transition: "width 0.5s ease", borderRadius: "10px 0 0 10px" }} />}
+        {plannedPct > 0 && <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${plannedPct}%`, background: isOverPlanned ? `${COLORS.dangerFill}48` : `${COLORS.primary}38`, transition: "width 0.5s ease", borderRadius: `${R.lg}px 0 0 ${R.lg}px` }} />}
         {/* Spent fill */}
-        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${spentPct}%`, background: spentColor, transition: "width 0.5s ease", borderRadius: "10px 0 0 10px" }} />
+        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${spentPct}%`, background: spentColor, transition: "width 0.5s ease", borderRadius: `${R.lg}px 0 0 ${R.lg}px` }} />
         {/* Inline labels */}
-        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 12px", pointerEvents: "none" }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.4)", whiteSpace: "nowrap" }}>Spent {fmt(totalSpent)}</span>
-          <span style={{ fontSize: 11, fontWeight: 700, color: COLORS.subtext, whiteSpace: "nowrap" }}>Income {fmt(totalIncome)}</span>
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: `0 ${S.lg}px`, pointerEvents: "none" }}>
+          <span style={{ fontSize: FS.xs, fontWeight: 700, color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.4)", whiteSpace: "nowrap" }}>Spent {fmt(totalSpent)}</span>
+          <span style={{ fontSize: FS.xs, fontWeight: 700, color: COLORS.subtext, whiteSpace: "nowrap" }}>Income {fmt(totalIncome)}</span>
         </div>
       </div>
-      <div style={{ display: "flex", gap: 14, marginTop: 6, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 14, marginTop: S.sm, flexWrap: "wrap" }}>
         {[
           { color: spentColor, label: `Spent ${fmt(totalSpent)}` },
-          { color: "rgba(0,103,136,0.45)", label: `Planned ${fmt(totalPlanned)}` },
+          { color: `${COLORS.primary}72`, label: `Planned ${fmt(totalPlanned)}` },
         ].map(l => (
-          <span key={l.label} style={{ fontSize: 11, color: COLORS.muted, display: "flex", alignItems: "center", gap: 5 }}>
-            <span style={{ width: 8, height: 8, borderRadius: 2, background: l.color, flexShrink: 0, display: "inline-block" }} />{l.label}
+          <span key={l.label} style={{ fontSize: FS.xs, color: COLORS.muted, display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ width: 8, height: 8, borderRadius: R.xs, background: l.color, flexShrink: 0, display: "inline-block" }} />{l.label}
           </span>
         ))}
-        {isOverPlanned && <span style={{ fontSize: 11, color: "#F87171", fontWeight: 700, marginLeft: "auto" }}>⚠ Over by {fmt(overBy)}</span>}
-        {isOverIncome && <span style={{ fontSize: 11, color: "#F87171", fontWeight: 700, marginLeft: "auto" }}>Overspent by {fmt(totalSpent - totalIncome)}</span>}
-        {isOverBudget && !isOverIncome && <span style={{ fontSize: 11, color: "#FBBF24", fontWeight: 700, marginLeft: "auto" }}>Over budget by {fmt(totalSpent - totalPlanned)}</span>}
+        {isOverPlanned && <span style={{ fontSize: FS.xs, color: COLORS.dangerFill, fontWeight: 700, marginLeft: "auto" }}>⚠ Over by {fmt(overBy)}</span>}
+        {isOverIncome && <span style={{ fontSize: FS.xs, color: COLORS.dangerFill, fontWeight: 700, marginLeft: "auto" }}>Overspent by {fmt(totalSpent - totalIncome)}</span>}
+        {isOverBudget && !isOverIncome && <span style={{ fontSize: FS.xs, color: COLORS.warningFill, fontWeight: 700, marginLeft: "auto" }}>Over budget by {fmt(totalSpent - totalPlanned)}</span>}
       </div>
     </div>
   );
@@ -286,8 +300,8 @@ function BudgetBar({ totalIncome, totalPlanned, totalSpent }) {
 function Toast({ info }) {
   if (!info) return null;
   return (
-    <div style={{ position: "fixed", bottom: 48, left: "50%", transform: "translateX(-50%)", background: "rgba(22,22,35,0.88)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", color: "#fff", borderRadius: 24, padding: "10px 22px", fontSize: 13, fontWeight: 600, zIndex: 9999, display: "flex", alignItems: "center", gap: 8, boxShadow: "0 8px 32px rgba(0,0,0,0.28)", animation: "toastSlideUp 0.2s ease", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      <span style={{ fontSize: 15 }}>{info.icon}</span>{info.msg}
+    <div style={{ position: "fixed", bottom: 48, left: "50%", transform: "translateX(-50%)", background: "rgba(22,22,35,0.88)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", color: "#fff", borderRadius: R["4xl"], padding: `${S.md}px 22px`, fontSize: FS.base, fontWeight: 600, zIndex: 9999, display: "flex", alignItems: "center", gap: S.md, boxShadow: "0 8px 32px rgba(0,0,0,0.28)", animation: "toastSlideUp 0.2s ease", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      <span style={{ fontSize: FS.lg }}>{info.icon}</span>{info.msg}
     </div>
   );
 }
@@ -552,7 +566,7 @@ If date not visible, use today. If unsure of category, use Other.`
                   </>
                 ) : "✦ Parse with Claude"}
               </button>
-              <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes pop-in { 0% { transform: scale(0); opacity: 0; } 80% { transform: scale(1.2); } 100% { transform: scale(1); opacity: 1; } } @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }`}</style>
+{/* keyframes defined in global <style> block */}
             </div>
           )}
           {/* ── UPLOAD ── */}
@@ -1207,7 +1221,7 @@ Return plain text bullet points only, no headers.` }]
   const totalDebtBalance = debts.reduce((s, d) => s + parseFloat(d.balance || 0), 0);
   const spentPct = Math.round(pct(totalExpenses, totalIncome));
   const CATEGORY_ICONS = { Housing: "home", Food: "restaurant", Transport: "directions_car", Utilities: "bolt", Health: "medication", Entertainment: "movie", Personal: "person", Education: "school", Kids: "child_care", Subscriptions: "subscriptions", Travel: "flight", Other: "category" };
-  const CATEGORY_ICON_BG = { Housing: "rgba(97,205,253,0.2)", Food: "rgba(192,232,255,0.3)", Transport: "rgba(186,191,255,0.3)", Utilities: "rgba(192,232,255,0.3)", Health: "rgba(186,191,255,0.3)", Entertainment: "rgba(186,191,255,0.3)", Personal: "rgba(186,191,255,0.3)", Education: "rgba(97,205,253,0.2)", Kids: "rgba(192,232,255,0.3)", Subscriptions: "rgba(186,191,255,0.3)", Travel: "rgba(186,191,255,0.3)", Other: "#eaeef0" };
+  const CATEGORY_ICON_BG = { Housing: "rgba(97,205,253,0.2)", Food: "rgba(192,232,255,0.3)", Transport: "rgba(186,191,255,0.3)", Utilities: "rgba(192,232,255,0.3)", Health: "rgba(186,191,255,0.3)", Entertainment: "rgba(186,191,255,0.3)", Personal: "rgba(186,191,255,0.3)", Education: "rgba(97,205,253,0.2)", Kids: "rgba(192,232,255,0.3)", Subscriptions: "rgba(186,191,255,0.3)", Travel: "rgba(186,191,255,0.3)", Other: COLORS.neutral };
   const CATEGORY_ICON_COLOR = { Housing: COLORS.primary, Food: COLORS.secondary, Transport: COLORS.tertiary, Utilities: COLORS.secondary, Health: COLORS.tertiary, Entertainment: COLORS.tertiary, Personal: COLORS.tertiary, Education: COLORS.primary, Kids: COLORS.secondary, Subscriptions: COLORS.tertiary, Travel: COLORS.tertiary, Other: COLORS.subtext };
   // ── View-month derived values (income/expenses are now always month-scoped) ──
   const viewExpenses = expenses;
@@ -1431,7 +1445,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
   if (joinScreen) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", background: COLORS.bg, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
+{/* fonts loaded in global style block */}
         <div style={{ width: 56, height: 56, borderRadius: 16, background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.tertiary})`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
           <span style={{ fontSize: 22, fontWeight: 900, color: "#fff" }}>RF</span>
         </div>
@@ -1466,7 +1480,6 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         <h2 style={{ fontSize: 20, fontWeight: 800, color: COLORS.sidebarText, marginBottom: 8 }}>FamilyFinance</h2>
         <div style={{ width: 32, height: 32, border: `3px solid ${COLORS.containerHigh}`, borderTopColor: COLORS.primary, borderRadius: "50%", animation: "spin 1s linear infinite", marginBottom: 12 }} />
         <p style={{ fontSize: 14, color: COLORS.muted }}>Loading your budget…</p>
-        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
       </div>
     );
   }
@@ -1871,7 +1884,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   </div>
                 ) : (
                   <div style={{ display: "flex", gap: 16, overflowX: "auto", scrollSnapType: "x mandatory", scrollBehavior: "smooth", paddingBottom: 8, msOverflowStyle: "none", scrollbarWidth: "none" }}>
-                    <style>{`.cat-scroll::-webkit-scrollbar { display: none; }`}</style>
+{/* scrollbar hidden via msOverflowStyle + scrollbarWidth above */}
                     {/* Sort by planned amount desc, then by spent amount */}
                     {[...viewCatExpenseCards]
                       .sort((a, b) => {
@@ -1889,7 +1902,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         return (
                           <div key={cat} className="exp-card" style={{ flexShrink: 0, width: 200, scrollSnapAlign: "start", background: COLORS.card, borderRadius: 14, padding: "18px", boxShadow: COLORS.shadowSm, border: isOver ? `1.5px solid #F87171` : `1.5px solid transparent`, cursor: "default" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                              <div style={{ width: 40, height: 40, borderRadius: 12, background: CATEGORY_ICON_BG[cat] || "#eaeef0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <div style={{ width: 40, height: 40, borderRadius: 12, background: CATEGORY_ICON_BG[cat] || COLORS.neutral, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                                 <span className="material-symbols-outlined" style={{ fontSize: 20, color: CATEGORY_ICON_COLOR[cat] || COLORS.subtext }}>{CATEGORY_ICONS[cat] || "category"}</span>
                               </div>
                               <div style={{ minWidth: 0 }}>
@@ -2155,7 +2168,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         <div onClick={() => setCollapsedCategories(p => ({ ...p, [group.catId]: !p[group.catId] }))}
                           style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, alignItems: "center", padding: "9px 12px", background: util >= 100 ? COLORS.danger + "10" : util >= 80 ? COLORS.warning + "10" : COLORS.containerLow, borderRadius: 10, cursor: "pointer", marginBottom: isCollapsed ? 0 : 6, borderLeft: util >= 100 ? `3px solid ${COLORS.danger}` : util >= 80 ? `3px solid ${COLORS.warning}` : "3px solid transparent" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <div style={{ width: 28, height: 28, borderRadius: 8, background: CATEGORY_ICON_BG[group.catId] || "#eaeef0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <div style={{ width: 28, height: 28, borderRadius: 8, background: CATEGORY_ICON_BG[group.catId] || COLORS.neutral, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                               <span className="material-symbols-outlined" style={{ fontSize: 15, color: CATEGORY_ICON_COLOR[group.catId] || COLORS.subtext }}>{CATEGORY_ICONS[group.catId] || "category"}</span>
                             </div>
                             <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>{group.label}</span>
@@ -3076,7 +3089,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                       {[0,1,2].map(j => <div key={j} style={{ width: 8, height: 8, background: COLORS.primary, borderRadius: "50%", animation: `bounce .8s ${j*0.15}s infinite alternate` }} />)}
                     </div>
-                    <style>{`@keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-6px); } }`}</style>
+{/* @keyframes bounce defined in global style block */}
                   </div>
                 </div>
               )}
