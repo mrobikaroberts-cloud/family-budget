@@ -992,6 +992,12 @@ export default function App() {
   }, [viewMonthKey]); // eslint-disable-line react-hooks/exhaustive-deps
   // Reset expense card pagination when viewing a different month
   useEffect(() => { setExpenseCardPage(0); }, [viewMonthKey]);
+  // Reset 50/30/20 toggle when switching months — pre5020Budgets is month-scoped
+  useEffect(() => {
+    setToggle5020(false);
+    pre5020Budgets.current = null;
+    pre5020Savings.current = null;
+  }, [viewMonthKey]); // eslint-disable-line react-hooks/exhaustive-deps
   // Auto-send when navigating to advisor tab from header search
   useEffect(() => {
     if (pendingAdvisorSend.current && tab === "advisor" && advisorMsg) {
@@ -1054,7 +1060,7 @@ export default function App() {
   const viewExpenseBudgets = normaliseExpenseBudgets(monthlySnapshots[viewMonthKey]?.expenseBudgets || DEFAULT_EXPENSE_BUDGETS);
   const setViewExpenseBudgets = (updater) => setMonthlySnapshots(prev => {
     const oldBudgets = prev[viewMonthKey]?.expenseBudgets || DEFAULT_EXPENSE_BUDGETS;
-    const newBudgets = typeof updater === "function" ? updater(oldBudgets) : updater;
+    const newBudgets = typeof updater === "function" ? updater(oldBudgets) : { ...updater };
     return { ...prev, [viewMonthKey]: { ...(prev[viewMonthKey] || { income: [], expenses: [], notes: "", billStatus: {} }), expenseBudgets: newBudgets } };
   });
   // ── Default date for modals (Fix 4) ──
