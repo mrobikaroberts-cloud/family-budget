@@ -63,6 +63,33 @@ const FS = { "2xs": 9, xs: 11, sm: 12, base: 13, md: 14, lg: 15, xl: 16, "2xl": 
 const R = { xs: 4, sm: 6, md: 8, lg: 10, xl: 12, "2xl": 14, "3xl": 16, "4xl": 20, "5xl": 24, pill: 9999, circle: "50%" };
 // ── Spacing scale (margin / padding / gap) ────────────────────────────────────
 const S = { "2xs": 2, xs: 4, sm: 6, md: 8, lg: 12, xl: 16, "2xl": 20, "3xl": 24, "4xl": 28, "5xl": 32 };
+// ── Chart palettes ────────────────────────────────────────────────────────────
+// Per-category data-viz colors — brand-anchored (teal / indigo / warm axis)
+const CAT_CHART_COLOR = {
+  Housing:       "#0078a8",  // brand primary — teal
+  Food:          "#f59e0b",  // amber        — warm family (accentWarm-light)
+  Utilities:     "#38bdf8",  // sky           — teal family, light
+  Transport:     "#6366f1",  // indigo        — tertiary family, lighter
+  Health:        "#f43f5e",  // rose          — danger family, lighter
+  Entertainment: "#0d9488",  // teal-green    — success + primary mix
+  Personal:      "#a855f7",  // purple        — between tertiary and pink
+  Education:     "#fb923c",  // orange        — warm family, analogous
+  Savings:       "#10b981",  // emerald       — success family
+  Kids:          "#e879f9",  // fuchsia       — complementary arc
+  Subscriptions: "#818cf8",  // periwinkle    — tertiary light
+  Travel:        "#06b6d4",  // cyan          — primary family, light
+  Other:         "#94a3b8",  // slate         — muted family
+};
+// Ordered array for positional use (pie/bar slice index fallback)
+const CHART_COLORS = Object.values(CAT_CHART_COLOR);
+// Semantic colors for the 5 cash-flow series
+const CASH_FLOW_COLORS = {
+  Income:   "#10b981",  // emerald  — positive inflow
+  Expenses: "#0078a8",  // primary  — main spending activity
+  Bills:    "#6366f1",  // indigo   — recurring committed
+  Debt:     "#f59e0b",  // amber    — obligation / caution
+  Savings:  "#0d9488",  // teal-grn — growth / positive
+};
 const fmt = (n) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 const pct = (val, total) => (total === 0 ? 0 : Math.min(100, (val / total) * 100));
@@ -1164,19 +1191,18 @@ Return plain text bullet points only, no headers.` }]
     setToastInfo({ msg, icon });
     toastTimer.current = setTimeout(() => setToastInfo(null), 2400);
   }, []);
-  const CHART_COLORS = ["#f472b6","#60a5fa","#a78bfa","#fbbf24","#34d399","#fb923c","#4ade80","#c084fc","#38bdf8","#f97316"];
   const cashFlowData = [
-    ...(showIncomeInCharts ? [{ name: "Income", value: totalIncome, color: "#4ade80" }] : []),
-    { name: "Expenses", value: totalExpenses, color: "#f472b6" },
-    { name: "Bills", value: billsActualTotal, color: "#c084fc" },
-    { name: "Debt", value: debtPayments, color: "#facc15" },
-    { name: "Savings", value: savingsActualTotal, color: "#34d399" },
+    ...(showIncomeInCharts ? [{ name: "Income",   value: totalIncome,        color: CASH_FLOW_COLORS.Income   }] : []),
+    { name: "Expenses", value: totalExpenses,     color: CASH_FLOW_COLORS.Expenses },
+    { name: "Bills",    value: billsActualTotal,  color: CASH_FLOW_COLORS.Bills    },
+    { name: "Debt",     value: debtPayments,      color: CASH_FLOW_COLORS.Debt     },
+    { name: "Savings",  value: savingsActualTotal, color: CASH_FLOW_COLORS.Savings },
   ].filter(d => d.value > 0);
   const budgetVsActualData = CATEGORIES.filter(c => (viewExpenseBudgets[c.id] || 0) > 0 || catTotals[c.id] > 0).map(c => ({
     name: c.label.slice(0, 5), Budget: viewExpenseBudgets[c.id] || 0, Actual: catTotals[c.id] || 0,
   }));
-  const expBreakdownData = CATEGORIES.filter(c => catTotals[c.id] > 0).map((c, i) => ({
-    name: c.label, value: catTotals[c.id], color: CHART_COLORS[i % CHART_COLORS.length],
+  const expBreakdownData = CATEGORIES.filter(c => catTotals[c.id] > 0).map(c => ({
+    name: c.label, value: catTotals[c.id], color: CAT_CHART_COLOR[c.id] ?? COLORS.primary,
   }));
   const dailyExpenseData = (() => {
     const map = {};
@@ -1842,11 +1868,11 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.8)", marginBottom: 28 }}>Cash Flow Summary</p>
                   <div style={{ display: "flex", flexDirection: "column", gap: 20, flex: 1 }}>
                     {[
-                      { label: "Expenses", amount: fmt(viewTotalExpenses), pctVal: pct(viewTotalExpenses, viewTotalIncome), badge: `${viewSpentPct}% of budget`, barColor: "#4ade80" },
-                      { label: "Bills", amount: fmt(totalBills), pctVal: 100, badge: "100% committed", barColor: "rgba(255,255,255,0.9)" },
-                      { label: "Debt", amount: fmt(totalDebtPayments), pctVal: pct(totalDebtPayments, totalDebtBalance || 1), badge: `${Math.round(pct(totalDebtPayments, totalDebtBalance || 1))}% of target`, barColor: "rgba(255,255,255,0.9)" },
-                      { label: "Savings", amount: fmt(savingsActualTotal), pctVal: pct(savingsActualTotal, savingsExpectedTotal || 1), badge: `${Math.round(pct(savingsActualTotal, savingsExpectedTotal || 1))}% to goal`, barColor: "rgba(255,255,255,0.9)" },
-                      { label: "Income", amount: fmt(viewTotalIncome), pctVal: 100, badge: null, barColor: "#4ade80" },
+                      { label: "Expenses", amount: fmt(viewTotalExpenses), pctVal: pct(viewTotalExpenses, viewTotalIncome), badge: `${viewSpentPct}% of budget`, barColor: "rgba(255,255,255,0.92)" },
+                      { label: "Bills", amount: fmt(totalBills), pctVal: 100, badge: "100% committed", barColor: "rgba(255,255,255,0.92)" },
+                      { label: "Debt", amount: fmt(totalDebtPayments), pctVal: pct(totalDebtPayments, totalDebtBalance || 1), badge: `${Math.round(pct(totalDebtPayments, totalDebtBalance || 1))}% of target`, barColor: "rgba(255,255,255,0.92)" },
+                      { label: "Savings", amount: fmt(savingsActualTotal), pctVal: pct(savingsActualTotal, savingsExpectedTotal || 1), badge: `${Math.round(pct(savingsActualTotal, savingsExpectedTotal || 1))}% to goal`, barColor: "rgba(255,255,255,0.92)" },
+                      { label: "Income", amount: fmt(viewTotalIncome), pctVal: 100, badge: null, barColor: "rgba(255,255,255,0.92)" },
                     ].map(row => (
                       <div key={row.label}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 6 }}>
