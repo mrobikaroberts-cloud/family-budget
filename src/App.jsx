@@ -209,7 +209,9 @@ function CategoryCard({ name, spent, goal, color }) {
     COLORS.border;
   return (
     <div style={{
-      background: COLORS.card,
+      background: "rgba(255,255,255,0.70)",
+      backdropFilter: "blur(20px) saturate(160%)",
+      WebkitBackdropFilter: "blur(20px) saturate(160%)",
       border: `1.5px solid ${borderColor}`,
       borderRadius: R["2xl"],
       padding: `${S.lg}px ${S.xl}px`,
@@ -238,17 +240,25 @@ function CategoryCard({ name, spent, goal, color }) {
 function Modal({ title, onClose, children }) {
   return (
     <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000,
+      position: "fixed", inset: 0,
+      background: "rgba(0,0,0,0.30)",
+      backdropFilter: "blur(12px) saturate(140%)",
+      WebkitBackdropFilter: "blur(12px) saturate(140%)",
+      zIndex: 1000,
       display: "flex", alignItems: "center", justifyContent: "center", padding: S.xl,
     }} onClick={onClose}>
       <div style={{
-        background: COLORS.card, borderRadius: R["5xl"], padding: S["5xl"], width: "100%",
+        background: "rgba(255,255,255,0.90)",
+        backdropFilter: "blur(40px) saturate(200%)",
+        WebkitBackdropFilter: "blur(40px) saturate(200%)",
+        border: "1px solid rgba(255,255,255,0.96)",
+        borderRadius: R["5xl"], padding: S["5xl"], width: "100%",
         maxWidth: 480, maxHeight: "90vh", overflowY: "auto",
-        boxShadow: COLORS.shadowLg,
+        boxShadow: "0 32px 64px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,1)",
       }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: S["3xl"] }}>
-          <h2 style={{ fontFamily: "'Figtree', sans-serif", fontWeight: FW.extrabold, color: COLORS.text, fontSize: FS["3xl"], margin: 0 }}>{title}</h2>
-          <button onClick={onClose} style={{ background: COLORS.containerHigh, border: "none", color: COLORS.subtext, borderRadius: R.circle, width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: FS["2xl"], lineHeight: 1 }}>×</button>
+          <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: FW.extrabold, color: COLORS.text, fontSize: FS["3xl"], margin: 0, letterSpacing: "-0.025em" }}>{title}</h2>
+          <button onClick={onClose} style={{ background: "rgba(0,0,0,0.06)", border: "none", color: COLORS.subtext, borderRadius: R.circle, width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: FS["2xl"], lineHeight: 1 }}>×</button>
         </div>
         {children}
       </div>
@@ -265,15 +275,17 @@ function Field({ label, children }) {
   );
 }
 const inputStyle = {
-  width: "100%", background: COLORS.containerLow, border: "none",
+  width: "100%", background: "rgba(0,120,168,0.055)", border: "1px solid rgba(0,120,168,0.10)",
   borderRadius: R.xl, padding: `${S.lg}px ${S.xl}px`, color: COLORS.text, fontSize: FS.md,
   fontFamily: "'Figtree', sans-serif", outline: "none", boxSizing: "border-box",
+  transition: "box-shadow 0.15s ease, border-color 0.15s ease",
 };
 const selectStyle = { ...inputStyle, appearance: "none" };
 const btnPrimary = {
-  width: "100%", background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`,
+  width: "100%", background: `linear-gradient(140deg, ${COLORS.primary} 0%, #0095d2 100%)`,
   color: "#fff", border: "none", borderRadius: R.xl, padding: `${S.lg}px`,
   fontSize: FS.md, fontWeight: FW.bold, cursor: "pointer", fontFamily: "'Figtree', sans-serif",
+  boxShadow: "0 6px 20px rgba(0,120,168,0.30), inset 0 1px 0 rgba(255,255,255,0.15)",
 };
 // ── BudgetBar ─────────────────────────────────────────────────────────────────
 function BudgetBar({ totalIncome, totalPlanned, totalSpent }) {
@@ -480,23 +492,23 @@ If date not visible, use today. If unsure of category, use Other.`
   };
   // ── Render ──
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#00000099", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={step === "home" ? onClose : undefined}>
-      <div style={{ background: COLORS.card, borderRadius: 24, width: "100%", maxWidth: 520, maxHeight: "92vh", overflowY: "auto", boxShadow: "0 24px 48px rgba(0,0,0,0.14)" }} onClick={e => e.stopPropagation()}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.30)", backdropFilter: "blur(12px) saturate(140%)", WebkitBackdropFilter: "blur(12px) saturate(140%)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={step === "home" ? onClose : undefined}>
+      <div style={{ background: "rgba(255,255,255,0.90)", backdropFilter: "blur(40px) saturate(200%)", WebkitBackdropFilter: "blur(40px) saturate(200%)", border: "1px solid rgba(255,255,255,0.96)", borderRadius: 28, width: "100%", maxWidth: 520, maxHeight: "92vh", overflowY: "auto", boxShadow: "0 32px 64px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,1)" }} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "28px 28px 0" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {step !== "home" && (
               <button onClick={() => { setStep("home"); setNlInput(""); setNlError(""); setUploadError(""); setPreviewItems([]); }}
-                style={{ background: COLORS.containerHigh, border: "none", color: COLORS.subtext, borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontSize: 14 }}>←</button>
+                style={{ background: "rgba(0,0,0,0.06)", border: "none", color: COLORS.subtext, borderRadius: 10, padding: "4px 10px", cursor: "pointer", fontSize: 14 }}>←</button>
             )}
-            <h2 style={{ fontFamily: "'Figtree', sans-serif", fontWeight: FW.extrabold, color: COLORS.text, fontSize: 20, margin: 0 }}>
+            <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: FW.extrabold, color: COLORS.text, fontSize: 20, margin: 0, letterSpacing: "-0.025em" }}>
               {step === "home" && "Add Transaction"}
               {step === "nl" && "Describe It"}
               {step === "upload" && "Upload Document"}
               {step === "preview" && "Review & Import"}
             </h2>
           </div>
-          <button onClick={onClose} style={{ background: COLORS.containerHigh, border: "none", color: COLORS.subtext, borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>×</button>
+          <button onClick={onClose} style={{ background: "rgba(0,0,0,0.06)", border: "none", color: COLORS.subtext, borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>×</button>
         </div>
         <div style={{ padding: "20px 28px 32px" }}>
           {/* ── HOME ── */}
@@ -508,45 +520,45 @@ If date not visible, use today. If unsure of category, use Other.`
               {/* Action tiles */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
                 <button onClick={onManualExpense} style={{
-                  background: COLORS.containerLow, border: "none", borderRadius: 16, padding: "20px 12px",
-                  cursor: "pointer", textAlign: "center", transition: "background .2s",
+                  background: "rgba(0,120,168,0.07)", border: "1px solid rgba(0,120,168,0.10)", borderRadius: 16, padding: "20px 12px",
+                  cursor: "pointer", textAlign: "center", transition: "all 0.2s cubic-bezier(0.34,1.56,0.64,1)",
                 }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 14, background: `rgba(0,103,136,0.1)`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 22, color: COLORS.primary }}>shopping_bag</span>
+                  <div style={{ width: 44, height: 44, borderRadius: 14, background: `rgba(0,120,168,0.12)`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 22, color: COLORS.primary, fontVariationSettings: "'FILL' 1" }}>shopping_bag</span>
                   </div>
-                  <p style={{ fontWeight: FW.bold, fontSize: 13, color: COLORS.text, marginBottom: 2 }}>Expense</p>
+                  <p style={{ fontWeight: FW.semibold, fontSize: 13, color: COLORS.text, marginBottom: 2 }}>Expense</p>
                   <p style={{ fontSize: 11, color: COLORS.subtext, lineHeight: 1.4 }}>Add a cost</p>
                 </button>
                 <button onClick={onManualIncome} style={{
-                  background: "rgba(192,232,255,0.4)", border: "none", borderRadius: 16, padding: "20px 12px",
-                  cursor: "pointer", textAlign: "center", transition: "background .2s",
+                  background: "rgba(16,185,129,0.07)", border: "1px solid rgba(16,185,129,0.12)", borderRadius: 16, padding: "20px 12px",
+                  cursor: "pointer", textAlign: "center", transition: "all 0.2s cubic-bezier(0.34,1.56,0.64,1)",
                 }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 14, background: `rgba(23,102,132,0.12)`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 22, color: COLORS.secondary }}>trending_up</span>
+                  <div style={{ width: 44, height: 44, borderRadius: 14, background: `rgba(16,185,129,0.12)`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 22, color: COLORS.success, fontVariationSettings: "'FILL' 1" }}>trending_up</span>
                   </div>
-                  <p style={{ fontWeight: FW.bold, fontSize: 13, color: COLORS.text, marginBottom: 2 }}>Income</p>
+                  <p style={{ fontWeight: FW.semibold, fontSize: 13, color: COLORS.text, marginBottom: 2 }}>Income</p>
                   <p style={{ fontSize: 11, color: COLORS.subtext, lineHeight: 1.4 }}>Add earnings</p>
                 </button>
                 <button onClick={() => { setStep("upload"); setTimeout(() => fileRef.current?.click(), 100); }} style={{
-                  background: "rgba(186,191,255,0.3)", border: "none", borderRadius: 16, padding: "20px 12px",
-                  cursor: "pointer", textAlign: "center", transition: "background .2s",
+                  background: "rgba(74,82,168,0.07)", border: "1px solid rgba(74,82,168,0.10)", borderRadius: 16, padding: "20px 12px",
+                  cursor: "pointer", textAlign: "center", transition: "all 0.2s cubic-bezier(0.34,1.56,0.64,1)",
                 }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 14, background: `rgba(85,91,147,0.12)`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 22, color: COLORS.tertiary }}>receipt_long</span>
+                  <div style={{ width: 44, height: 44, borderRadius: 14, background: `rgba(74,82,168,0.12)`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 22, color: COLORS.tertiary, fontVariationSettings: "'FILL' 1" }}>receipt_long</span>
                   </div>
-                  <p style={{ fontWeight: FW.bold, fontSize: 13, color: COLORS.text, marginBottom: 2 }}>Receipt</p>
+                  <p style={{ fontWeight: FW.semibold, fontSize: 13, color: COLORS.text, marginBottom: 2 }}>Receipt</p>
                   <p style={{ fontSize: 11, color: COLORS.subtext, lineHeight: 1.4 }}>Scan a doc</p>
                 </button>
               </div>
               {/* Divider */}
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-                <div style={{ flex: 1, height: 1, background: COLORS.containerHighest }} />
-                <span style={{ fontSize: 11, color: COLORS.muted }}>or describe in words</span>
-                <div style={{ flex: 1, height: 1, background: COLORS.containerHighest }} />
+                <div style={{ flex: 1, height: 1, background: "rgba(0,0,0,0.07)" }} />
+                <span style={{ fontSize: 11, color: COLORS.muted, fontWeight: FW.medium }}>or describe in words</span>
+                <div style={{ flex: 1, height: 1, background: "rgba(0,0,0,0.07)" }} />
               </div>
               <button onClick={() => setStep("nl")} style={{
-                width: "100%", background: COLORS.containerLow, border: "none", borderRadius: 12, padding: "14px 16px",
-                cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 12,
+                width: "100%", background: "rgba(0,120,168,0.07)", border: "1px solid rgba(0,120,168,0.10)", borderRadius: 14, padding: "14px 16px",
+                cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 12, transition: "all 0.18s ease",
               }}>
                 <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.primary }}>chat</span>
                 <div>
@@ -562,7 +574,7 @@ If date not visible, use today. If unsure of category, use Other.`
               <p style={{ fontSize: 14, color: COLORS.subtext, marginBottom: 16, lineHeight: 1.7 }}>
                 Describe any transaction in plain English. Claude will extract and categorize everything automatically.
               </p>
-              <div style={{ background: COLORS.containerLow, borderRadius: 14, padding: 16, marginBottom: 14 }}>
+              <div style={{ background: "rgba(0,120,168,0.05)", border: "1px solid rgba(0,120,168,0.08)", borderRadius: 14, padding: 16, marginBottom: 14 }}>
                 <p style={{ fontSize: 11, color: COLORS.muted, fontWeight: FW.bold, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>EXAMPLES</p>
                 {[
                   "Spent $85 on groceries and $60 on gas today",
@@ -644,12 +656,12 @@ If date not visible, use today. If unsure of category, use Other.`
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18, maxHeight: 360, overflowY: "auto", paddingRight: 4 }}>
                 {previewItems.map(item => (
-                  <div key={item.id} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: 14 }}>
+                  <div key={item.id} style={{ background: "rgba(0,120,168,0.04)", border: "1px solid rgba(0,120,168,0.09)", borderRadius: 14, padding: 14 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                       <input
                         value={item.label}
                         onChange={e => updateItem(item.id, "label", e.target.value)}
-                        style={{ ...inputStyle, flex: 1, marginRight: 10, padding: "7px 12px", fontSize: 13, fontWeight: FW.semibold, background: COLORS.inputBg }}
+                        style={{ ...inputStyle, flex: 1, marginRight: 10, padding: "7px 12px", fontSize: 13, fontWeight: FW.semibold }}
                       />
                       <button onClick={() => removeItem(item.id)} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 18, flexShrink: 0, lineHeight: 1 }}>×</button>
                     </div>
@@ -1599,6 +1611,16 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
 
+        /* Focus accessibility — never remove focus without a visible replacement */
+        :focus-visible { outline: 2px solid rgba(0,120,168,0.65); outline-offset: 2px; border-radius: 8px; }
+        button:focus-visible { outline: 2px solid rgba(0,120,168,0.65); outline-offset: 2px; }
+        input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(0,120,168,0.18) !important; border-color: rgba(0,120,168,0.35) !important; }
+
+        /* Reduced motion — respect user preference */
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+        }
+
         /* Scroll */
         .cat-scroll { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; padding-bottom: 8px; }
         .cat-scroll::-webkit-scrollbar { display: none; }
@@ -1631,7 +1653,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           }
           .mobile-nav-item.active { color: #0078a8; }
           .mobile-nav-item .material-symbols-outlined { font-size: 24px; }
-          main.has-mobile-nav { padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important; }
+          main { padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important; }
+          .mobile-fab { display: flex !important; }
           .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
           .bento-grid { grid-template-columns: 1fr !important; gap: 14px !important; }
           .bento-grid > * { grid-column: span 1 !important; }
@@ -1640,6 +1663,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         }
         @media (min-width: 768px) {
           .mobile-nav { display: none !important; }
+          .mobile-fab { display: none !important; }
         }
         @media (min-width: 768px) and (max-width: 1023px) {
           .app-sidebar { width: 72px !important; }
@@ -1718,12 +1742,12 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         <header style={{ background: "rgba(240,244,247,0.82)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", borderBottom: "1px solid rgba(255,255,255,0.75)", padding: "16px 32px 14px", display: "flex", alignItems: "center", gap: 20, flexShrink: 0, boxShadow: "0 2px 16px rgba(0,0,0,0.04)" }}>
           {/* Month picker */}
           <div style={{ position: "relative" }}>
-            <button onClick={() => setShowMonthPicker(p => !p)} style={{ display: "flex", alignItems: "center", gap: 8, background: COLORS.card, border: "none", borderRadius: 10, padding: "9px 16px", fontSize: 14, fontWeight: FW.semibold, color: COLORS.text, cursor: "pointer", boxShadow: COLORS.shadowSm, flexShrink: 0 }}>
+            <button onClick={() => setShowMonthPicker(p => !p)} style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.72)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 12, padding: "9px 16px", fontSize: 14, fontWeight: FW.semibold, color: COLORS.text, cursor: "pointer", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", flexShrink: 0 }}>
               {(() => { const { month0, year } = parseKey(viewMonthKey); return `${MONTH_FULL[month0]} ${year}`; })()}
               <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.subtext }}>expand_more</span>
             </button>
             {showMonthPicker && (
-              <div style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, background: COLORS.card, borderRadius: 16, boxShadow: "0 12px 32px rgba(0,0,0,0.12)", zIndex: 200, padding: 8, minWidth: 200, maxHeight: 320, overflowY: "auto" }}>
+              <div style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, background: "rgba(255,255,255,0.88)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", border: "1px solid rgba(255,255,255,0.92)", borderRadius: 18, boxShadow: "0 16px 40px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,1)", zIndex: 200, padding: 8, minWidth: 200, maxHeight: 320, overflowY: "auto" }}>
                 {(() => {
                   const { month0: sm, year: sy } = parseKey(startMonthKey);
                   const endDate = new Date(); endDate.setMonth(endDate.getMonth() + 3);
@@ -2242,7 +2266,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               {/* ── Main grid ── */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 24 }}>
                 {/* ── Spending Plan Table (col-8) ── */}
-                <div style={{ gridColumn: "span 8", background: COLORS.card, borderRadius: 20, padding: 28, boxShadow: COLORS.shadowSm }}>
+                <div style={{ gridColumn: "span 8", background: "rgba(255,255,255,0.72)", backdropFilter: "blur(28px) saturate(180%)", WebkitBackdropFilter: "blur(28px) saturate(180%)", border: "1px solid rgba(255,255,255,0.88)", borderRadius: 20, padding: 28, boxShadow: "0 4px 24px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.95)" }}>
                   {/* ── Unified Budget Status Bar ── */}
                   <div style={{ paddingBottom: 14, marginBottom: 14, borderBottom: "0.5px solid rgba(172,179,181,0.3)" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -2323,7 +2347,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       <div key={group.catId} style={{ marginBottom: 6 }}>
                         {/* Group header — uses same grid as rows */}
                         <div onClick={() => setCollapsedCategories(p => ({ ...p, [group.catId]: !p[group.catId] }))}
-                          style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, alignItems: "center", padding: "9px 12px", background: util >= 100 ? COLORS.danger + "10" : util >= 80 ? COLORS.warning + "10" : COLORS.containerLow, borderRadius: 10, cursor: "pointer", marginBottom: isCollapsed ? 0 : 6, borderLeft: util >= 100 ? `3px solid ${COLORS.danger}` : util >= 80 ? `3px solid ${COLORS.warning}` : "3px solid transparent" }}>
+                          style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, alignItems: "center", padding: "9px 12px", background: util >= 100 ? COLORS.danger + "12" : util >= 80 ? COLORS.warning + "12" : "rgba(255,255,255,0.60)", borderRadius: 10, cursor: "pointer", marginBottom: isCollapsed ? 0 : 6, border: util >= 100 ? `1px solid ${COLORS.danger}30` : util >= 80 ? `1px solid ${COLORS.warning}30` : "1px solid rgba(255,255,255,0.80)" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                             <div style={{ width: 28, height: 28, borderRadius: 8, background: CATEGORY_ICON_BG[group.catId] || COLORS.neutral, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                               <span className="material-symbols-outlined" style={{ fontSize: 15, color: CATEGORY_ICON_COLOR[group.catId] || COLORS.subtext }}>{CATEGORY_ICONS[group.catId] || "category"}</span>
@@ -2355,7 +2379,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         </div>
 
                         {!isCollapsed && (
-                          <div style={{ borderLeft: `3px solid ${CATEGORY_ICON_BG[group.catId] || COLORS.containerLow}`, marginLeft: 6, paddingLeft: 10, marginBottom: 4 }}>
+                          <div style={{ marginLeft: 8, paddingLeft: 8, marginBottom: 4 }}>
                             {/* Existing expense rows */}
                             {grpExp.map(e => {
                               const expPlanned = monthItemBudgets[`exp-${e.id}`] || 0;
@@ -2372,7 +2396,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                                 return e.date;
                               })();
                               return (
-                              <div key={e.id} style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "7px 10px", alignItems: "center", borderRadius: 8, background: COLORS.card, marginBottom: 2, boxShadow: COLORS.shadowSm }}>
+                              <div key={e.id} style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "7px 10px", alignItems: "center", borderRadius: 8, background: "rgba(255,255,255,0.75)", marginBottom: 2, border: "1px solid rgba(255,255,255,0.88)" }}>
                                 <EditableText id={e.id} field="label" value={e.label} />
                                 <span style={{ fontSize: 11, fontWeight: FW.semibold, color: e.fixed ? COLORS.subtext : COLORS.muted, background: e.fixed ? COLORS.containerHigh : COLORS.containerLow, borderRadius: 9999, padding: "2px 7px", justifySelf: "start" }}>{e.fixed ? "Fixed" : "Variable"}</span>
                                 <EditableDate id={e.id} field="date" value={displayDate} />
@@ -2436,7 +2460,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           <span style={{ fontSize: 11, color: COLORS.muted }}>({others.length})</span>
                         </div>
                         {others.map(e => (
-                          <div key={e.id} style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "7px 10px", alignItems: "center", borderRadius: 8, background: COLORS.card, marginBottom: 2, boxShadow: COLORS.shadowSm }}>
+                          <div key={e.id} style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "7px 10px", alignItems: "center", borderRadius: 8, background: "rgba(255,255,255,0.75)", marginBottom: 2, border: "1px solid rgba(255,255,255,0.88)" }}>
                             <EditableText id={e.id} field="label" value={e.label} />
                             <EditableCat id={e.id} field="category" value={e.category} />
                             <EditableDate id={e.id} field="date" value={e.date} />
@@ -2525,7 +2549,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     )}
                   </div>
                   {/* Savings — with inline editing, × , and +/- controls */}
-                  <div style={{ background: COLORS.card, borderRadius: 20, padding: 22, boxShadow: COLORS.shadowSm }}>
+                  <div style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)", border: "1px solid rgba(255,255,255,0.88)", borderRadius: 20, padding: 22, boxShadow: "0 4px 24px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.95)" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <div style={{ padding: "6px 8px", background: "rgba(97,205,253,0.15)", borderRadius: 10 }}>
@@ -2625,7 +2649,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   { label: "Paid", value: paidAmountTotal, icon: "check_circle", color: COLORS.success, bg: "rgba(0,103,136,0.06)" },
                   { label: "Remaining", value: remainingBillsTotal, icon: "pending", color: remainingBillsTotal > 0 ? COLORS.warning : COLORS.success, bg: remainingBillsTotal > 0 ? "rgba(249,115,22,0.07)" : "rgba(0,103,136,0.06)" },
                 ].map(stat => (
-                  <div key={stat.label} style={{ background: COLORS.card, borderRadius: 16, padding: "18px 20px", boxShadow: COLORS.shadowSm, display: "flex", alignItems: "center", gap: 14 }}>
+                  <div key={stat.label} style={{ background: "rgba(255,255,255,0.70)", backdropFilter: "blur(20px) saturate(160%)", WebkitBackdropFilter: "blur(20px) saturate(160%)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 16, padding: "18px 20px", boxShadow: "0 4px 16px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: 14 }}>
                     <div style={{ width: 42, height: 42, borderRadius: 12, background: stat.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       <span className="material-symbols-outlined" style={{ fontSize: 20, color: stat.color }}>{stat.icon}</span>
                     </div>
@@ -2638,7 +2662,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               </div>
 
               {/* ── Full-width calendar card ── */}
-              <div style={{ background: COLORS.card, borderRadius: 20, padding: 28, boxShadow: COLORS.shadowSm, marginBottom: 20 }}>
+              <div style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)", border: "1px solid rgba(255,255,255,0.88)", borderRadius: 20, padding: 28, boxShadow: "0 4px 24px rgba(0,0,0,0.06)", marginBottom: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
                   <h3 style={{ fontSize: 18, fontWeight: FW.bold, color: COLORS.text }}>{MONTH_FULL[calMonth]} {calYear}</h3>
                   <div style={{ display: "flex", gap: 4 }}>
@@ -2663,7 +2687,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       const dayBills = billsOnDay(day);
                       const isToday = day === todayDate;
                       return (
-                        <div key={day} style={{ background: COLORS.card, borderRadius: 8, minHeight: 80, padding: 8, border: `1px solid ${COLORS.containerLow}` }}>
+                        <div key={day} style={{ background: "rgba(255,255,255,0.65)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderRadius: 10, minHeight: 80, padding: 8, border: "1px solid rgba(255,255,255,0.80)" }}>
                           <div style={{ width: 24, height: 24, borderRadius: "50%", background: isToday ? COLORS.primary : "transparent", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
                             <span style={{ fontSize: 12, fontWeight: isToday ? FW.extrabold : FW.medium, color: isToday ? "#fff" : COLORS.text }}>{day}</span>
                           </div>
@@ -2695,7 +2719,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       const bPaidL = getBillPaid(b, calMk);
                       const isOverdueL = !bPaidL && dDate < nowL;
                       return (
-                        <div key={b.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 60px 28px", gap: 8, padding: "10px 12px", borderRadius: 8, background: COLORS.card, marginBottom: 4, boxShadow: COLORS.shadowSm, alignItems: "center", borderLeft: `3px solid ${bPaidL ? COLORS.success : isOverdueL ? COLORS.danger : "transparent"}` }}>
+                        <div key={b.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 60px 28px", gap: 8, padding: "10px 12px", borderRadius: 10, background: bPaidL ? "rgba(16,185,129,0.05)" : isOverdueL ? "rgba(248,113,113,0.06)" : "rgba(255,255,255,0.72)", marginBottom: 4, boxShadow: "0 2px 8px rgba(0,0,0,0.04)", alignItems: "center", border: `1px solid ${bPaidL ? "rgba(16,185,129,0.15)" : isOverdueL ? "rgba(248,113,113,0.18)" : "rgba(255,255,255,0.80)"}` }}>
                           <span style={{ fontSize: 13, fontWeight: FW.semibold, color: COLORS.text }}>{b.label}</span>
                           <span style={{ fontSize: 12, color: COLORS.subtext }}>{fmtDate(bDueDateL)}</span>
                           <span style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.text }}>{fmt(b.budget)}</span>
@@ -2710,7 +2734,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               </div>
 
               {/* ── Always-visible editable bills list ── */}
-              <div style={{ background: COLORS.card, borderRadius: 20, padding: 28, boxShadow: COLORS.shadowSm, marginBottom: 20 }}>
+              <div style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)", border: "1px solid rgba(255,255,255,0.88)", borderRadius: 20, padding: 28, boxShadow: "0 4px 24px rgba(0,0,0,0.06)", marginBottom: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                   <h3 style={{ fontSize: 16, fontWeight: FW.bold, color: COLORS.text }}>Bills This Month</h3>
                   <button onClick={() => setNewBillInline({ label: "", budget: "", dayOfMonth: "" })} style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(0,103,136,0.08)", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: FW.bold, color: COLORS.primary, cursor: "pointer" }}>
@@ -2733,7 +2757,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   const isEA = editingBillCell?.id === b.id && editingBillCell?.field === "budget";
                   const cellInp = { background: COLORS.containerLow, border: `1px solid ${COLORS.primary}`, borderRadius: 6, padding: "4px 8px", fontSize: 13, color: COLORS.text, outline: "none", width: "100%" };
                   return (
-                    <div key={b.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 80px 28px", gap: 8, padding: "10px 12px", borderRadius: 10, background: bPaidE ? COLORS.success + "08" : isOverdueE ? COLORS.danger + "06" : COLORS.containerLow + "60", marginBottom: 6, alignItems: "center", borderLeft: `3px solid ${bPaidE ? COLORS.success : isOverdueE ? COLORS.danger : "transparent"}` }}>
+                    <div key={b.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 80px 28px", gap: 8, padding: "10px 12px", borderRadius: 10, background: bPaidE ? "rgba(16,185,129,0.07)" : isOverdueE ? "rgba(248,113,113,0.07)" : "rgba(255,255,255,0.65)", marginBottom: 6, alignItems: "center", border: `1px solid ${bPaidE ? "rgba(16,185,129,0.18)" : isOverdueE ? "rgba(248,113,113,0.18)" : "rgba(255,255,255,0.80)"}` }}>
                       {/* Bill Name */}
                       {isEL ? <input autoFocus defaultValue={b.label} style={cellInp} onBlur={e => { setBills(p => p.map(x => x.id===b.id?{...x,label:e.target.value||x.label}:x)); setEditingBillCell(null); }} onKeyDown={e=>{ if(e.key==="Enter")e.target.blur(); if(e.key==="Escape")setEditingBillCell(null); }} />
                         : <span onClick={() => setEditingBillCell({id:b.id,field:"label"})} style={{ fontSize: 13, fontWeight: FW.semibold, color: COLORS.text, cursor: "text" }}>{b.label}</span>}
@@ -2771,7 +2795,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               </div>
 
               {/* ── Statements panel ── */}
-              <div style={{ background: COLORS.card, borderRadius: 20, padding: 28, boxShadow: COLORS.shadowSm }}>
+              <div style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(28px) saturate(180%)", WebkitBackdropFilter: "blur(28px) saturate(180%)", border: "1px solid rgba(255,255,255,0.88)", borderRadius: 20, padding: 28, boxShadow: "0 4px 24px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.95)" }}>
                 <h4 style={{ fontSize: 15, fontWeight: FW.bold, color: COLORS.text, marginBottom: 16 }}>Statements</h4>
                 {(() => {
                   const now2 = new Date(); now2.setHours(0,0,0,0);
@@ -2826,8 +2850,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               const isEAmt = editingBillCell?.id === b.id && editingBillCell?.field === "budget";
               const isEDate = editingBillCell?.id === b.id && editingBillCell?.field === "dueDate";
               return (
-                <div onClick={() => { setActiveBillDetail(null); setEditingBillCell(null); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <div onClick={e => e.stopPropagation()} style={{ background: COLORS.card, borderRadius: 20, padding: 32, minWidth: 320, boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+                <div onClick={() => { setActiveBillDetail(null); setEditingBillCell(null); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.30)", backdropFilter: "blur(12px) saturate(140%)", WebkitBackdropFilter: "blur(12px) saturate(140%)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div onClick={e => e.stopPropagation()} style={{ background: "rgba(255,255,255,0.90)", backdropFilter: "blur(40px) saturate(200%)", WebkitBackdropFilter: "blur(40px) saturate(200%)", border: "1px solid rgba(255,255,255,0.96)", borderRadius: 24, padding: 32, minWidth: 320, boxShadow: "0 32px 64px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,1)" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, alignItems: "flex-start" }}>
                       {isELabel
                         ? <input autoFocus defaultValue={b.label} style={{ ...popInpStyle, textAlign: "left", fontSize: 18, fontWeight: FW.extrabold, flex: 1, marginRight: 8 }} onBlur={e => { setBills(p => p.map(x => x.id === b.id ? {...x, label: e.target.value || x.label} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
@@ -2964,7 +2988,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     </div>
                   )}
                   {!s.hasData ? (
-                    <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 40, textAlign: "center" }}>
+                    <div style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(20px) saturate(160%)", WebkitBackdropFilter: "blur(20px) saturate(160%)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 16, padding: 40, textAlign: "center" }}>
                       <p style={{ fontSize: 32, marginBottom: 12 }}>📭</p>
                       <p style={{ fontWeight: FW.bold, color: COLORS.text, marginBottom: 6 }}>No data for {MONTH_FULL[month0]}</p>
                       <p style={{ color: COLORS.muted, fontSize: 13 }}>Switch to this month and use the + button to add entries,<br />or they'll appear here automatically.</p>
@@ -2979,7 +3003,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           { label: "Net", val: s.net, color: s.net >= 0 ? COLORS.success : COLORS.danger },
                           { label: "Savings Rate", val: s.inc > 0 ? `${Math.max(0,(s.net/s.inc*100)).toFixed(1)}%` : "—", color: COLORS.accentPurple, raw: true },
                         ].map(k => (
-                          <div key={k.label} style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "16px 16px 12px" }}>
+                          <div key={k.label} style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(20px) saturate(160%)", WebkitBackdropFilter: "blur(20px) saturate(160%)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 14, padding: "16px 16px 12px" }}>
                             <p style={{ fontSize: 10, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>{k.label}</p>
                             <p style={{ fontSize: 20, fontWeight: FW.extrabold, color: k.color }}>{k.raw ? k.val : fmt(k.val)}</p>
                             {prevS.hasData && !k.raw && (() => {
@@ -3001,7 +3025,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                               { label: "Net Worth", val: fmt(netWorth), color: netWorth >= 0 ? COLORS.success : COLORS.danger },
                               { label: "Debt-to-Income", val: debtToInc === "—" ? "—" : `${debtToInc}%`, color: parseFloat(debtToInc) > 200 ? COLORS.danger : parseFloat(debtToInc) > 100 ? COLORS.warning : COLORS.success },
                             ].map(k => (
-                              <div key={k.label} style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "14px 16px" }}>
+                              <div key={k.label} style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(20px) saturate(160%)", WebkitBackdropFilter: "blur(20px) saturate(160%)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 14, padding: "14px 16px" }}>
                                 <p style={{ fontSize: 10, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 5 }}>{k.label}</p>
                                 <p style={{ fontSize: 18, fontWeight: FW.extrabold, color: k.color }}>{k.val}</p>
                               </div>
@@ -3012,7 +3036,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       {/* Category breakdown */}
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 20 }}>
                         {/* Spending by Category */}
-                        <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
+                        <div style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(20px) saturate(160%)", WebkitBackdropFilter: "blur(20px) saturate(160%)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 16, padding: 20 }}>
                           <h4 style={{ fontWeight: FW.bold, fontSize: 14, marginBottom: 14 }}>Spending by Category</h4>
                           {CATEGORIES.filter(c => s.cats[c.id] > 0 || viewExpenseBudgets[c.id] > 0).sort((a,b) => (s.cats[b.id]||0)-(s.cats[a.id]||0)).map(c => {
                             const budget = viewExpenseBudgets[c.id] || 0;
@@ -3036,7 +3060,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           {CATEGORIES.every(c => s.cats[c.id] === 0) && <p style={{ color: COLORS.muted, fontSize: 13 }}>No expenses recorded.</p>}
                         </div>
                         {/* Debt Details */}
-                        <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
+                        <div style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(20px) saturate(160%)", WebkitBackdropFilter: "blur(20px) saturate(160%)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 16, padding: 20 }}>
                           <h4 style={{ fontWeight: FW.bold, fontSize: 14, marginBottom: 14 }}>Debt Details</h4>
                           {debts.length === 0 ? (
                             <p style={{ color: COLORS.muted, fontSize: 13 }}>No debts recorded.</p>
@@ -3067,7 +3091,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           )}
                         </div>
                         {/* 50/30/20 */}
-                        <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
+                        <div style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(20px) saturate(160%)", WebkitBackdropFilter: "blur(20px) saturate(160%)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 16, padding: 20 }}>
                           <h4 style={{ fontWeight: FW.bold, fontSize: 14, marginBottom: 14 }}>50 / 30 / 20</h4>
                           {(() => {
                             const debtMins = debts.reduce((s,d) => s+d.minPayment, 0);
@@ -3107,7 +3131,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       </div>
                       {/* Transactions list */}
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                        <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
+                        <div style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(20px) saturate(160%)", WebkitBackdropFilter: "blur(20px) saturate(160%)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 16, padding: 20 }}>
                           <h4 style={{ fontWeight: FW.bold, fontSize: 14, marginBottom: 12, color: COLORS.accent }}>Income ({snap.income.length})</h4>
                           {snap.income.length === 0 ? <p style={{ color: COLORS.muted, fontSize: 12 }}>None recorded</p> :
                             snap.income.map(i => (
@@ -3118,7 +3142,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                             ))
                           }
                         </div>
-                        <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
+                        <div style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(20px) saturate(160%)", WebkitBackdropFilter: "blur(20px) saturate(160%)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 16, padding: 20 }}>
                           <h4 style={{ fontWeight: FW.bold, fontSize: 14, marginBottom: 12, color: COLORS.accentWarm }}>Expenses ({snap.expenses.length})</h4>
                           {snap.expenses.length === 0 ? <p style={{ color: COLORS.muted, fontSize: 12 }}>None recorded</p> :
                             snap.expenses.slice().sort((a,b)=>b.amount-a.amount).map(e => (
@@ -3139,7 +3163,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               );
             })()}
             {/* Year-at-a-glance summary bar */}
-            <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 24, marginTop: 28 }}>
+            <div style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(20px) saturate(160%)", WebkitBackdropFilter: "blur(20px) saturate(160%)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 16, padding: 24, marginTop: 28 }}>
               <h4 style={{ fontWeight: FW.bold, fontSize: 15, marginBottom: 16 }}>Year-at-a-Glance</h4>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 18 }}>
                 {(() => {
