@@ -218,7 +218,7 @@ function CategoryCard({ name, spent, goal, color }) {
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <span style={{ fontSize: 12, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 1 }}>{name}</span>
-        <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: FW.bold, fontSize: 15, color: COLORS.text }}>{fmt(spent)}</span>
+        <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: FW.bold, fontSize: 15, color: COLORS.text }}>{fmt(spent)}</span>
       </div>
       {goal && (
         <>
@@ -247,7 +247,7 @@ function Modal({ title, onClose, children }) {
         boxShadow: COLORS.shadowLg,
       }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: S["3xl"] }}>
-          <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: FW.extrabold, color: COLORS.text, fontSize: FS["3xl"], margin: 0 }}>{title}</h2>
+          <h2 style={{ fontFamily: "'Figtree', sans-serif", fontWeight: FW.extrabold, color: COLORS.text, fontSize: FS["3xl"], margin: 0 }}>{title}</h2>
           <button onClick={onClose} style={{ background: COLORS.containerHigh, border: "none", color: COLORS.subtext, borderRadius: R.circle, width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: FS["2xl"], lineHeight: 1 }}>×</button>
         </div>
         {children}
@@ -267,13 +267,13 @@ function Field({ label, children }) {
 const inputStyle = {
   width: "100%", background: COLORS.containerLow, border: "none",
   borderRadius: R.xl, padding: `${S.lg}px ${S.xl}px`, color: COLORS.text, fontSize: FS.md,
-  fontFamily: "'Plus Jakarta Sans', sans-serif", outline: "none", boxSizing: "border-box",
+  fontFamily: "'Figtree', sans-serif", outline: "none", boxSizing: "border-box",
 };
 const selectStyle = { ...inputStyle, appearance: "none" };
 const btnPrimary = {
   width: "100%", background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`,
   color: "#fff", border: "none", borderRadius: R.xl, padding: `${S.lg}px`,
-  fontSize: FS.md, fontWeight: FW.bold, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif",
+  fontSize: FS.md, fontWeight: FW.bold, cursor: "pointer", fontFamily: "'Figtree', sans-serif",
 };
 // ── BudgetBar ─────────────────────────────────────────────────────────────────
 function BudgetBar({ totalIncome, totalPlanned, totalSpent }) {
@@ -329,7 +329,7 @@ function BudgetBar({ totalIncome, totalPlanned, totalSpent }) {
 function Toast({ info }) {
   if (!info) return null;
   return (
-    <div style={{ position: "fixed", bottom: 48, left: "50%", transform: "translateX(-50%)", background: "rgba(22,22,35,0.88)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", color: "#fff", borderRadius: R["4xl"], padding: `${S.md}px 22px`, fontSize: FS.base, fontWeight: FW.semibold, zIndex: 9999, display: "flex", alignItems: "center", gap: S.md, boxShadow: "0 8px 32px rgba(0,0,0,0.28)", animation: "toastSlideUp 0.2s ease", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <div style={{ position: "fixed", bottom: 48, left: "50%", transform: "translateX(-50%)", background: "rgba(22,22,35,0.88)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", color: "#fff", borderRadius: R["4xl"], padding: `${S.md}px 22px`, fontSize: FS.base, fontWeight: FW.semibold, zIndex: 9999, display: "flex", alignItems: "center", gap: S.md, boxShadow: "0 8px 32px rgba(0,0,0,0.28)", animation: "toastSlideUp 0.2s ease", fontFamily: "'Figtree', sans-serif" }}>
       <span style={{ fontSize: FS.lg }}>{info.icon}</span>{info.msg}
     </div>
   );
@@ -489,7 +489,7 @@ If date not visible, use today. If unsure of category, use Other.`
               <button onClick={() => { setStep("home"); setNlInput(""); setNlError(""); setUploadError(""); setPreviewItems([]); }}
                 style={{ background: COLORS.containerHigh, border: "none", color: COLORS.subtext, borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontSize: 14 }}>←</button>
             )}
-            <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: FW.extrabold, color: COLORS.text, fontSize: 20, margin: 0 }}>
+            <h2 style={{ fontFamily: "'Figtree', sans-serif", fontWeight: FW.extrabold, color: COLORS.text, fontSize: 20, margin: 0 }}>
               {step === "home" && "Add Transaction"}
               {step === "nl" && "Describe It"}
               {step === "upload" && "Upload Document"}
@@ -1470,143 +1470,252 @@ If the request doesn't map to a clear category goal, still return JSON with newG
     { id: "upload", label: "Upload Receipt" },
     { id: "advisor", label: "AI Advisor" },
   ];
+  const SplashStyles = () => (
+    <style>{`
+      @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Figtree:wght@400;500;600;700;800&display=swap');
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { background: radial-gradient(ellipse at 20% 20%, rgba(0,120,168,0.08) 0%, transparent 50%), radial-gradient(ellipse at 80% 80%, rgba(74,82,168,0.06) 0%, transparent 50%), #f0f4f7; background-attachment: fixed; }
+      button { transition: all 0.18s cubic-bezier(0.34,1.56,0.64,1); font-family: 'Figtree', sans-serif; }
+      button:hover { opacity: 0.9; } button:active { transform: scale(0.96); }
+      @keyframes fadeInUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes spin { to { transform: rotate(360deg) } }
+    `}</style>
+  );
   if (joinScreen) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", background: COLORS.bg, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-{/* fonts loaded in global style block */}
-        <div style={{ width: 56, height: 56, borderRadius: 16, background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.tertiary})`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
-          <span style={{ fontSize: 22, fontWeight: FW.black, color: "#fff" }}>RF</span>
-        </div>
-        <h2 style={{ fontSize: 24, fontWeight: FW.extrabold, color: COLORS.sidebarText, marginBottom: 4 }}>Welcome to FamilyFinance</h2>
-        <p style={{ fontSize: 14, color: COLORS.muted, marginBottom: 32 }}>Track your family budget together</p>
-        <div style={{ width: 360, maxWidth: "90vw" }}>
-          <button onClick={handleCreateHousehold} disabled={joinLoading} style={{ width: "100%", padding: "14px 20px", fontSize: 15, fontWeight: FW.bold, background: COLORS.primary, color: "#fff", border: "none", borderRadius: 12, cursor: "pointer", marginBottom: 24, opacity: joinLoading ? 0.6 : 1 }}>
-            Start Fresh Household
-          </button>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-            <div style={{ flex: 1, height: 1, background: COLORS.containerHigh }} />
-            <span style={{ fontSize: 12, color: COLORS.muted, fontWeight: FW.semibold }}>or join existing</span>
-            <div style={{ flex: 1, height: 1, background: COLORS.containerHigh }} />
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", fontFamily: "'Figtree', sans-serif", padding: 20 }}>
+        <SplashStyles />
+        <div style={{ animation: "fadeInUp 0.5s cubic-bezier(0.4,0,0.2,1)", width: "100%", maxWidth: 400, display: "flex", flexDirection: "column", alignItems: "center" }}>
+          {/* Logo */}
+          <div style={{ width: 72, height: 72, borderRadius: 24, background: `linear-gradient(140deg, ${COLORS.primary} 0%, #0095d2 50%, ${COLORS.tertiary} 100%)`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 24, boxShadow: `0 12px 36px rgba(0,120,168,0.35), inset 0 1px 0 rgba(255,255,255,0.25)` }}>
+            <span style={{ fontSize: 28, fontWeight: FW.black, color: "#fff", fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.02em" }}>RF</span>
           </div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-            <input value={joinCode} onChange={e => { setJoinCode(e.target.value.toUpperCase()); setJoinError(''); }} placeholder="e.g. RF-4829" maxLength={7} style={{ flex: 1, padding: "12px 14px", fontSize: 15, fontWeight: FW.semibold, letterSpacing: "0.05em", background: COLORS.inputBg, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.text, textAlign: "center", fontFamily: "'Plus Jakarta Sans', sans-serif" }} onKeyDown={e => { if (e.key === 'Enter') handleJoinHousehold(); }} />
-            <button onClick={handleJoinHousehold} disabled={joinLoading || !joinCode.trim()} style={{ padding: "12px 20px", fontSize: 14, fontWeight: FW.bold, background: COLORS.primary, color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", opacity: (joinLoading || !joinCode.trim()) ? 0.5 : 1 }}>
-              Join
+          <h2 style={{ fontSize: 32, fontWeight: FW.extrabold, color: COLORS.text, marginBottom: 8, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.035em", textAlign: "center" }}>Welcome to FamilyFinance</h2>
+          <p style={{ fontSize: 15, color: COLORS.subtext, marginBottom: 40, textAlign: "center", lineHeight: 1.5 }}>Your family's financial story, together.</p>
+
+          {/* Glass card */}
+          <div style={{ width: "100%", background: "rgba(255,255,255,0.72)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", border: "1px solid rgba(255,255,255,0.88)", borderRadius: 28, padding: "32px", boxShadow: "0 8px 40px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.95)" }}>
+            <button onClick={handleCreateHousehold} disabled={joinLoading} style={{ width: "100%", padding: "16px 20px", fontSize: 16, fontWeight: FW.bold, background: `linear-gradient(140deg, ${COLORS.primary} 0%, #0095d2 100%)`, color: "#fff", border: "none", borderRadius: 16, cursor: "pointer", marginBottom: 24, opacity: joinLoading ? 0.6 : 1, boxShadow: `0 8px 24px rgba(0,120,168,0.35)` }}>
+              🏠 Start Fresh Household
             </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+              <div style={{ flex: 1, height: 1, background: "rgba(0,0,0,0.08)" }} />
+              <span style={{ fontSize: 12, color: COLORS.muted, fontWeight: FW.semibold }}>or join existing</span>
+              <div style={{ flex: 1, height: 1, background: "rgba(0,0,0,0.08)" }} />
+            </div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <input value={joinCode} onChange={e => { setJoinCode(e.target.value.toUpperCase()); setJoinError(''); }} placeholder="e.g. RF-4829" maxLength={7} style={{ flex: 1, padding: "14px 16px", fontSize: 16, fontWeight: FW.semibold, letterSpacing: "0.08em", background: "rgba(0,120,168,0.06)", border: "1px solid rgba(0,120,168,0.14)", borderRadius: 14, color: COLORS.text, textAlign: "center", fontFamily: "'Figtree', sans-serif" }} onKeyDown={e => { if (e.key === 'Enter') handleJoinHousehold(); }} />
+              <button onClick={handleJoinHousehold} disabled={joinLoading || !joinCode.trim()} style={{ padding: "14px 22px", fontSize: 15, fontWeight: FW.bold, background: COLORS.primary, color: "#fff", border: "none", borderRadius: 14, cursor: "pointer", opacity: (joinLoading || !joinCode.trim()) ? 0.5 : 1 }}>
+                Join
+              </button>
+            </div>
+            {joinError && <p style={{ fontSize: 13, color: COLORS.danger, fontWeight: FW.semibold, marginTop: 6 }}>{joinError}</p>}
           </div>
-          {joinError && <p style={{ fontSize: 12, color: COLORS.danger, fontWeight: FW.semibold, marginTop: 4 }}>{joinError}</p>}
         </div>
       </div>
     );
   }
   if (firebaseLoading) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", background: COLORS.bg, fontFamily: "'Inter', sans-serif" }}>
-        <div style={{ width: 56, height: 56, borderRadius: 16, background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.tertiary})`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
-          <span style={{ fontSize: 22, fontWeight: FW.black, color: "#fff" }}>RF</span>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "'Figtree', sans-serif" }}>
+        <SplashStyles />
+        <div style={{ width: 64, height: 64, borderRadius: 22, background: `linear-gradient(140deg, ${COLORS.primary}, #0095d2, ${COLORS.tertiary})`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 24, boxShadow: `0 12px 36px rgba(0,120,168,0.35)` }}>
+          <span style={{ fontSize: 24, fontWeight: FW.black, color: "#fff", fontFamily: "'Bricolage Grotesque', sans-serif" }}>RF</span>
         </div>
-        <h2 style={{ fontSize: 20, fontWeight: FW.extrabold, color: COLORS.sidebarText, marginBottom: 8 }}>FamilyFinance</h2>
-        <div style={{ width: 32, height: 32, border: `3px solid ${COLORS.containerHigh}`, borderTopColor: COLORS.primary, borderRadius: "50%", animation: "spin 1s linear infinite", marginBottom: 12 }} />
-        <p style={{ fontSize: 14, color: COLORS.muted }}>Loading your budget…</p>
+        <h2 style={{ fontSize: 22, fontWeight: FW.extrabold, color: COLORS.text, marginBottom: 16, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em" }}>FamilyFinance</h2>
+        <div style={{ width: 28, height: 28, border: `2.5px solid rgba(0,120,168,0.15)`, borderTopColor: COLORS.primary, borderRadius: "50%", animation: "spin 0.9s linear infinite", marginBottom: 12 }} />
+        <p style={{ fontSize: 14, color: COLORS.muted, fontWeight: FW.medium }}>Loading your budget…</p>
       </div>
     );
   }
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: COLORS.bg, color: COLORS.text, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <div className="app-layout" style={{ display: "flex", height: "100vh", overflow: "hidden", background: "transparent", color: COLORS.text, fontFamily: "'Figtree', sans-serif" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Figtree:wght@300;400;500;600;700;800;900&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #dde4e6; border-radius: 4px; }
-        input, select, textarea { outline: none; font-family: 'Plus Jakarta Sans', sans-serif; }
-        input::placeholder, textarea::placeholder { color: #757c7e; }
+        html, body { height: 100%; }
+        body {
+          background:
+            radial-gradient(ellipse at 15% 15%, rgba(0,120,168,0.07) 0%, transparent 45%),
+            radial-gradient(ellipse at 85% 80%, rgba(74,82,168,0.05) 0%, transparent 45%),
+            radial-gradient(ellipse at 50% 50%, rgba(16,185,129,0.03) 0%, transparent 60%),
+            #f0f4f7;
+          background-attachment: fixed;
+        }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(0,120,168,0.18); border-radius: 99px; }
+        input, select, textarea { outline: none; font-family: 'Figtree', sans-serif; }
+        input::placeholder, textarea::placeholder { color: #94a3b0; }
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; font-family: 'Material Symbols Outlined'; }
-        .nav-item:hover { background: #f1f4f5 !important; opacity: 1 !important; }
-        .exp-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(79,97,116,0.1) !important; transition: all 0.2s ease !important; }
-        button { transition: all 0.18s ease; }
-        button:hover { opacity: 0.88; }
-        button:active { transform: scale(0.97); }
-        @keyframes toastSlideUp { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+        /* Glass surfaces */
+        .glass {
+          background: rgba(255,255,255,0.68);
+          backdrop-filter: blur(28px) saturate(180%);
+          -webkit-backdrop-filter: blur(28px) saturate(180%);
+          border: 1px solid rgba(255,255,255,0.82);
+          box-shadow: 0 4px 24px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.95);
+        }
+        .glass-strong {
+          background: rgba(255,255,255,0.80);
+          backdrop-filter: blur(40px) saturate(200%);
+          -webkit-backdrop-filter: blur(40px) saturate(200%);
+          border: 1px solid rgba(255,255,255,0.90);
+          box-shadow: 0 8px 40px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,1);
+        }
+        .glass-tinted {
+          background: rgba(0,120,168,0.07);
+          backdrop-filter: blur(20px) saturate(160%);
+          -webkit-backdrop-filter: blur(20px) saturate(160%);
+          border: 1px solid rgba(0,120,168,0.12);
+        }
+
+        /* Nav */
+        .nav-item:hover { background: rgba(0,120,168,0.07) !important; opacity: 1 !important; color: ${COLORS.primary} !important; }
+        .nav-item.active { background: rgba(0,120,168,0.12) !important; }
+
+        /* Cards */
+        .exp-card:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(0,0,0,0.10) !important; transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1) !important; }
+        .glass-card { transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.25s ease; }
+        .glass-card:hover { transform: translateY(-2px); box-shadow: 0 20px 48px rgba(0,0,0,0.10) !important; }
+
+        /* Buttons */
+        button { transition: all 0.18s cubic-bezier(0.34,1.56,0.64,1); }
+        button:hover { opacity: 0.9; }
+        button:active { transform: scale(0.96) !important; }
+
+        /* Typography */
+        .kpi-num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; letter-spacing: -0.03em; }
+        h1, h2, h3, h4 { font-family: 'Bricolage Grotesque', sans-serif; letter-spacing: -0.025em; }
+
+        /* Keyframes */
+        @keyframes toastSlideUp { from { opacity: 0; transform: translateX(-50%) translateY(16px) scale(0.96); } to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } }
         @keyframes spin { to { transform: rotate(360deg) } }
         @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-6px); } }
-        @keyframes pop-in { 0% { transform: scale(0); opacity: 0; } 80% { transform: scale(1.2); } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes pop-in { 0% { transform: scale(0.7); opacity: 0; } 80% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; } }
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
-        .cat-scroll { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; padding-bottom: 8px; }
+        @keyframes slideInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+
+        /* Scroll */
+        .cat-scroll { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; padding-bottom: 8px; }
         .cat-scroll::-webkit-scrollbar { display: none; }
         .cat-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-        /* Section 11: iOS/macOS refinements */
-        .kpi-num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; letter-spacing: -0.02em; }
-        .card { transition: box-shadow 0.2s ease, transform 0.2s ease; }
-        .card:hover { box-shadow: 0 16px 32px rgba(79,97,116,0.1) !important; }
-        h1, h2, h3 { letter-spacing: -0.02em; }
-        @media (max-width: 768px) {
+
+        /* Mobile responsive — stack layout for iPhone/iPad */
+        @media (max-width: 767px) {
+          .app-layout { flex-direction: column !important; }
+          .app-sidebar { display: none !important; }
+          .app-main { height: 100vh; }
           main { padding: 16px !important; }
-          header { padding: 14px 16px 12px !important; }
+          header { padding: 12px 16px 10px !important; gap: 12px !important; }
+          .header-search { display: none !important; }
+          .mobile-nav {
+            display: flex !important;
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+            background: rgba(255,255,255,0.82);
+            backdrop-filter: blur(32px) saturate(180%);
+            -webkit-backdrop-filter: blur(32px) saturate(180%);
+            border-top: 1px solid rgba(255,255,255,0.9);
+            padding: 10px 8px calc(10px + env(safe-area-inset-bottom));
+            gap: 0;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+          }
+          .mobile-nav-item {
+            flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+            padding: 8px 4px; border: none; background: transparent; cursor: pointer;
+            font-family: 'Figtree', sans-serif; font-size: 10px; font-weight: 500; color: #94a3b0;
+            border-radius: 12px; transition: all 0.2s ease;
+          }
+          .mobile-nav-item.active { color: #0078a8; }
+          .mobile-nav-item .material-symbols-outlined { font-size: 24px; }
+          main.has-mobile-nav { padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important; }
+          .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .bento-grid { grid-template-columns: 1fr !important; gap: 14px !important; }
+          .bento-grid > * { grid-column: span 1 !important; }
+          .comparison-strip { flex-wrap: wrap !important; }
+          .comparison-strip > * { flex: 1 1 calc(33% - 8px) !important; min-width: 100px; }
+        }
+        @media (min-width: 768px) {
+          .mobile-nav { display: none !important; }
+        }
+        @media (min-width: 768px) and (max-width: 1023px) {
+          .app-sidebar { width: 72px !important; }
+          .sidebar-label { display: none !important; }
+          .sidebar-family-name { display: none !important; }
+          header { padding: 16px 20px 14px !important; }
+          main { padding: 20px 20px !important; }
+          .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
         }
       `}</style>
 
-      {/* ── SIDEBAR — light, rounded-r-3xl ── */}
-      <aside style={{ width: sidebarCollapsed ? 64 : 288, background: COLORS.sidebarBg, display: "flex", flexDirection: "column", flexShrink: 0, height: "100vh", borderRadius: "0 24px 24px 0", transition: "width 0.2s ease", overflow: "hidden" }}>
+      {/* ── SIDEBAR — glass, rounded-r-3xl ── */}
+      <aside className="app-sidebar" style={{ width: sidebarCollapsed ? 72 : 280, background: "rgba(255,255,255,0.72)", backdropFilter: "blur(40px) saturate(200%)", WebkitBackdropFilter: "blur(40px) saturate(200%)", borderRight: "1px solid rgba(255,255,255,0.80)", display: "flex", flexDirection: "column", flexShrink: 0, height: "100vh", borderRadius: "0 28px 28px 0", transition: "width 0.25s cubic-bezier(0.4,0,0.2,1)", overflow: "hidden", boxShadow: "4px 0 24px rgba(0,0,0,0.05)" }}>
         {/* Family branding */}
-        <div style={{ padding: sidebarCollapsed ? "20px 0" : "24px 24px 40px", display: "flex", justifyContent: sidebarCollapsed ? "center" : "flex-start" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ width: 56, height: 56, borderRadius: "50%", background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: FW.extrabold, color: "#fff", flexShrink: 0, boxShadow: COLORS.shadowSm }}>
+        <div style={{ padding: sidebarCollapsed ? "22px 0 18px" : "28px 20px 32px", display: "flex", justifyContent: sidebarCollapsed ? "center" : "flex-start" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 52, height: 52, borderRadius: 18, background: `linear-gradient(140deg, ${COLORS.primary} 0%, #0095d2 50%, ${COLORS.tertiary} 100%)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, fontWeight: FW.extrabold, color: "#fff", flexShrink: 0, boxShadow: `0 6px 20px rgba(0,120,168,0.35), inset 0 1px 0 rgba(255,255,255,0.25)`, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.01em" }}>
               {familyName.split(" ").map(w => w[0]).join("").slice(0, 2)}
             </div>
-            {!sidebarCollapsed && <div><h1 style={{ fontSize: 20, fontWeight: FW.bold, color: COLORS.sidebarText, letterSpacing: "-0.02em", lineHeight: 1.2, whiteSpace: "nowrap" }}>{familyName}</h1>{saveStatus && (
-              <span style={{ fontSize: 11, fontWeight: FW.semibold, color: saveStatus === 'saving' ? COLORS.muted : saveStatus === 'saved' ? COLORS.success : COLORS.danger }}>
-                {saveStatus === 'saving' ? '⟳ Saving…' : saveStatus === 'saved' ? '✓ Saved' : '⚠ Not saved'}
-              </span>
-            )}</div>}
+            {!sidebarCollapsed && <div className="sidebar-family-name"><h1 style={{ fontSize: 17, fontWeight: FW.extrabold, color: COLORS.text, letterSpacing: "-0.03em", lineHeight: 1.15, whiteSpace: "nowrap", fontFamily: "'Bricolage Grotesque', sans-serif" }}>{familyName}</h1>
+              {saveStatus ? (
+                <span style={{ fontSize: 11, fontWeight: FW.semibold, color: saveStatus === 'saving' ? COLORS.muted : saveStatus === 'saved' ? COLORS.success : COLORS.danger }}>
+                  {saveStatus === 'saving' ? '⟳ Saving…' : saveStatus === 'saved' ? '✓ Saved' : '⚠ Not saved'}
+                </span>
+              ) : <span style={{ fontSize: 11, color: COLORS.muted }}>Family Finance</span>}
+            </div>}
           </div>
         </div>
         {/* Nav */}
-        <nav style={{ flex: 1, padding: sidebarCollapsed ? "0 8px" : "0 12px", display: "flex", flexDirection: "column", gap: 4 }}>
+        <nav style={{ flex: 1, padding: sidebarCollapsed ? "0 10px" : "0 10px", display: "flex", flexDirection: "column", gap: 2 }}>
           {[
-            { id: "dashboard",    label: "Overview",            icon: "dashboard" },
-            { id: "transactions", label: "Family Budget",        icon: "payments" },
-            { id: "weekly",       label: "Bill Calendar",        icon: "calendar_month" },
-            { id: "insights",     label: "Monthly Insights",     icon: "bar_chart" },
-            { id: "advisor",      label: "AI Assistant",         icon: "smart_toy" },
+            { id: "dashboard",    label: "Overview",        icon: "dashboard" },
+            { id: "transactions", label: "Family Budget",   icon: "payments" },
+            { id: "weekly",       label: "Bill Calendar",   icon: "calendar_month" },
+            { id: "insights",     label: "Monthly Insights",icon: "bar_chart" },
+            { id: "advisor",      label: "AI Assistant",    icon: "smart_toy" },
           ].map(item => (
-            <button key={item.id} className="nav-item" onClick={() => setTab(item.id)} title={sidebarCollapsed ? item.label : undefined} style={{
-              display: "flex", alignItems: "center", justifyContent: sidebarCollapsed ? "center" : "flex-start", gap: 12, padding: sidebarCollapsed ? "11px 0" : "11px 14px",
-              background: tab === item.id ? COLORS.sidebarActive : "transparent",
-              border: "none", borderRadius: 12,
-              color: tab === item.id ? "#ffffff" : COLORS.sidebarText,
-              fontSize: 14, fontWeight: FW.medium,
+            <button key={item.id} className={`nav-item${tab === item.id ? " active" : ""}`} onClick={() => setTab(item.id)} title={sidebarCollapsed ? item.label : undefined} style={{
+              display: "flex", alignItems: "center", justifyContent: sidebarCollapsed ? "center" : "flex-start", gap: 11, padding: sidebarCollapsed ? "12px 0" : "11px 14px",
+              background: tab === item.id ? `linear-gradient(135deg, rgba(0,120,168,0.13), rgba(74,82,168,0.08))` : "transparent",
+              border: "none", borderRadius: 14,
+              color: tab === item.id ? COLORS.primary : COLORS.subtext,
+              fontSize: 14, fontWeight: tab === item.id ? FW.semibold : FW.medium,
               cursor: "pointer", textAlign: "left", width: "100%",
-              opacity: tab === item.id ? 1 : 0.8,
-              transition: "all 0.15s",
+              transition: "all 0.2s ease",
             }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 20, color: "inherit", flexShrink: 0 }}>{item.icon}</span>
-              {!sidebarCollapsed && item.label}
+              <span className="material-symbols-outlined" style={{ fontSize: 21, color: "inherit", flexShrink: 0, fontVariationSettings: tab === item.id ? "'FILL' 1, 'wght' 500" : "'FILL' 0, 'wght' 300" }}>{item.icon}</span>
+              <span className="sidebar-label">{!sidebarCollapsed && item.label}</span>
             </button>
           ))}
         </nav>
         {/* Collapse toggle */}
-        <div style={{ padding: sidebarCollapsed ? "8px 0" : "8px 16px", display: "flex", justifyContent: sidebarCollapsed ? "center" : "flex-end" }}>
-          <button onClick={() => setSidebarCollapsed(p => !p)} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} style={{ background: "none", border: "none", cursor: "pointer", padding: 6, borderRadius: 8, color: COLORS.muted, display: "flex", alignItems: "center" }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>{sidebarCollapsed ? "chevron_right" : "chevron_left"}</span>
+        <div style={{ padding: sidebarCollapsed ? "8px 0" : "8px 10px", display: "flex", justifyContent: sidebarCollapsed ? "center" : "flex-end" }}>
+          <button onClick={() => setSidebarCollapsed(p => !p)} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} style={{ background: "rgba(0,0,0,0.04)", border: "none", cursor: "pointer", padding: "6px 8px", borderRadius: 10, color: COLORS.muted, display: "flex", alignItems: "center" }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>{sidebarCollapsed ? "chevron_right" : "chevron_left"}</span>
           </button>
         </div>
         {/* Add Transaction CTA */}
-        <div style={{ padding: sidebarCollapsed ? "12px 8px 28px" : "8px 16px 28px" }}>
+        <div style={{ padding: sidebarCollapsed ? "10px 10px 28px" : "8px 12px 28px" }}>
           <button onClick={() => setModal("addMenu")} title={sidebarCollapsed ? "Add Transaction" : undefined} style={{
-            width: "100%", background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`,
-            border: "none", borderRadius: 12, color: "#fff", fontSize: 14, fontWeight: FW.semibold,
-            padding: sidebarCollapsed ? "14px 0" : "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: sidebarCollapsed ? 0 : 8,
-            boxShadow: COLORS.shadow,
+            width: "100%",
+            background: `linear-gradient(140deg, ${COLORS.primary} 0%, #0095d2 50%, #0069a0 100%)`,
+            border: "none", borderRadius: 16, color: "#fff", fontSize: 14, fontWeight: FW.semibold,
+            padding: sidebarCollapsed ? "15px 0" : "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: sidebarCollapsed ? 0 : 8,
+            boxShadow: `0 8px 24px rgba(0,120,168,0.40), inset 0 1px 0 rgba(255,255,255,0.2)`,
           }}>
             <span className="material-symbols-outlined" style={{ fontSize: 20 }}>add</span>
-            {!sidebarCollapsed && "Add Transaction"}
+            {!sidebarCollapsed && <span className="sidebar-label">Add Transaction</span>}
           </button>
         </div>
       </aside>
 
       {/* ── MAIN COLUMN ── */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
+      <div className="app-main" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
         {/* TOP HEADER */}
-        <header style={{ background: COLORS.bg, padding: "20px 32px 16px", display: "flex", alignItems: "center", gap: 24, flexShrink: 0 }}>
+        <header style={{ background: "rgba(240,244,247,0.82)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", borderBottom: "1px solid rgba(255,255,255,0.75)", padding: "16px 32px 14px", display: "flex", alignItems: "center", gap: 20, flexShrink: 0, boxShadow: "0 2px 16px rgba(0,0,0,0.04)" }}>
           {/* Month picker */}
           <div style={{ position: "relative" }}>
             <button onClick={() => setShowMonthPicker(p => !p)} style={{ display: "flex", alignItems: "center", gap: 8, background: COLORS.card, border: "none", borderRadius: 10, padding: "9px 16px", fontSize: 14, fontWeight: FW.semibold, color: COLORS.text, cursor: "pointer", boxShadow: COLORS.shadowSm, flexShrink: 0 }}>
@@ -1635,7 +1744,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         background: isView ? `rgba(0,103,136,0.08)` : "transparent",
                         color: isView ? COLORS.primary : COLORS.text,
                         fontWeight: isView ? FW.bold : FW.medium, fontSize: 14, cursor: "pointer",
-                        fontFamily: "'Plus Jakarta Sans', sans-serif",
+                        fontFamily: "'Figtree', sans-serif",
                       }}>
                         <span>{MONTH_FULL[month0]} {year}{isCurrent ? " (now)" : ""}</span>
                         {hasData && <div style={{ width: 6, height: 6, borderRadius: "50%", background: COLORS.primary, flexShrink: 0 }} />}
@@ -1647,31 +1756,50 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             )}
           </div>
           {/* AI Search bar */}
-          <div style={{ flex: 1, maxWidth: 600, position: "relative" }}>
-            <span className="material-symbols-outlined" style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 20, color: COLORS.primary }}>smart_toy</span>
+          <div className="header-search" style={{ flex: 1, maxWidth: 560, position: "relative" }}>
+            <span className="material-symbols-outlined" style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 18, color: COLORS.primary }}>smart_toy</span>
             <input
               ref={headerInputRef}
-              placeholder="Ask AI Financial Assistant..."
-              style={{ width: "100%", background: COLORS.containerLow, border: `2px solid rgba(0,103,136,0.1)`, borderRadius: 9999, padding: "10px 48px 10px 44px", fontSize: 14, color: COLORS.text }}
+              placeholder="Ask your AI financial assistant…"
+              style={{ width: "100%", background: "rgba(255,255,255,0.70)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 9999, padding: "10px 44px 10px 42px", fontSize: 13.5, color: COLORS.text, boxShadow: "0 2px 12px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9)", fontWeight: FW.medium }}
               onKeyDown={e => { if (e.key === "Enter" && e.target.value.trim()) { setAdvisorMsg(e.target.value.trim()); pendingAdvisorSend.current = true; setTab("advisor"); e.target.value = ""; } }}
             />
-            <button onClick={() => { const v = headerInputRef.current?.value?.trim(); if (v) { setAdvisorMsg(v); pendingAdvisorSend.current = true; setTab("advisor"); headerInputRef.current.value = ""; } }} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 6, borderRadius: "50%" }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.primary }}>send</span>
+            <button onClick={() => { const v = headerInputRef.current?.value?.trim(); if (v) { setAdvisorMsg(v); pendingAdvisorSend.current = true; setTab("advisor"); headerInputRef.current.value = ""; } }} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: `linear-gradient(135deg, ${COLORS.primary}, #0095d2)`, border: "none", cursor: "pointer", padding: 6, borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,120,168,0.3)" }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 16, color: "#fff" }}>send</span>
             </button>
           </div>
           {/* Icons */}
-          <div style={{ display: "flex", gap: 14, alignItems: "center", marginLeft: "auto" }}>
-            <button onClick={() => setModal("notifications")} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, position: "relative" }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 24, color: COLORS.sidebarText }}>notifications</span>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", marginLeft: "auto" }}>
+            <button onClick={() => setModal("notifications")} style={{ background: "rgba(255,255,255,0.65)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 12, cursor: "pointer", padding: "7px", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.text }}>notifications</span>
               {billsDueIn7Days > 0 && (
-                <span style={{ position: "absolute", top: 0, right: 0, width: 16, height: 16, borderRadius: "50%", background: COLORS.danger, color: "#fff", fontSize: 9, fontWeight: FW.extrabold, display: "flex", alignItems: "center", justifyContent: "center" }}>{billsDueIn7Days}</span>
+                <span style={{ position: "absolute", top: 4, right: 4, width: 14, height: 14, borderRadius: "50%", background: COLORS.danger, color: "#fff", fontSize: 8, fontWeight: FW.extrabold, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid white" }}>{billsDueIn7Days}</span>
               )}
             </button>
-            <button onClick={() => setModal("settings")} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 24, color: COLORS.sidebarText }}>settings</span>
+            <button onClick={() => setModal("settings")} style={{ background: "rgba(255,255,255,0.65)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 12, cursor: "pointer", padding: "7px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.text }}>settings</span>
             </button>
           </div>
         </header>
+
+        {/* MOBILE BOTTOM NAV */}
+        <nav className="mobile-nav">
+          {[
+            { id: "dashboard",    label: "Home",     icon: "dashboard" },
+            { id: "transactions", label: "Budget",   icon: "payments" },
+            { id: "weekly",       label: "Bills",    icon: "calendar_month" },
+            { id: "insights",     label: "Insights", icon: "bar_chart" },
+            { id: "advisor",      label: "AI",       icon: "smart_toy" },
+          ].map(item => (
+            <button key={item.id} className={`mobile-nav-item${tab === item.id ? " active" : ""}`} onClick={() => setTab(item.id)}>
+              <span className="material-symbols-outlined" style={{ fontVariationSettings: tab === item.id ? "'FILL' 1, 'wght' 500" : "'FILL' 0, 'wght' 300" }}>{item.icon}</span>
+              {item.label}
+            </button>
+          ))}
+        </nav>
+
+        {/* Add button for mobile */}
+        <button className="mobile-fab" onClick={() => setModal("addMenu")} style={{ display: "none", position: "fixed", bottom: "calc(80px + env(safe-area-inset-bottom) + 12px)", right: 20, width: 52, height: 52, borderRadius: "50%", background: `linear-gradient(140deg, ${COLORS.primary}, #0095d2)`, border: "none", color: "#fff", fontSize: 26, cursor: "pointer", zIndex: 101, boxShadow: `0 8px 24px rgba(0,120,168,0.45)`, alignItems: "center", justifyContent: "center" }}>+</button>
 
         {/* SCROLLABLE CONTENT */}
         <main style={{ flex: 1, overflowY: "auto", padding: "24px 32px" }}>
@@ -1691,16 +1819,16 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               const paceLabel = diff > 25 ? `over pace 🔴` : diff > 10 ? `ahead of pace ⚠️` : `on pace ✓`;
               const { month0, year } = parseKey(viewMonthKey);
               return (
-                <div style={{ background: COLORS.card, borderRadius: 16, padding: "28px 28px 24px", boxShadow: COLORS.shadow, marginBottom: 24 }}>
+                <div className="glass-card" style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", border: "1px solid rgba(255,255,255,0.88)", borderRadius: 24, padding: "32px 32px 28px", boxShadow: "0 8px 40px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.95)", marginBottom: 20 }}>
                   {/* Header: title + income total */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
                     <div>
-                      <h2 style={{ fontSize: 22, fontWeight: FW.extrabold, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 4 }}>Show me the Money!</h2>
-                      <p style={{ fontSize: 13, color: COLORS.subtext }}>Your budget for {MONTH_FULL[month0]} {year}</p>
+                      <h2 style={{ fontSize: 28, fontWeight: FW.extrabold, color: COLORS.text, letterSpacing: "-0.035em", marginBottom: 4, fontFamily: "'Bricolage Grotesque', sans-serif", lineHeight: 1.1 }}>Show me the Money! 💰</h2>
+                      <p style={{ fontSize: 13.5, color: COLORS.subtext, fontWeight: FW.medium }}>Your budget for {MONTH_FULL[month0]} {year}</p>
                     </div>
-                    <div style={{ textAlign: "right" }}>
-                      <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.subtext, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Total Income</p>
-                      <p style={{ fontSize: 28, fontWeight: FW.extrabold, color: COLORS.primary, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{fmt(viewTotalIncome)}</p>
+                    <div style={{ textAlign: "right", background: "rgba(0,120,168,0.07)", borderRadius: 18, padding: "14px 20px", border: "1px solid rgba(0,120,168,0.08)" }}>
+                      <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.primary, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 5, opacity: 0.75 }}>Total Income</p>
+                      <p className="kpi-num" style={{ fontSize: 34, fontWeight: FW.extrabold, color: COLORS.primary, letterSpacing: "-0.03em", fontFamily: "'Bricolage Grotesque', sans-serif", lineHeight: 1 }}>{fmt(viewTotalIncome)}</p>
                     </div>
                   </div>
                   {/* Budget bar */}
@@ -1718,9 +1846,9 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         {fmt(viewTotalExpenses)} expenses · {fmt(billsActualTotal)} bills paid
                       </span>
                     </div>
-                    <div style={{ background: netCashFlow >= 0 ? "rgba(52,211,153,0.1)" : "rgba(248,113,113,0.1)", borderRadius: 12, padding: "10px 18px", textAlign: "center", flexShrink: 0 }}>
-                      <p style={{ fontSize: 9, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 2 }}>Net This Month</p>
-                      <p style={{ fontSize: 22, fontWeight: FW.black, color: netCashFlow >= 0 ? "#34D399" : "#F87171", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums", margin: 0 }}>
+                    <div style={{ background: netCashFlow >= 0 ? "rgba(52,211,153,0.12)" : "rgba(248,113,113,0.12)", borderRadius: 16, padding: "12px 20px", textAlign: "center", flexShrink: 0, border: `1px solid ${netCashFlow >= 0 ? "rgba(52,211,153,0.2)" : "rgba(248,113,113,0.2)"}` }}>
+                      <p style={{ fontSize: 9, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 3 }}>Net This Month</p>
+                      <p className="kpi-num" style={{ fontSize: 26, fontWeight: FW.black, color: netCashFlow >= 0 ? "#10b981" : "#F87171", letterSpacing: "-0.03em", fontFamily: "'Bricolage Grotesque', sans-serif", margin: 0 }}>
                         {netCashFlow >= 0 ? "+" : "−"}{fmt(Math.abs(netCashFlow))}
                       </p>
                     </div>
@@ -1740,7 +1868,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               const netDiff = prevS2.hasData ? (currInc - currExp) - prevS2.net : null;
               const { month0: pm2 } = parseKey(prevKey2);
               return (
-                <div style={{ display: "flex", alignItems: "center", gap: 0, background: COLORS.card, borderRadius: 12, marginBottom: 20, boxShadow: COLORS.shadowSm, overflow: "hidden" }}>
+                <div className="comparison-strip" style={{ display: "flex", alignItems: "center", gap: 0, background: "rgba(255,255,255,0.70)", backdropFilter: "blur(24px) saturate(160%)", WebkitBackdropFilter: "blur(24px) saturate(160%)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 20, marginBottom: 16, boxShadow: "0 4px 20px rgba(0,0,0,0.05)", overflow: "hidden" }}>
                   {prevS2.hasData ? [
                     { label: "vs " + MONTH_NAMES[pm2] + " Income", val: incDiff, icon: "trending_up", invert: false },
                     { label: "vs " + MONTH_NAMES[pm2] + " Expenses", val: expDiff, icon: "receipt_long", invert: true },
@@ -1777,15 +1905,15 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 { label: "Debt-to-Income", val: `${dti}%`, color: dti > 200 ? COLORS.danger : dti > 100 ? COLORS.warning : COLORS.success, icon: "percent" },
               ];
               return (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
+                <div className="kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
                   {kwCards.map(k => (
-                    <div key={k.label} style={{ background: COLORS.card, borderRadius: 12, padding: "16px 20px", boxShadow: COLORS.shadowSm, display: "flex", alignItems: "center", gap: 12 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 10, background: k.color + "18", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 20, color: k.color }}>{k.icon}</span>
+                    <div key={k.label} className="glass-card" style={{ background: "rgba(255,255,255,0.68)", backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 20, padding: "18px 18px 16px", boxShadow: "0 4px 20px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.95)", display: "flex", flexDirection: "column", gap: 10 }}>
+                      <div style={{ width: 38, height: 38, borderRadius: 12, background: k.color + "1a", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: `1px solid ${k.color}22` }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 20, color: k.color, fontVariationSettings: "'FILL' 1, 'wght' 400" }}>{k.icon}</span>
                       </div>
                       <div>
-                        <p style={{ fontSize: 10, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 2 }}>{k.label}</p>
-                        <p style={{ fontSize: 18, fontWeight: FW.extrabold, color: k.color }}>{k.val}</p>
+                        <p style={{ fontSize: 10, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4, fontWeight: FW.semibold }}>{k.label}</p>
+                        <p className="kpi-num" style={{ fontSize: 20, fontWeight: FW.extrabold, color: k.color, fontFamily: "'Bricolage Grotesque', sans-serif" }}>{k.val}</p>
                       </div>
                     </div>
                   ))}
@@ -1793,7 +1921,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               );
             })()}
             {/* Bento grid — 12 columns */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 28, paddingBottom: 48 }}>
+            <div className="bento-grid" style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 20, paddingBottom: 64 }}>
               {/* ── ROW 1, COL 1–4: Next Bill Due (cycling carousel) ── */}
               {(() => {
                 const carouselBills = unpaidSorted;
@@ -1802,7 +1930,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 const carouselBill = hasBills ? carouselBills[safeBillIdx] : null;
                 const carouselDaysUntil = carouselBill ? Math.round((carouselBill._due.getTime() - today0.getTime()) / 86400000) : null;
                 return (
-                  <div style={{ gridColumn: "span 4", background: COLORS.secondaryContainer, borderRadius: 12, padding: "28px", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 320, position: "relative" }}>
+                  <div style={{ gridColumn: "span 4", background: `linear-gradient(145deg, rgba(0,120,168,0.12) 0%, rgba(0,149,210,0.09) 50%, rgba(74,82,168,0.08) 100%)`, backdropFilter: "blur(24px) saturate(160%)", WebkitBackdropFilter: "blur(24px) saturate(160%)", border: "1px solid rgba(0,120,168,0.15)", borderRadius: 24, padding: "28px", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 320, position: "relative", boxShadow: "0 8px 32px rgba(0,120,168,0.10), inset 0 1px 0 rgba(255,255,255,0.6)" }}>
                     {/* Arrow buttons */}
                     {hasBills && carouselBills.length > 1 && (
                       <>
@@ -1865,7 +1993,10 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               })()}
 
               {/* ── ROW 1, COL 5–12: Cash Flow Summary ── */}
-              <div style={{ gridColumn: "span 8", position: "relative", overflow: "hidden", background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, borderRadius: 12, padding: "40px", color: "#fff", boxShadow: COLORS.shadow, minHeight: 320 }}>
+              <div style={{ gridColumn: "span 8", position: "relative", overflow: "hidden", background: `linear-gradient(145deg, #0078a8 0%, #0095d2 40%, #0069a0 75%, #2e347a 100%)`, borderRadius: 24, padding: "36px 40px", color: "#fff", boxShadow: "0 16px 48px rgba(0,120,168,0.35), 0 4px 16px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.2)", minHeight: 320 }}>
+                {/* Decorative glass orbs */}
+                <div style={{ position: "absolute", top: -40, right: -40, width: 200, height: 200, borderRadius: "50%", background: "rgba(255,255,255,0.06)", pointerEvents: "none" }} />
+                <div style={{ position: "absolute", bottom: -20, left: 60, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,0.04)", pointerEvents: "none" }} />
                 <div style={{ position: "relative", zIndex: 1, height: "100%", display: "flex", flexDirection: "column" }}>
                   <p style={{ fontSize: 11, fontWeight: FW.bold, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.8)", marginBottom: 28 }}>Cash Flow Summary</p>
                   <div style={{ display: "flex", flexDirection: "column", gap: 20, flex: 1 }}>
@@ -1894,13 +2025,13 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               </div>
 
               {/* ── ROW 2: Spending by Category (horizontally scrollable) ── */}
-              <div style={{ gridColumn: "span 12", background: COLORS.containerLow, borderRadius: 12, padding: "32px", position: "relative" }}>
+              <div style={{ gridColumn: "span 12", background: "rgba(255,255,255,0.55)", backdropFilter: "blur(20px) saturate(160%)", WebkitBackdropFilter: "blur(20px) saturate(160%)", border: "1px solid rgba(255,255,255,0.75)", borderRadius: 24, padding: "28px 28px 24px", position: "relative", boxShadow: "0 4px 24px rgba(0,0,0,0.05)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
                   <div>
-                    <h4 style={{ fontSize: 20, fontWeight: FW.bold, color: COLORS.text, marginBottom: 4 }}>Spending by Category</h4>
-                    <p style={{ fontSize: 13, color: COLORS.subtext }}>Track where our money goes — scroll to see all categories</p>
+                    <h4 style={{ fontSize: 20, fontWeight: FW.extrabold, color: COLORS.text, marginBottom: 4, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.025em" }}>Spending by Category</h4>
+                    <p style={{ fontSize: 13, color: COLORS.subtext }}>Track where your money goes · scroll to see all</p>
                   </div>
-                  <button onClick={() => setTab("transactions")} style={{ background: COLORS.card, border: "none", borderRadius: 9999, padding: "8px 18px", fontSize: 13, fontWeight: FW.bold, color: COLORS.primary, cursor: "pointer", boxShadow: COLORS.shadowSm }}>
+                  <button onClick={() => setTab("transactions")} style={{ background: "rgba(0,120,168,0.10)", border: "1px solid rgba(0,120,168,0.12)", borderRadius: 9999, padding: "8px 18px", fontSize: 13, fontWeight: FW.semibold, color: COLORS.primary, cursor: "pointer" }}>
                     View Budget →
                   </button>
                 </div>
@@ -1928,7 +2059,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         const barColor = isOver ? "#F87171" : COLORS.primary;
                         const topExpense = [...viewExpenses].filter(e => e.category === cat).sort((a, b) => b.amount - a.amount)[0];
                         return (
-                          <div key={cat} className="exp-card" style={{ flexShrink: 0, width: 200, scrollSnapAlign: "start", background: COLORS.card, borderRadius: 14, padding: "18px", boxShadow: COLORS.shadowSm, border: isOver ? `1.5px solid #F87171` : `1.5px solid transparent`, cursor: "default" }}>
+                          <div key={cat} className="exp-card" style={{ flexShrink: 0, width: 200, scrollSnapAlign: "start", background: "rgba(255,255,255,0.80)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderRadius: 20, padding: "18px", boxShadow: isOver ? `0 4px 20px rgba(248,113,113,0.20)` : "0 4px 16px rgba(0,0,0,0.06)", border: isOver ? `1.5px solid rgba(248,113,113,0.35)` : `1px solid rgba(255,255,255,0.90)`, cursor: "default" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                               <div style={{ width: 40, height: 40, borderRadius: 12, background: CATEGORY_ICON_BG[cat] || COLORS.neutral, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                                 <span className="material-symbols-outlined" style={{ fontSize: 20, color: CATEGORY_ICON_COLOR[cat] || COLORS.subtext }}>{CATEGORY_ICONS[cat] || "category"}</span>
@@ -1964,55 +2095,53 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 const label = goal ? goal.label.toLowerCase() : "";
                 const goalIcon = label.includes("holiday") || label.includes("travel") || label.includes("trip") || label.includes("vacation") ? "flight" : label.includes("house") || label.includes("home") ? "home" : label.includes("car") || label.includes("vehicle") ? "directions_car" : label.includes("school") || label.includes("college") || label.includes("education") ? "school" : "savings";
                 return (
-                  <div style={{ gridColumn: "span 6", background: "rgba(186,191,255,0.3)", borderRadius: 12, padding: "32px", position: "relative", overflow: "hidden" }}>
+                  <div style={{ gridColumn: "span 6", background: `linear-gradient(145deg, rgba(74,82,168,0.10) 0%, rgba(168,174,255,0.14) 50%, rgba(74,82,168,0.08) 100%)`, backdropFilter: "blur(24px) saturate(150%)", WebkitBackdropFilter: "blur(24px) saturate(150%)", border: "1px solid rgba(168,174,255,0.30)", borderRadius: 24, padding: "32px", position: "relative", overflow: "hidden", boxShadow: "0 8px 32px rgba(74,82,168,0.12), inset 0 1px 0 rgba(255,255,255,0.5)" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
                       <div>
-                        <h4 style={{ fontSize: 22, fontWeight: FW.bold, color: COLORS.onTertiaryContainer, marginBottom: 4 }}>
-                          Shared Goal: {goal ? goal.label : "Savings Goal"}
+                        <h4 style={{ fontSize: 22, fontWeight: FW.extrabold, color: COLORS.text, marginBottom: 4, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.025em" }}>
+                          🎯 {goal ? goal.label : "Savings Goal"}
                         </h4>
-                        <p style={{ fontSize: 13, color: `${COLORS.onTertiaryContainer}b3` }}>Saving for the family's future</p>
+                        <p style={{ fontSize: 13, color: COLORS.subtext }}>Saving for the family's future</p>
                       </div>
-                      <span className="material-symbols-outlined" style={{ fontSize: 44, color: COLORS.onTertiaryContainer, opacity: 0.4 }}>{goalIcon}</span>
+                      <span className="material-symbols-outlined" style={{ fontSize: 40, color: COLORS.tertiary, opacity: 0.35, fontVariationSettings: "'FILL' 1" }}>{goalIcon}</span>
                     </div>
                     <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 8 }}>
-                      <span style={{ fontSize: 44, fontWeight: FW.black, color: COLORS.onTertiaryContainer, letterSpacing: "-0.02em" }}>{fmt(goal ? goal.actual : 0)}</span>
-                      <span style={{ fontSize: 14, fontWeight: FW.semibold, color: `${COLORS.onTertiaryContainer}99` }}>/ {fmt(goal ? goal.expected : 0)}</span>
+                      <span className="kpi-num" style={{ fontSize: 44, fontWeight: FW.black, color: COLORS.tertiary, letterSpacing: "-0.03em", fontFamily: "'Bricolage Grotesque', sans-serif" }}>{fmt(goal ? goal.actual : 0)}</span>
+                      <span style={{ fontSize: 14, fontWeight: FW.semibold, color: COLORS.subtext }}>/ {fmt(goal ? goal.expected : 0)}</span>
                     </div>
-                    <div style={{ width: "100%", height: 24, background: "rgba(255,255,255,0.5)", borderRadius: 9999, overflow: "hidden", marginBottom: 12 }}>
-                      <div style={{ width: `${goalPct}%`, height: "100%", background: COLORS.primary, borderRadius: 9999, transition: "width 0.4s" }} />
+                    <div style={{ width: "100%", height: 10, background: "rgba(74,82,168,0.10)", borderRadius: 9999, overflow: "hidden", marginBottom: 12 }}>
+                      <div style={{ width: `${goalPct}%`, height: "100%", background: `linear-gradient(90deg, ${COLORS.tertiary}, #818cf8)`, borderRadius: 9999, transition: "width 0.5s cubic-bezier(0.4,0,0.2,1)" }} />
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: FW.bold, color: COLORS.onTertiaryContainer, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: FW.semibold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                       <span>Just Started</span>
-                      <span style={{ fontSize: 14 }}>{Math.round(goalPct)}% Saved!</span>
+                      <span style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.tertiary }}>{Math.round(goalPct)}% Saved!</span>
                       <span>Goal Reached</span>
                     </div>
-                    <div style={{ position: "absolute", right: -20, top: "50%", transform: "translateY(-50%)", width: 120, height: 120, background: "rgba(255,255,255,0.15)", borderRadius: "50%", filter: "blur(30px)" }} />
                   </div>
                 );
               })()}
 
               {/* ── ROW 3, COL 7–12: Savings & Investments ── */}
-              <div style={{ gridColumn: "span 6", background: "rgba(97,205,253,0.2)", borderRadius: 12, padding: "32px", position: "relative", overflow: "hidden" }}>
+              <div style={{ gridColumn: "span 6", background: `linear-gradient(145deg, rgba(0,120,168,0.09) 0%, rgba(0,149,210,0.12) 50%, rgba(13,148,136,0.08) 100%)`, backdropFilter: "blur(24px) saturate(150%)", WebkitBackdropFilter: "blur(24px) saturate(150%)", border: "1px solid rgba(0,149,210,0.20)", borderRadius: 24, padding: "32px", position: "relative", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,120,168,0.10), inset 0 1px 0 rgba(255,255,255,0.55)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
                   <div>
-                    <h4 style={{ fontSize: 22, fontWeight: FW.bold, color: COLORS.onSecondaryContainer, marginBottom: 4 }}>Savings &amp; Investments</h4>
-                    <p style={{ fontSize: 13, color: `${COLORS.onSecondaryContainer}b3` }}>Monthly wealth building target</p>
+                    <h4 style={{ fontSize: 22, fontWeight: FW.extrabold, color: COLORS.text, marginBottom: 4, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.025em" }}>Savings &amp; Investments</h4>
+                    <p style={{ fontSize: 13, color: COLORS.subtext }}>Monthly wealth building target</p>
                   </div>
-                  <span className="material-symbols-outlined" style={{ fontSize: 44, color: COLORS.primary, opacity: 0.4 }}>show_chart</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 40, color: COLORS.primary, opacity: 0.35, fontVariationSettings: "'FILL' 1" }}>show_chart</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 8 }}>
-                  <span style={{ fontSize: 44, fontWeight: FW.black, color: COLORS.onSecondaryContainer, letterSpacing: "-0.02em" }}>{fmt(savingsActualTotal)}</span>
-                  <span style={{ fontSize: 14, fontWeight: FW.semibold, color: `${COLORS.onSecondaryContainer}99` }}>/ {fmt(savingsExpectedTotal)}</span>
+                  <span className="kpi-num" style={{ fontSize: 44, fontWeight: FW.black, color: COLORS.primary, letterSpacing: "-0.03em", fontFamily: "'Bricolage Grotesque', sans-serif" }}>{fmt(savingsActualTotal)}</span>
+                  <span style={{ fontSize: 14, fontWeight: FW.semibold, color: COLORS.subtext }}>/ {fmt(savingsExpectedTotal)}</span>
                 </div>
-                <div style={{ width: "100%", height: 24, background: "rgba(255,255,255,0.5)", borderRadius: 9999, overflow: "hidden", marginBottom: 12 }}>
-                  <div style={{ width: `${pct(savingsActualTotal, savingsExpectedTotal || 1)}%`, height: "100%", background: COLORS.primary, borderRadius: 9999, transition: "width 0.4s" }} />
+                <div style={{ width: "100%", height: 10, background: "rgba(0,120,168,0.10)", borderRadius: 9999, overflow: "hidden", marginBottom: 12 }}>
+                  <div style={{ width: `${pct(savingsActualTotal, savingsExpectedTotal || 1)}%`, height: "100%", background: `linear-gradient(90deg, ${COLORS.primary}, #0095d2)`, borderRadius: 9999, transition: "width 0.5s cubic-bezier(0.4,0,0.2,1)" }} />
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: FW.bold, color: COLORS.onSecondaryContainer, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: FW.semibold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   <span>Base</span>
-                  <span style={{ fontSize: 14 }}>{Math.round(pct(savingsActualTotal, savingsExpectedTotal || 1))}% of Target</span>
+                  <span style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.primary }}>{Math.round(pct(savingsActualTotal, savingsExpectedTotal || 1))}% of Target</span>
                   <span>Maxed Out</span>
                 </div>
-                <div style={{ position: "absolute", right: -20, top: "50%", transform: "translateY(-50%)", width: 120, height: 120, background: "rgba(255,255,255,0.2)", borderRadius: "50%", filter: "blur(30px)" }} />
               </div>
             </div>{/* end bento grid */}
           </div>
@@ -3078,7 +3207,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     <button key={chip.label} onClick={() => { setAdvisorMsg(chip.label); handleAdvisor(chip.label); }} style={{
                       display: "flex", alignItems: "center", gap: 8, padding: "10px 16px",
                       background: chip.bg, border: "none", borderRadius: 9999, cursor: "pointer",
-                      fontSize: 13, fontWeight: FW.semibold, color: chip.color, fontFamily: "'Plus Jakarta Sans', sans-serif",
+                      fontSize: 13, fontWeight: FW.semibold, color: chip.color, fontFamily: "'Figtree', sans-serif",
                     }}>
                       <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{chip.icon}</span>
                       {chip.label}
@@ -3133,7 +3262,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     <button key={chip.label} onClick={() => { setAdvisorMsg(chip.label); handleAdvisor(chip.label); }} style={{
                       display: "flex", alignItems: "center", gap: 8, padding: "8px 14px",
                       background: COLORS.containerHighest, border: "none", borderRadius: 9999, cursor: "pointer",
-                      fontSize: 12, fontWeight: FW.semibold, color: COLORS.text, fontFamily: "'Plus Jakarta Sans', sans-serif",
+                      fontSize: 12, fontWeight: FW.semibold, color: COLORS.text, fontFamily: "'Figtree', sans-serif",
                     }}>
                       <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{chip.icon}</span>
                       {chip.label}
@@ -3156,7 +3285,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   onChange={e => setAdvisorMsg(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAdvisor(); } }}
                   placeholder="Ask about your finances, goals, or spending..."
-                  style={{ flex: 1, background: "transparent", border: "none", fontSize: 14, color: COLORS.text, outline: "none", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                  style={{ flex: 1, background: "transparent", border: "none", fontSize: 14, color: COLORS.text, outline: "none", fontFamily: "'Figtree', sans-serif" }}
                 />
                 <input ref={advisorFileRef} type="file" accept="image/*,.pdf" style={{ display: "none" }} onChange={e => setAdvisorFile(e.target.files[0])} />
                 <button onClick={() => advisorFileRef.current?.click()} style={{ width: 40, height: 40, borderRadius: "50%", background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
