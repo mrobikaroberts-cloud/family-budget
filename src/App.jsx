@@ -63,6 +63,8 @@ const FS = { "2xs": 9, xs: 11, sm: 12, base: 13, md: 14, lg: 15, xl: 16, "2xl": 
 const R = { xs: 4, sm: 6, md: 8, lg: 10, xl: 12, "2xl": 14, "3xl": 16, "4xl": 20, "5xl": 24, pill: 9999, circle: "50%" };
 // ── Spacing scale (margin / padding / gap) ────────────────────────────────────
 const S = { "2xs": 2, xs: 4, sm: 6, md: 8, lg: 12, xl: 16, "2xl": 20, "3xl": 24, "4xl": 28, "5xl": 32 };
+// ── Font-weight scale ─────────────────────────────────────────────────────────
+const FW = { normal: 400, medium: 500, semibold: 600, bold: 700, extrabold: 800, black: 900 };
 // ── Chart palettes ────────────────────────────────────────────────────────────
 // Per-category data-viz colors — brand-anchored (teal / indigo / warm axis)
 const CAT_CHART_COLOR = {
@@ -104,9 +106,9 @@ const renderMd = (text) => {
     if (line.startsWith("- ") || line.startsWith("• ")) {
       listItems.push(<li key={i} style={{ fontSize: 14, lineHeight: 1.65, marginBottom: 2 }} dangerouslySetInnerHTML={{ __html: inlineHtml(line.slice(2)) }} />);
     } else if (line.startsWith("### ")) {
-      flushList(); out.push(<p key={i} style={{ fontWeight: 700, fontSize: 14, margin: "10px 0 4px" }} dangerouslySetInnerHTML={{ __html: inlineHtml(line.slice(4)) }} />);
+      flushList(); out.push(<p key={i} style={{ fontWeight: FW.bold, fontSize: 14, margin: "10px 0 4px" }} dangerouslySetInnerHTML={{ __html: inlineHtml(line.slice(4)) }} />);
     } else if (line.startsWith("## ")) {
-      flushList(); out.push(<p key={i} style={{ fontWeight: 800, fontSize: 15, margin: "12px 0 4px" }} dangerouslySetInnerHTML={{ __html: inlineHtml(line.slice(3)) }} />);
+      flushList(); out.push(<p key={i} style={{ fontWeight: FW.extrabold, fontSize: 15, margin: "12px 0 4px" }} dangerouslySetInnerHTML={{ __html: inlineHtml(line.slice(3)) }} />);
     } else if (line.trim() === "") {
       flushList(); out.push(<br key={i} />);
     } else {
@@ -216,7 +218,7 @@ function CategoryCard({ name, spent, goal, color }) {
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <span style={{ fontSize: 12, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 1 }}>{name}</span>
-        <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 15, color: COLORS.text }}>{fmt(spent)}</span>
+        <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: FW.bold, fontSize: 15, color: COLORS.text }}>{fmt(spent)}</span>
       </div>
       {goal && (
         <>
@@ -245,7 +247,7 @@ function Modal({ title, onClose, children }) {
         boxShadow: COLORS.shadowLg,
       }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: S["3xl"] }}>
-          <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, color: COLORS.text, fontSize: FS["3xl"], margin: 0 }}>{title}</h2>
+          <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: FW.extrabold, color: COLORS.text, fontSize: FS["3xl"], margin: 0 }}>{title}</h2>
           <button onClick={onClose} style={{ background: COLORS.containerHigh, border: "none", color: COLORS.subtext, borderRadius: R.circle, width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: FS["2xl"], lineHeight: 1 }}>×</button>
         </div>
         {children}
@@ -257,7 +259,7 @@ function Modal({ title, onClose, children }) {
 function Field({ label, children }) {
   return (
     <div style={{ marginBottom: S.xl }}>
-      <label style={{ display: "block", fontSize: FS.xs, color: COLORS.subtext, marginBottom: S.sm, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700 }}>{label}</label>
+      <label style={{ display: "block", fontSize: FS.xs, color: COLORS.subtext, marginBottom: S.sm, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: FW.bold }}>{label}</label>
       {children}
     </div>
   );
@@ -271,7 +273,7 @@ const selectStyle = { ...inputStyle, appearance: "none" };
 const btnPrimary = {
   width: "100%", background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`,
   color: "#fff", border: "none", borderRadius: R.xl, padding: `${S.lg}px`,
-  fontSize: FS.md, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif",
+  fontSize: FS.md, fontWeight: FW.bold, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif",
 };
 // ── BudgetBar ─────────────────────────────────────────────────────────────────
 function BudgetBar({ totalIncome, totalPlanned, totalSpent }) {
@@ -293,8 +295,8 @@ function BudgetBar({ totalIncome, totalPlanned, totalSpent }) {
   return (
     <div style={{ marginBottom: S.xs }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: S.md }}>
-        <span style={{ fontSize: FS.sm, fontWeight: 700, color: COLORS.subtext }}>Budget Status</span>
-        <span style={{ fontSize: FS.sm, fontWeight: 700, background: pillBg, color: pillColor, borderRadius: R.pill, padding: `3px ${S.lg}px`, letterSpacing: "-0.01em" }}>{pillText}</span>
+        <span style={{ fontSize: FS.sm, fontWeight: FW.bold, color: COLORS.subtext }}>Budget Status</span>
+        <span style={{ fontSize: FS.sm, fontWeight: FW.bold, background: pillBg, color: pillColor, borderRadius: R.pill, padding: `3px ${S.lg}px`, letterSpacing: "-0.01em" }}>{pillText}</span>
       </div>
       <div style={{ position: "relative", height: 28, background: COLORS.containerLow, borderRadius: R.xl, overflow: "hidden", border: `1.5px solid ${borderColor}`, boxShadow: isOverPlanned ? `0 0 10px ${COLORS.dangerFill}30` : "none" }}>
         {/* Planned fill */}
@@ -303,8 +305,8 @@ function BudgetBar({ totalIncome, totalPlanned, totalSpent }) {
         <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${spentPct}%`, background: spentColor, transition: "width 0.5s ease", borderRadius: `${R.lg}px 0 0 ${R.lg}px` }} />
         {/* Inline labels */}
         <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: `0 ${S.lg}px`, pointerEvents: "none" }}>
-          <span style={{ fontSize: FS.xs, fontWeight: 700, color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.4)", whiteSpace: "nowrap" }}>Spent {fmt(totalSpent)}</span>
-          <span style={{ fontSize: FS.xs, fontWeight: 700, color: COLORS.subtext, whiteSpace: "nowrap" }}>Income {fmt(totalIncome)}</span>
+          <span style={{ fontSize: FS.xs, fontWeight: FW.bold, color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.4)", whiteSpace: "nowrap" }}>Spent {fmt(totalSpent)}</span>
+          <span style={{ fontSize: FS.xs, fontWeight: FW.bold, color: COLORS.subtext, whiteSpace: "nowrap" }}>Income {fmt(totalIncome)}</span>
         </div>
       </div>
       <div style={{ display: "flex", gap: 14, marginTop: S.sm, flexWrap: "wrap" }}>
@@ -316,9 +318,9 @@ function BudgetBar({ totalIncome, totalPlanned, totalSpent }) {
             <span style={{ width: 8, height: 8, borderRadius: R.xs, background: l.color, flexShrink: 0, display: "inline-block" }} />{l.label}
           </span>
         ))}
-        {isOverPlanned && <span style={{ fontSize: FS.xs, color: COLORS.dangerFill, fontWeight: 700, marginLeft: "auto" }}>⚠ Over by {fmt(overBy)}</span>}
-        {isOverIncome && <span style={{ fontSize: FS.xs, color: COLORS.dangerFill, fontWeight: 700, marginLeft: "auto" }}>Overspent by {fmt(totalSpent - totalIncome)}</span>}
-        {isOverBudget && !isOverIncome && <span style={{ fontSize: FS.xs, color: COLORS.warningFill, fontWeight: 700, marginLeft: "auto" }}>Over budget by {fmt(totalSpent - totalPlanned)}</span>}
+        {isOverPlanned && <span style={{ fontSize: FS.xs, color: COLORS.dangerFill, fontWeight: FW.bold, marginLeft: "auto" }}>⚠ Over by {fmt(overBy)}</span>}
+        {isOverIncome && <span style={{ fontSize: FS.xs, color: COLORS.dangerFill, fontWeight: FW.bold, marginLeft: "auto" }}>Overspent by {fmt(totalSpent - totalIncome)}</span>}
+        {isOverBudget && !isOverIncome && <span style={{ fontSize: FS.xs, color: COLORS.warningFill, fontWeight: FW.bold, marginLeft: "auto" }}>Over budget by {fmt(totalSpent - totalPlanned)}</span>}
       </div>
     </div>
   );
@@ -327,7 +329,7 @@ function BudgetBar({ totalIncome, totalPlanned, totalSpent }) {
 function Toast({ info }) {
   if (!info) return null;
   return (
-    <div style={{ position: "fixed", bottom: 48, left: "50%", transform: "translateX(-50%)", background: "rgba(22,22,35,0.88)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", color: "#fff", borderRadius: R["4xl"], padding: `${S.md}px 22px`, fontSize: FS.base, fontWeight: 600, zIndex: 9999, display: "flex", alignItems: "center", gap: S.md, boxShadow: "0 8px 32px rgba(0,0,0,0.28)", animation: "toastSlideUp 0.2s ease", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <div style={{ position: "fixed", bottom: 48, left: "50%", transform: "translateX(-50%)", background: "rgba(22,22,35,0.88)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", color: "#fff", borderRadius: R["4xl"], padding: `${S.md}px 22px`, fontSize: FS.base, fontWeight: FW.semibold, zIndex: 9999, display: "flex", alignItems: "center", gap: S.md, boxShadow: "0 8px 32px rgba(0,0,0,0.28)", animation: "toastSlideUp 0.2s ease", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <span style={{ fontSize: FS.lg }}>{info.icon}</span>{info.msg}
     </div>
   );
@@ -487,7 +489,7 @@ If date not visible, use today. If unsure of category, use Other.`
               <button onClick={() => { setStep("home"); setNlInput(""); setNlError(""); setUploadError(""); setPreviewItems([]); }}
                 style={{ background: COLORS.containerHigh, border: "none", color: COLORS.subtext, borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontSize: 14 }}>←</button>
             )}
-            <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, color: COLORS.text, fontSize: 20, margin: 0 }}>
+            <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: FW.extrabold, color: COLORS.text, fontSize: 20, margin: 0 }}>
               {step === "home" && "Add Transaction"}
               {step === "nl" && "Describe It"}
               {step === "upload" && "Upload Document"}
@@ -512,7 +514,7 @@ If date not visible, use today. If unsure of category, use Other.`
                   <div style={{ width: 44, height: 44, borderRadius: 14, background: `rgba(0,103,136,0.1)`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
                     <span className="material-symbols-outlined" style={{ fontSize: 22, color: COLORS.primary }}>shopping_bag</span>
                   </div>
-                  <p style={{ fontWeight: 700, fontSize: 13, color: COLORS.text, marginBottom: 2 }}>Expense</p>
+                  <p style={{ fontWeight: FW.bold, fontSize: 13, color: COLORS.text, marginBottom: 2 }}>Expense</p>
                   <p style={{ fontSize: 11, color: COLORS.subtext, lineHeight: 1.4 }}>Add a cost</p>
                 </button>
                 <button onClick={onManualIncome} style={{
@@ -522,7 +524,7 @@ If date not visible, use today. If unsure of category, use Other.`
                   <div style={{ width: 44, height: 44, borderRadius: 14, background: `rgba(23,102,132,0.12)`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
                     <span className="material-symbols-outlined" style={{ fontSize: 22, color: COLORS.secondary }}>trending_up</span>
                   </div>
-                  <p style={{ fontWeight: 700, fontSize: 13, color: COLORS.text, marginBottom: 2 }}>Income</p>
+                  <p style={{ fontWeight: FW.bold, fontSize: 13, color: COLORS.text, marginBottom: 2 }}>Income</p>
                   <p style={{ fontSize: 11, color: COLORS.subtext, lineHeight: 1.4 }}>Add earnings</p>
                 </button>
                 <button onClick={() => { setStep("upload"); setTimeout(() => fileRef.current?.click(), 100); }} style={{
@@ -532,7 +534,7 @@ If date not visible, use today. If unsure of category, use Other.`
                   <div style={{ width: 44, height: 44, borderRadius: 14, background: `rgba(85,91,147,0.12)`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
                     <span className="material-symbols-outlined" style={{ fontSize: 22, color: COLORS.tertiary }}>receipt_long</span>
                   </div>
-                  <p style={{ fontWeight: 700, fontSize: 13, color: COLORS.text, marginBottom: 2 }}>Receipt</p>
+                  <p style={{ fontWeight: FW.bold, fontSize: 13, color: COLORS.text, marginBottom: 2 }}>Receipt</p>
                   <p style={{ fontSize: 11, color: COLORS.subtext, lineHeight: 1.4 }}>Scan a doc</p>
                 </button>
               </div>
@@ -548,7 +550,7 @@ If date not visible, use today. If unsure of category, use Other.`
               }}>
                 <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.primary }}>chat</span>
                 <div>
-                  <p style={{ fontWeight: 700, fontSize: 14, color: COLORS.text, marginBottom: 2 }}>Natural Language</p>
+                  <p style={{ fontWeight: FW.bold, fontSize: 14, color: COLORS.text, marginBottom: 2 }}>Natural Language</p>
                   <p style={{ fontSize: 12, color: COLORS.subtext }}>"Spent $85 on groceries and $40 on gas today"</p>
                 </div>
               </button>
@@ -561,7 +563,7 @@ If date not visible, use today. If unsure of category, use Other.`
                 Describe any transaction in plain English. Claude will extract and categorize everything automatically.
               </p>
               <div style={{ background: COLORS.containerLow, borderRadius: 14, padding: 16, marginBottom: 14 }}>
-                <p style={{ fontSize: 11, color: COLORS.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>EXAMPLES</p>
+                <p style={{ fontSize: 11, color: COLORS.muted, fontWeight: FW.bold, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>EXAMPLES</p>
                 {[
                   "Spent $85 on groceries and $60 on gas today",
                   "Paid $1,200 rent and $110 electricity this week",
@@ -606,7 +608,7 @@ If date not visible, use today. If unsure of category, use Other.`
                   style={{ border: `2px dashed ${COLORS.accent}55`, borderRadius: 18, padding: "40px 24px", textAlign: "center", cursor: "pointer", background: COLORS.surface, marginBottom: 16 }}
                 >
                   <p style={{ fontSize: 38, marginBottom: 10 }}>📄</p>
-                  <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 6, color: COLORS.text }}>Tap to choose a file</p>
+                  <p style={{ fontWeight: FW.bold, fontSize: 15, marginBottom: 6, color: COLORS.text }}>Tap to choose a file</p>
                   <p style={{ color: COLORS.muted, fontSize: 12 }}>Receipt · Bill · Bank statement · Payslip<br />JPG · PNG · PDF</p>
                 </div>
               )}
@@ -636,8 +638,8 @@ If date not visible, use today. If unsure of category, use Other.`
                   {previewItems.length} item{previewItems.length !== 1 ? "s" : ""} found · Edit before importing
                 </p>
                 <div style={{ display: "flex", gap: 6 }}>
-                  <button onClick={() => setPreviewType("expense")} style={{ fontSize: 11, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontWeight: 700, border: `1px solid ${previewType === "expense" ? COLORS.accentWarm : COLORS.border}`, background: previewType === "expense" ? COLORS.accentWarm + "22" : "none", color: previewType === "expense" ? COLORS.accentWarm : COLORS.muted }}>Expense</button>
-                  <button onClick={() => setPreviewType("income")} style={{ fontSize: 11, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontWeight: 700, border: `1px solid ${previewType === "income" ? COLORS.accent : COLORS.border}`, background: previewType === "income" ? COLORS.accent + "22" : "none", color: previewType === "income" ? COLORS.accent : COLORS.muted }}>Income</button>
+                  <button onClick={() => setPreviewType("expense")} style={{ fontSize: 11, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontWeight: FW.bold, border: `1px solid ${previewType === "expense" ? COLORS.accentWarm : COLORS.border}`, background: previewType === "expense" ? COLORS.accentWarm + "22" : "none", color: previewType === "expense" ? COLORS.accentWarm : COLORS.muted }}>Expense</button>
+                  <button onClick={() => setPreviewType("income")} style={{ fontSize: 11, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontWeight: FW.bold, border: `1px solid ${previewType === "income" ? COLORS.accent : COLORS.border}`, background: previewType === "income" ? COLORS.accent + "22" : "none", color: previewType === "income" ? COLORS.accent : COLORS.muted }}>Income</button>
                 </div>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18, maxHeight: 360, overflowY: "auto", paddingRight: 4 }}>
@@ -647,7 +649,7 @@ If date not visible, use today. If unsure of category, use Other.`
                       <input
                         value={item.label}
                         onChange={e => updateItem(item.id, "label", e.target.value)}
-                        style={{ ...inputStyle, flex: 1, marginRight: 10, padding: "7px 12px", fontSize: 13, fontWeight: 600, background: COLORS.inputBg }}
+                        style={{ ...inputStyle, flex: 1, marginRight: 10, padding: "7px 12px", fontSize: 13, fontWeight: FW.semibold, background: COLORS.inputBg }}
                       />
                       <button onClick={() => removeItem(item.id)} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 18, flexShrink: 0, lineHeight: 1 }}>×</button>
                     </div>
@@ -672,7 +674,7 @@ If date not visible, use today. If unsure of category, use Other.`
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderTop: `1px solid ${COLORS.border}`, marginBottom: 14 }}>
                 <span style={{ fontSize: 13, color: COLORS.muted }}>Total</span>
-                <span style={{ fontSize: 18, fontWeight: 800, color: previewType === "income" ? COLORS.accent : COLORS.accentWarm }}>
+                <span style={{ fontSize: 18, fontWeight: FW.extrabold, color: previewType === "income" ? COLORS.accent : COLORS.accentWarm }}>
                   {fmt(previewItems.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0))}
                 </span>
               </div>
@@ -1473,26 +1475,26 @@ If the request doesn't map to a clear category goal, still return JSON with newG
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", background: COLORS.bg, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
 {/* fonts loaded in global style block */}
         <div style={{ width: 56, height: 56, borderRadius: 16, background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.tertiary})`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
-          <span style={{ fontSize: 22, fontWeight: 900, color: "#fff" }}>RF</span>
+          <span style={{ fontSize: 22, fontWeight: FW.black, color: "#fff" }}>RF</span>
         </div>
-        <h2 style={{ fontSize: 24, fontWeight: 800, color: COLORS.sidebarText, marginBottom: 4 }}>Welcome to FamilyFinance</h2>
+        <h2 style={{ fontSize: 24, fontWeight: FW.extrabold, color: COLORS.sidebarText, marginBottom: 4 }}>Welcome to FamilyFinance</h2>
         <p style={{ fontSize: 14, color: COLORS.muted, marginBottom: 32 }}>Track your family budget together</p>
         <div style={{ width: 360, maxWidth: "90vw" }}>
-          <button onClick={handleCreateHousehold} disabled={joinLoading} style={{ width: "100%", padding: "14px 20px", fontSize: 15, fontWeight: 700, background: COLORS.primary, color: "#fff", border: "none", borderRadius: 12, cursor: "pointer", marginBottom: 24, opacity: joinLoading ? 0.6 : 1 }}>
+          <button onClick={handleCreateHousehold} disabled={joinLoading} style={{ width: "100%", padding: "14px 20px", fontSize: 15, fontWeight: FW.bold, background: COLORS.primary, color: "#fff", border: "none", borderRadius: 12, cursor: "pointer", marginBottom: 24, opacity: joinLoading ? 0.6 : 1 }}>
             Start Fresh Household
           </button>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
             <div style={{ flex: 1, height: 1, background: COLORS.containerHigh }} />
-            <span style={{ fontSize: 12, color: COLORS.muted, fontWeight: 600 }}>or join existing</span>
+            <span style={{ fontSize: 12, color: COLORS.muted, fontWeight: FW.semibold }}>or join existing</span>
             <div style={{ flex: 1, height: 1, background: COLORS.containerHigh }} />
           </div>
           <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-            <input value={joinCode} onChange={e => { setJoinCode(e.target.value.toUpperCase()); setJoinError(''); }} placeholder="e.g. RF-4829" maxLength={7} style={{ flex: 1, padding: "12px 14px", fontSize: 15, fontWeight: 600, letterSpacing: "0.05em", background: COLORS.inputBg, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.text, textAlign: "center", fontFamily: "'Plus Jakarta Sans', sans-serif" }} onKeyDown={e => { if (e.key === 'Enter') handleJoinHousehold(); }} />
-            <button onClick={handleJoinHousehold} disabled={joinLoading || !joinCode.trim()} style={{ padding: "12px 20px", fontSize: 14, fontWeight: 700, background: COLORS.primary, color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", opacity: (joinLoading || !joinCode.trim()) ? 0.5 : 1 }}>
+            <input value={joinCode} onChange={e => { setJoinCode(e.target.value.toUpperCase()); setJoinError(''); }} placeholder="e.g. RF-4829" maxLength={7} style={{ flex: 1, padding: "12px 14px", fontSize: 15, fontWeight: FW.semibold, letterSpacing: "0.05em", background: COLORS.inputBg, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.text, textAlign: "center", fontFamily: "'Plus Jakarta Sans', sans-serif" }} onKeyDown={e => { if (e.key === 'Enter') handleJoinHousehold(); }} />
+            <button onClick={handleJoinHousehold} disabled={joinLoading || !joinCode.trim()} style={{ padding: "12px 20px", fontSize: 14, fontWeight: FW.bold, background: COLORS.primary, color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", opacity: (joinLoading || !joinCode.trim()) ? 0.5 : 1 }}>
               Join
             </button>
           </div>
-          {joinError && <p style={{ fontSize: 12, color: COLORS.danger, fontWeight: 600, marginTop: 4 }}>{joinError}</p>}
+          {joinError && <p style={{ fontSize: 12, color: COLORS.danger, fontWeight: FW.semibold, marginTop: 4 }}>{joinError}</p>}
         </div>
       </div>
     );
@@ -1501,9 +1503,9 @@ If the request doesn't map to a clear category goal, still return JSON with newG
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", background: COLORS.bg, fontFamily: "'Inter', sans-serif" }}>
         <div style={{ width: 56, height: 56, borderRadius: 16, background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.tertiary})`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
-          <span style={{ fontSize: 22, fontWeight: 900, color: "#fff" }}>RF</span>
+          <span style={{ fontSize: 22, fontWeight: FW.black, color: "#fff" }}>RF</span>
         </div>
-        <h2 style={{ fontSize: 20, fontWeight: 800, color: COLORS.sidebarText, marginBottom: 8 }}>FamilyFinance</h2>
+        <h2 style={{ fontSize: 20, fontWeight: FW.extrabold, color: COLORS.sidebarText, marginBottom: 8 }}>FamilyFinance</h2>
         <div style={{ width: 32, height: 32, border: `3px solid ${COLORS.containerHigh}`, borderTopColor: COLORS.primary, borderRadius: "50%", animation: "spin 1s linear infinite", marginBottom: 12 }} />
         <p style={{ fontSize: 14, color: COLORS.muted }}>Loading your budget…</p>
       </div>
@@ -1547,11 +1549,11 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         {/* Family branding */}
         <div style={{ padding: sidebarCollapsed ? "20px 0" : "24px 24px 40px", display: "flex", justifyContent: sidebarCollapsed ? "center" : "flex-start" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ width: 56, height: 56, borderRadius: "50%", background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 800, color: "#fff", flexShrink: 0, boxShadow: COLORS.shadowSm }}>
+            <div style={{ width: 56, height: 56, borderRadius: "50%", background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: FW.extrabold, color: "#fff", flexShrink: 0, boxShadow: COLORS.shadowSm }}>
               {familyName.split(" ").map(w => w[0]).join("").slice(0, 2)}
             </div>
-            {!sidebarCollapsed && <div><h1 style={{ fontSize: 20, fontWeight: 700, color: COLORS.sidebarText, letterSpacing: "-0.02em", lineHeight: 1.2, whiteSpace: "nowrap" }}>{familyName}</h1>{saveStatus && (
-              <span style={{ fontSize: 11, fontWeight: 600, color: saveStatus === 'saving' ? COLORS.muted : saveStatus === 'saved' ? COLORS.success : COLORS.danger }}>
+            {!sidebarCollapsed && <div><h1 style={{ fontSize: 20, fontWeight: FW.bold, color: COLORS.sidebarText, letterSpacing: "-0.02em", lineHeight: 1.2, whiteSpace: "nowrap" }}>{familyName}</h1>{saveStatus && (
+              <span style={{ fontSize: 11, fontWeight: FW.semibold, color: saveStatus === 'saving' ? COLORS.muted : saveStatus === 'saved' ? COLORS.success : COLORS.danger }}>
                 {saveStatus === 'saving' ? '⟳ Saving…' : saveStatus === 'saved' ? '✓ Saved' : '⚠ Not saved'}
               </span>
             )}</div>}
@@ -1571,7 +1573,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               background: tab === item.id ? COLORS.sidebarActive : "transparent",
               border: "none", borderRadius: 12,
               color: tab === item.id ? "#ffffff" : COLORS.sidebarText,
-              fontSize: 14, fontWeight: 500,
+              fontSize: 14, fontWeight: FW.medium,
               cursor: "pointer", textAlign: "left", width: "100%",
               opacity: tab === item.id ? 1 : 0.8,
               transition: "all 0.15s",
@@ -1591,7 +1593,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         <div style={{ padding: sidebarCollapsed ? "12px 8px 28px" : "8px 16px 28px" }}>
           <button onClick={() => setModal("addMenu")} title={sidebarCollapsed ? "Add Transaction" : undefined} style={{
             width: "100%", background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`,
-            border: "none", borderRadius: 12, color: "#fff", fontSize: 14, fontWeight: 600,
+            border: "none", borderRadius: 12, color: "#fff", fontSize: 14, fontWeight: FW.semibold,
             padding: sidebarCollapsed ? "14px 0" : "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: sidebarCollapsed ? 0 : 8,
             boxShadow: COLORS.shadow,
           }}>
@@ -1607,7 +1609,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         <header style={{ background: COLORS.bg, padding: "20px 32px 16px", display: "flex", alignItems: "center", gap: 24, flexShrink: 0 }}>
           {/* Month picker */}
           <div style={{ position: "relative" }}>
-            <button onClick={() => setShowMonthPicker(p => !p)} style={{ display: "flex", alignItems: "center", gap: 8, background: COLORS.card, border: "none", borderRadius: 10, padding: "9px 16px", fontSize: 14, fontWeight: 600, color: COLORS.text, cursor: "pointer", boxShadow: COLORS.shadowSm, flexShrink: 0 }}>
+            <button onClick={() => setShowMonthPicker(p => !p)} style={{ display: "flex", alignItems: "center", gap: 8, background: COLORS.card, border: "none", borderRadius: 10, padding: "9px 16px", fontSize: 14, fontWeight: FW.semibold, color: COLORS.text, cursor: "pointer", boxShadow: COLORS.shadowSm, flexShrink: 0 }}>
               {(() => { const { month0, year } = parseKey(viewMonthKey); return `${MONTH_FULL[month0]} ${year}`; })()}
               <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.subtext }}>expand_more</span>
             </button>
@@ -1632,7 +1634,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         width: "100%", padding: "10px 14px", border: "none", borderRadius: 10,
                         background: isView ? `rgba(0,103,136,0.08)` : "transparent",
                         color: isView ? COLORS.primary : COLORS.text,
-                        fontWeight: isView ? 700 : 500, fontSize: 14, cursor: "pointer",
+                        fontWeight: isView ? FW.bold : FW.medium, fontSize: 14, cursor: "pointer",
                         fontFamily: "'Plus Jakarta Sans', sans-serif",
                       }}>
                         <span>{MONTH_FULL[month0]} {year}{isCurrent ? " (now)" : ""}</span>
@@ -1662,7 +1664,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             <button onClick={() => setModal("notifications")} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, position: "relative" }}>
               <span className="material-symbols-outlined" style={{ fontSize: 24, color: COLORS.sidebarText }}>notifications</span>
               {billsDueIn7Days > 0 && (
-                <span style={{ position: "absolute", top: 0, right: 0, width: 16, height: 16, borderRadius: "50%", background: COLORS.danger, color: "#fff", fontSize: 9, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{billsDueIn7Days}</span>
+                <span style={{ position: "absolute", top: 0, right: 0, width: 16, height: 16, borderRadius: "50%", background: COLORS.danger, color: "#fff", fontSize: 9, fontWeight: FW.extrabold, display: "flex", alignItems: "center", justifyContent: "center" }}>{billsDueIn7Days}</span>
               )}
             </button>
             <button onClick={() => setModal("settings")} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
@@ -1693,12 +1695,12 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   {/* Header: title + income total */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
                     <div>
-                      <h2 style={{ fontSize: 22, fontWeight: 800, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 4 }}>Show me the Money!</h2>
+                      <h2 style={{ fontSize: 22, fontWeight: FW.extrabold, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 4 }}>Show me the Money!</h2>
                       <p style={{ fontSize: 13, color: COLORS.subtext }}>Your budget for {MONTH_FULL[month0]} {year}</p>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <p style={{ fontSize: 10, fontWeight: 700, color: COLORS.subtext, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Total Income</p>
-                      <p style={{ fontSize: 28, fontWeight: 800, color: COLORS.primary, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{fmt(viewTotalIncome)}</p>
+                      <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.subtext, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Total Income</p>
+                      <p style={{ fontSize: 28, fontWeight: FW.extrabold, color: COLORS.primary, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{fmt(viewTotalIncome)}</p>
                     </div>
                   </div>
                   {/* Budget bar */}
@@ -1707,18 +1709,18 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, flexWrap: "wrap", gap: 12 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
                       {budgetBarPlanned > 0 && (
-                        <p style={{ fontSize: 12, color: paceColor, fontWeight: 600, margin: 0 }}>
+                        <p style={{ fontSize: 12, color: paceColor, fontWeight: FW.semibold, margin: 0 }}>
                           Day {dayOfMo} of {daysInMo} — {actualPct}% spent ({paceLabel})
                         </p>
                       )}
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 700, color: COLORS.primary, background: "rgba(0,103,136,0.08)", borderRadius: 9999, padding: "4px 12px" }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: FW.bold, color: COLORS.primary, background: "rgba(0,103,136,0.08)", borderRadius: 9999, padding: "4px 12px" }}>
                         <span className="material-symbols-outlined" style={{ fontSize: 14 }}>receipt_long</span>
                         {fmt(viewTotalExpenses)} expenses · {fmt(billsActualTotal)} bills paid
                       </span>
                     </div>
                     <div style={{ background: netCashFlow >= 0 ? "rgba(52,211,153,0.1)" : "rgba(248,113,113,0.1)", borderRadius: 12, padding: "10px 18px", textAlign: "center", flexShrink: 0 }}>
-                      <p style={{ fontSize: 9, fontWeight: 700, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 2 }}>Net This Month</p>
-                      <p style={{ fontSize: 22, fontWeight: 900, color: netCashFlow >= 0 ? "#34D399" : "#F87171", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums", margin: 0 }}>
+                      <p style={{ fontSize: 9, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 2 }}>Net This Month</p>
+                      <p style={{ fontSize: 22, fontWeight: FW.black, color: netCashFlow >= 0 ? "#34D399" : "#F87171", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums", margin: 0 }}>
                         {netCashFlow >= 0 ? "+" : "−"}{fmt(Math.abs(netCashFlow))}
                       </p>
                     </div>
@@ -1751,7 +1753,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         <span className="material-symbols-outlined" style={{ fontSize: 20, color: clr }}>{item.val === 0 ? "trending_flat" : item.val > 0 ? "trending_up" : "trending_down"}</span>
                         <div>
                           <p style={{ fontSize: 10, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>{item.label}</p>
-                          <p style={{ fontSize: 14, fontWeight: 800, color: clr }}>{item.val > 0 ? "+" : ""}{fmt(item.val)}</p>
+                          <p style={{ fontSize: 14, fontWeight: FW.extrabold, color: clr }}>{item.val > 0 ? "+" : ""}{fmt(item.val)}</p>
                         </div>
                       </div>
                     );
@@ -1783,7 +1785,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       </div>
                       <div>
                         <p style={{ fontSize: 10, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 2 }}>{k.label}</p>
-                        <p style={{ fontSize: 18, fontWeight: 800, color: k.color }}>{k.val}</p>
+                        <p style={{ fontSize: 18, fontWeight: FW.extrabold, color: k.color }}>{k.val}</p>
                       </div>
                     </div>
                   ))}
@@ -1814,39 +1816,39 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           <span className="material-symbols-outlined" style={{ color: COLORS.onSecondaryContainer, fontSize: 28 }}>event_upcoming</span>
                         </div>
                         {carouselDaysUntil !== null && (
-                          <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: COLORS.onSecondaryContainer, opacity: 0.7 }}>
+                          <span style={{ fontSize: 10, fontWeight: FW.extrabold, letterSpacing: "0.1em", textTransform: "uppercase", color: COLORS.onSecondaryContainer, opacity: 0.7 }}>
                             {carouselDaysUntil < 0 ? `OVERDUE ${Math.abs(carouselDaysUntil)}D` : carouselDaysUntil === 0 ? "DUE TODAY" : `DUE IN ${carouselDaysUntil}D`}
                           </span>
                         )}
                       </div>
                       {carouselBill ? (
                         <>
-                          <p style={{ fontSize: 13, fontWeight: 500, color: COLORS.onSecondaryContainer, marginBottom: 4, opacity: 0.7 }}>Upcoming Bill</p>
-                          <h4 style={{ fontSize: 22, fontWeight: 700, color: COLORS.onSecondaryContainer, marginBottom: 4, lineHeight: 1.2 }}>{carouselBill.label}</h4>
+                          <p style={{ fontSize: 13, fontWeight: FW.medium, color: COLORS.onSecondaryContainer, marginBottom: 4, opacity: 0.7 }}>Upcoming Bill</p>
+                          <h4 style={{ fontSize: 22, fontWeight: FW.bold, color: COLORS.onSecondaryContainer, marginBottom: 4, lineHeight: 1.2 }}>{carouselBill.label}</h4>
                           <p style={{ fontSize: 12, color: COLORS.onSecondaryContainer, opacity: 0.65 }}>{fmtDate(getBillDueDate(carouselBill, viewMonthKey))}</p>
                         </>
                       ) : (
                         <div style={{ textAlign: "center", marginTop: 20 }}>
                           <p style={{ fontSize: 28, marginBottom: 8 }}>🎉</p>
-                          <p style={{ fontSize: 15, fontWeight: 700, color: COLORS.onSecondaryContainer }}>All bills paid this month!</p>
+                          <p style={{ fontSize: 15, fontWeight: FW.bold, color: COLORS.onSecondaryContainer }}>All bills paid this month!</p>
                           <p style={{ fontSize: 12, color: COLORS.onSecondaryContainer, opacity: 0.65, marginTop: 4 }}>Great job staying on top of your bills.</p>
                         </div>
                       )}
                     </div>
                     {carouselBill && (
                       <div>
-                        <p style={{ fontSize: 10, fontWeight: 700, color: COLORS.onSecondaryContainer, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Amount Due</p>
-                        <p style={{ fontSize: 34, fontWeight: 800, color: COLORS.onSecondaryContainer, marginBottom: 16, letterSpacing: "-0.02em" }}>{fmt(carouselBill.budget)}</p>
+                        <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.onSecondaryContainer, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Amount Due</p>
+                        <p style={{ fontSize: 34, fontWeight: FW.extrabold, color: COLORS.onSecondaryContainer, marginBottom: 16, letterSpacing: "-0.02em" }}>{fmt(carouselBill.budget)}</p>
                         {payBillConfirm?.id === carouselBill.id ? (
                           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                             <p style={{ fontSize: 12, color: COLORS.onSecondaryContainer, textAlign: "center", opacity: 0.8 }}>Mark {carouselBill.label} as paid?</p>
                             <div style={{ display: "flex", gap: 8 }}>
-                              <button onClick={() => { markBillPaid(carouselBill.id, viewMonthKey); setPayBillConfirm(null); showToast(`${carouselBill.label} marked as paid`); }} style={{ flex: 1, background: COLORS.onSecondaryContainer, color: "#fff", border: "none", borderRadius: 9999, padding: "11px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Confirm</button>
-                              <button onClick={() => setPayBillConfirm(null)} style={{ flex: 1, background: "rgba(0,89,117,0.15)", color: COLORS.onSecondaryContainer, border: "none", borderRadius: 9999, padding: "11px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+                              <button onClick={() => { markBillPaid(carouselBill.id, viewMonthKey); setPayBillConfirm(null); showToast(`${carouselBill.label} marked as paid`); }} style={{ flex: 1, background: COLORS.onSecondaryContainer, color: "#fff", border: "none", borderRadius: 9999, padding: "11px", fontSize: 13, fontWeight: FW.bold, cursor: "pointer" }}>Confirm</button>
+                              <button onClick={() => setPayBillConfirm(null)} style={{ flex: 1, background: "rgba(0,89,117,0.15)", color: COLORS.onSecondaryContainer, border: "none", borderRadius: 9999, padding: "11px", fontSize: 13, fontWeight: FW.bold, cursor: "pointer" }}>Cancel</button>
                             </div>
                           </div>
                         ) : (
-                          <button onClick={() => setPayBillConfirm(carouselBill)} style={{ width: "100%", background: COLORS.onSecondaryContainer, color: "#fff", border: "none", borderRadius: 9999, padding: "12px", fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: COLORS.shadowSm }}>Pay Now</button>
+                          <button onClick={() => setPayBillConfirm(carouselBill)} style={{ width: "100%", background: COLORS.onSecondaryContainer, color: "#fff", border: "none", borderRadius: 9999, padding: "12px", fontSize: 14, fontWeight: FW.bold, cursor: "pointer", boxShadow: COLORS.shadowSm }}>Pay Now</button>
                         )}
                         {/* Dot indicators */}
                         {carouselBills.length > 1 && (
@@ -1865,7 +1867,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               {/* ── ROW 1, COL 5–12: Cash Flow Summary ── */}
               <div style={{ gridColumn: "span 8", position: "relative", overflow: "hidden", background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, borderRadius: 12, padding: "40px", color: "#fff", boxShadow: COLORS.shadow, minHeight: 320 }}>
                 <div style={{ position: "relative", zIndex: 1, height: "100%", display: "flex", flexDirection: "column" }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.8)", marginBottom: 28 }}>Cash Flow Summary</p>
+                  <p style={{ fontSize: 11, fontWeight: FW.bold, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.8)", marginBottom: 28 }}>Cash Flow Summary</p>
                   <div style={{ display: "flex", flexDirection: "column", gap: 20, flex: 1 }}>
                     {[
                       { label: "Expenses", amount: fmt(viewTotalExpenses), pctVal: pct(viewTotalExpenses, viewTotalIncome), badge: `${viewSpentPct}% of budget`, barColor: "rgba(255,255,255,0.92)" },
@@ -1876,11 +1878,11 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     ].map(row => (
                       <div key={row.label}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 6 }}>
-                          <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.9)" }}>
+                          <span style={{ fontSize: 13, fontWeight: FW.semibold, color: "rgba(255,255,255,0.9)" }}>
                             {row.label}
-                            {row.badge && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, opacity: 0.8, textTransform: "uppercase", letterSpacing: "0.04em" }}>{row.badge}</span>}
+                            {row.badge && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: FW.bold, opacity: 0.8, textTransform: "uppercase", letterSpacing: "0.04em" }}>{row.badge}</span>}
                           </span>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{row.amount}</span>
+                          <span style={{ fontSize: 13, fontWeight: FW.bold, color: "#fff" }}>{row.amount}</span>
                         </div>
                         <div style={{ height: 6, background: "rgba(255,255,255,0.2)", borderRadius: 9999, overflow: "hidden" }}>
                           <div style={{ width: `${Math.min(100, row.pctVal)}%`, height: "100%", background: row.barColor, borderRadius: 9999 }} />
@@ -1895,17 +1897,17 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               <div style={{ gridColumn: "span 12", background: COLORS.containerLow, borderRadius: 12, padding: "32px", position: "relative" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
                   <div>
-                    <h4 style={{ fontSize: 20, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>Spending by Category</h4>
+                    <h4 style={{ fontSize: 20, fontWeight: FW.bold, color: COLORS.text, marginBottom: 4 }}>Spending by Category</h4>
                     <p style={{ fontSize: 13, color: COLORS.subtext }}>Track where our money goes — scroll to see all categories</p>
                   </div>
-                  <button onClick={() => setTab("transactions")} style={{ background: COLORS.card, border: "none", borderRadius: 9999, padding: "8px 18px", fontSize: 13, fontWeight: 700, color: COLORS.primary, cursor: "pointer", boxShadow: COLORS.shadowSm }}>
+                  <button onClick={() => setTab("transactions")} style={{ background: COLORS.card, border: "none", borderRadius: 9999, padding: "8px 18px", fontSize: 13, fontWeight: FW.bold, color: COLORS.primary, cursor: "pointer", boxShadow: COLORS.shadowSm }}>
                     View Budget →
                   </button>
                 </div>
                 {viewCatExpenseCards.length === 0 ? (
                   <div style={{ textAlign: "center", padding: "32px 0", color: COLORS.muted }}>
                     <p style={{ fontSize: 22, marginBottom: 8 }}>📊</p>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text, marginBottom: 4 }}>No budget categories set up yet</p>
+                    <p style={{ fontSize: 14, fontWeight: FW.semibold, color: COLORS.text, marginBottom: 4 }}>No budget categories set up yet</p>
                     <p style={{ fontSize: 13, color: COLORS.muted }}>Head to Family Budget to start planning.</p>
                   </div>
                 ) : (
@@ -1932,11 +1934,11 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                                 <span className="material-symbols-outlined" style={{ fontSize: 20, color: CATEGORY_ICON_COLOR[cat] || COLORS.subtext }}>{CATEGORY_ICONS[cat] || "category"}</span>
                               </div>
                               <div style={{ minWidth: 0 }}>
-                                <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{CAT_LABEL[cat] || cat}</p>
+                                <p style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{CAT_LABEL[cat] || cat}</p>
                                 <p style={{ fontSize: 11, color: COLORS.subtext, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{topExpense ? topExpense.label : "—"}</p>
                               </div>
                             </div>
-                            <p style={{ fontSize: 22, fontWeight: 800, color: COLORS.text, letterSpacing: "-0.02em", marginBottom: 8 }}>{fmt(amt)}</p>
+                            <p style={{ fontSize: 22, fontWeight: FW.extrabold, color: COLORS.text, letterSpacing: "-0.02em", marginBottom: 8 }}>{fmt(amt)}</p>
                             {budget > 0 && (
                               <>
                                 <div style={{ height: 6, background: COLORS.containerLow, borderRadius: 9999, overflow: "hidden", marginBottom: 4 }}>
@@ -1965,7 +1967,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   <div style={{ gridColumn: "span 6", background: "rgba(186,191,255,0.3)", borderRadius: 12, padding: "32px", position: "relative", overflow: "hidden" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
                       <div>
-                        <h4 style={{ fontSize: 22, fontWeight: 700, color: COLORS.onTertiaryContainer, marginBottom: 4 }}>
+                        <h4 style={{ fontSize: 22, fontWeight: FW.bold, color: COLORS.onTertiaryContainer, marginBottom: 4 }}>
                           Shared Goal: {goal ? goal.label : "Savings Goal"}
                         </h4>
                         <p style={{ fontSize: 13, color: `${COLORS.onTertiaryContainer}b3` }}>Saving for the family's future</p>
@@ -1973,13 +1975,13 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       <span className="material-symbols-outlined" style={{ fontSize: 44, color: COLORS.onTertiaryContainer, opacity: 0.4 }}>{goalIcon}</span>
                     </div>
                     <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 8 }}>
-                      <span style={{ fontSize: 44, fontWeight: 900, color: COLORS.onTertiaryContainer, letterSpacing: "-0.02em" }}>{fmt(goal ? goal.actual : 0)}</span>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: `${COLORS.onTertiaryContainer}99` }}>/ {fmt(goal ? goal.expected : 0)}</span>
+                      <span style={{ fontSize: 44, fontWeight: FW.black, color: COLORS.onTertiaryContainer, letterSpacing: "-0.02em" }}>{fmt(goal ? goal.actual : 0)}</span>
+                      <span style={{ fontSize: 14, fontWeight: FW.semibold, color: `${COLORS.onTertiaryContainer}99` }}>/ {fmt(goal ? goal.expected : 0)}</span>
                     </div>
                     <div style={{ width: "100%", height: 24, background: "rgba(255,255,255,0.5)", borderRadius: 9999, overflow: "hidden", marginBottom: 12 }}>
                       <div style={{ width: `${goalPct}%`, height: "100%", background: COLORS.primary, borderRadius: 9999, transition: "width 0.4s" }} />
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 700, color: COLORS.onTertiaryContainer, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: FW.bold, color: COLORS.onTertiaryContainer, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                       <span>Just Started</span>
                       <span style={{ fontSize: 14 }}>{Math.round(goalPct)}% Saved!</span>
                       <span>Goal Reached</span>
@@ -1993,19 +1995,19 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               <div style={{ gridColumn: "span 6", background: "rgba(97,205,253,0.2)", borderRadius: 12, padding: "32px", position: "relative", overflow: "hidden" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
                   <div>
-                    <h4 style={{ fontSize: 22, fontWeight: 700, color: COLORS.onSecondaryContainer, marginBottom: 4 }}>Savings &amp; Investments</h4>
+                    <h4 style={{ fontSize: 22, fontWeight: FW.bold, color: COLORS.onSecondaryContainer, marginBottom: 4 }}>Savings &amp; Investments</h4>
                     <p style={{ fontSize: 13, color: `${COLORS.onSecondaryContainer}b3` }}>Monthly wealth building target</p>
                   </div>
                   <span className="material-symbols-outlined" style={{ fontSize: 44, color: COLORS.primary, opacity: 0.4 }}>show_chart</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 8 }}>
-                  <span style={{ fontSize: 44, fontWeight: 900, color: COLORS.onSecondaryContainer, letterSpacing: "-0.02em" }}>{fmt(savingsActualTotal)}</span>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: `${COLORS.onSecondaryContainer}99` }}>/ {fmt(savingsExpectedTotal)}</span>
+                  <span style={{ fontSize: 44, fontWeight: FW.black, color: COLORS.onSecondaryContainer, letterSpacing: "-0.02em" }}>{fmt(savingsActualTotal)}</span>
+                  <span style={{ fontSize: 14, fontWeight: FW.semibold, color: `${COLORS.onSecondaryContainer}99` }}>/ {fmt(savingsExpectedTotal)}</span>
                 </div>
                 <div style={{ width: "100%", height: 24, background: "rgba(255,255,255,0.5)", borderRadius: 9999, overflow: "hidden", marginBottom: 12 }}>
                   <div style={{ width: `${pct(savingsActualTotal, savingsExpectedTotal || 1)}%`, height: "100%", background: COLORS.primary, borderRadius: 9999, transition: "width 0.4s" }} />
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 700, color: COLORS.onSecondaryContainer, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: FW.bold, color: COLORS.onSecondaryContainer, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   <span>Base</span>
                   <span style={{ fontSize: 14 }}>{Math.round(pct(savingsActualTotal, savingsExpectedTotal || 1))}% of Target</span>
                   <span>Maxed Out</span>
@@ -2030,7 +2032,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           };
           const toggleSort = (field) => { if (expSortField === field) setExpSortDir(d => d === "asc" ? "desc" : "asc"); else { setExpSortField(field); setExpSortDir("asc"); } };
           const SortArrow = ({ field }) => expSortField === field ? <span style={{ fontSize: 10, marginLeft: 2, color: COLORS.primary }}>{expSortDir === "asc" ? "↑" : "↓"}</span> : null;
-          const colStyle = { fontSize: 11, fontWeight: 700, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.06em", cursor: "pointer", userSelect: "none", display: "flex", alignItems: "center" };
+          const colStyle = { fontSize: 11, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.06em", cursor: "pointer", userSelect: "none", display: "flex", alignItems: "center" };
           const COLS = "2.2fr 1fr 0.8fr 0.9fr 0.9fr 0.9fr 32px";
 
           // Inline cell helpers
@@ -2039,7 +2041,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             : <span onClick={()=>setEditingCell({id,field})} title="Click to edit" style={{cursor:"text",display:"block",borderRadius:4,padding:"2px 4px",fontSize:13}}>{value||"—"}</span>;
           const EditableNum = ({ id, field, value }) => editingCell?.id===id && editingCell?.field===field
             ? <input autoFocus type="number" value={value} onChange={e=>updateExpenseField(id,field,e.target.value)} onBlur={()=>setEditingCell(null)} onKeyDown={e=>{if(e.key==="Enter")setEditingCell(null);}} style={{width:"100%",background:COLORS.containerLow,border:"none",borderRadius:6,padding:"3px 6px",fontSize:13,color:COLORS.text,outline:"none"}} />
-            : <span onClick={()=>setEditingCell({id,field})} title="Click to edit" style={{cursor:"text",display:"block",borderRadius:4,padding:"2px 4px",color:COLORS.text,fontWeight:600,fontSize:13}}>{fmt(value)}</span>;
+            : <span onClick={()=>setEditingCell({id,field})} title="Click to edit" style={{cursor:"text",display:"block",borderRadius:4,padding:"2px 4px",color:COLORS.text,fontWeight:FW.semibold,fontSize:13}}>{fmt(value)}</span>;
           const EditableDate = ({ id, field, value }) => editingCell?.id===id && editingCell?.field===field
             ? <input autoFocus type="date" value={value} onChange={e=>updateExpenseField(id,field,e.target.value)} onBlur={()=>setEditingCell(null)} style={{width:"100%",background:COLORS.containerLow,border:"none",borderRadius:6,padding:"3px 6px",fontSize:12,color:COLORS.text,outline:"none"}} />
             : <span onClick={()=>setEditingCell({id,field})} title="Click to edit" style={{cursor:"text",display:"block",borderRadius:4,padding:"2px 4px",fontSize:12,color:COLORS.subtext}}>{value ? fmtDate(value) : "—"}</span>;
@@ -2047,7 +2049,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             ? <select autoFocus value={value} onChange={e=>updateExpenseField(id,field,e.target.value)} onBlur={()=>setEditingCell(null)} style={{width:"100%",background:COLORS.containerLow,border:"none",borderRadius:6,padding:"3px 6px",fontSize:12,color:COLORS.text,outline:"none"}}>
                 {CATEGORIES.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}
               </select>
-            : <span onClick={()=>setEditingCell({id,field})} title="Click to edit" style={{cursor:"pointer",display:"inline-block",fontSize:11,fontWeight:600,color:COLORS.subtext,background:COLORS.containerHighest,borderRadius:9999,padding:"2px 8px"}}>{value}</span>;
+            : <span onClick={()=>setEditingCell({id,field})} title="Click to edit" style={{cursor:"pointer",display:"inline-block",fontSize:11,fontWeight:FW.semibold,color:COLORS.subtext,background:COLORS.containerHighest,borderRadius:9999,padding:"2px 8px"}}>{value}</span>;
 
           // Inline debt cell helpers
           const DebtText = ({ id, field, value, style={} }) => editingDebtCell?.id===id && editingDebtCell?.field===field
@@ -2100,10 +2102,10 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             <div style={{ paddingBottom: 48 }}>
               {/* ── Page header ── */}
               <div style={{ marginBottom: 12 }}>
-                <h2 style={{ fontSize: 22, fontWeight: 800, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 2 }}>{MONTH_FULL[vm0]} {vy} Budget</h2>
+                <h2 style={{ fontSize: 22, fontWeight: FW.extrabold, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 2 }}>{MONTH_FULL[vm0]} {vy} Budget</h2>
                 <p style={{ fontSize: 13, color: COLORS.subtext }}>{fmt(totalActual)} spent of {fmt(viewTotalIncome)} income{totalPlanned > 0 ? ` · ${fmt(totalPlanned)} planned` : ""}{isCurrentMonth && daysLeft > 0 ? ` · ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left` : ""}</p>
                 {showCopyButton && (
-                  <button onClick={() => { if (Object.values(prevMonthExpBudgets).some(v => v > 0)) setViewExpenseBudgets({ ...prevMonthExpBudgets }); if (Object.keys(prevMonthItemBudgets).length > 0) setItemBudgets(p => ({...p, [viewMonthKey]: {...prevMonthItemBudgets}})); }} style={{ marginTop: 6, background: "rgba(0,103,136,0.08)", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: COLORS.primary, cursor: "pointer" }}>
+                  <button onClick={() => { if (Object.values(prevMonthExpBudgets).some(v => v > 0)) setViewExpenseBudgets({ ...prevMonthExpBudgets }); if (Object.keys(prevMonthItemBudgets).length > 0) setItemBudgets(p => ({...p, [viewMonthKey]: {...prevMonthItemBudgets}})); }} style={{ marginTop: 6, background: "rgba(0,103,136,0.08)", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: FW.semibold, color: COLORS.primary, cursor: "pointer" }}>
                     Copy planned amounts from {MONTH_NAMES[new Date(prevY, prevM0 - 1, 1).getMonth()]}
                   </button>
                 )}
@@ -2115,7 +2117,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   {/* ── Unified Budget Status Bar ── */}
                   <div style={{ paddingBottom: 14, marginBottom: 14, borderBottom: "0.5px solid rgba(172,179,181,0.3)" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <button onClick={() => { setAdvisorMsg(`My budget health: ${healthStatus.label}. I've spent ${fmt(totalActual)} of ${fmt(viewTotalIncome)} income (${pctSpent}%). ${isCurrentMonth ? `${daysLeft} days left in the month.` : ""} Please give me specific advice.`); pendingAdvisorSend.current = true; setTab("advisor"); }} style={{ fontSize: 11, fontWeight: 700, color: healthStatus.color, background: healthStatus.bg, border: "none", borderRadius: 9999, padding: "3px 10px", cursor: "pointer" }}>{healthStatus.label}</button>
+                      <button onClick={() => { setAdvisorMsg(`My budget health: ${healthStatus.label}. I've spent ${fmt(totalActual)} of ${fmt(viewTotalIncome)} income (${pctSpent}%). ${isCurrentMonth ? `${daysLeft} days left in the month.` : ""} Please give me specific advice.`); pendingAdvisorSend.current = true; setTab("advisor"); }} style={{ fontSize: 11, fontWeight: FW.bold, color: healthStatus.color, background: healthStatus.bg, border: "none", borderRadius: 9999, padding: "3px 10px", cursor: "pointer" }}>{healthStatus.label}</button>
                     </div>
                     <BudgetBar totalIncome={viewTotalIncome} totalPlanned={totalPlanned} totalSpent={totalActual} />
                     {/* 50/30/20 toggle row */}
@@ -2143,11 +2145,11 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                             pre5020Budgets.current = null; pre5020Savings.current = null;
                             setToggle5020(false);
                           }
-                        }} style={{ fontSize: 11, fontWeight: 700, background: toggle5020 ? COLORS.primary : "none", color: toggle5020 ? "#fff" : COLORS.primary, border: `1.5px solid ${COLORS.primary}`, borderRadius: 9999, padding: "3px 12px", cursor: "pointer", transition: "all .2s" }}>
+                        }} style={{ fontSize: 11, fontWeight: FW.bold, background: toggle5020 ? COLORS.primary : "none", color: toggle5020 ? "#fff" : COLORS.primary, border: `1.5px solid ${COLORS.primary}`, borderRadius: 9999, padding: "3px 12px", cursor: "pointer", transition: "all .2s" }}>
                           50/30/20 Rule {toggle5020 ? "ON" : "OFF"}
                         </button>
                         {toggle5020 && viewTotalIncome > 0 && <span style={{ fontSize: 11, color: COLORS.muted }}>Based on {fmt(viewTotalIncome)} income</span>}
-                        {toast5020 && <span style={{ fontSize: 11, color: COLORS.warning, fontWeight: 600 }}>{toast5020}</span>}
+                        {toast5020 && <span style={{ fontSize: 11, color: COLORS.warning, fontWeight: FW.semibold }}>{toast5020}</span>}
                       </div>
                     </div>
                     {!onboardingDismissed && plannedCount < 5 && (
@@ -2197,7 +2199,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                             <div style={{ width: 28, height: 28, borderRadius: 8, background: CATEGORY_ICON_BG[group.catId] || COLORS.neutral, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                               <span className="material-symbols-outlined" style={{ fontSize: 15, color: CATEGORY_ICON_COLOR[group.catId] || COLORS.subtext }}>{CATEGORY_ICONS[group.catId] || "category"}</span>
                             </div>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>{group.label}</span>
+                            <span style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.text }}>{group.label}</span>
                             {grpExp.length > 0 && <span style={{ fontSize: 11, color: COLORS.muted }}>({grpExp.length})</span>}
                             <div style={{ width: 7, height: 7, borderRadius: "50%", background: utilColor, flexShrink: 0 }} title={util === null ? "No budget set" : util > 100 ? "Over budget" : util >= 80 ? "Near limit" : "On track"} />
                           </div>
@@ -2207,18 +2209,18 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           <span />
                           {/* planned — editable category budget, auto-sum from items shown when available */}
                           {grpItemsPlannedSum > 0
-                            ? <span title={`Auto-sum of ${grpExp.length} item budgets${grpPlanned > 0 ? ` (category cap: ${fmt(grpPlanned)})` : ""}`} style={{ fontSize: 12, fontWeight: 700, color: COLORS.subtext, display: "flex", alignItems: "center", gap: 4 }}>
+                            ? <span title={`Auto-sum of ${grpExp.length} item budgets${grpPlanned > 0 ? ` (category cap: ${fmt(grpPlanned)})` : ""}`} style={{ fontSize: 12, fontWeight: FW.bold, color: COLORS.subtext, display: "flex", alignItems: "center", gap: 4 }}>
                                 {fmt(grpItemsPlannedSum)}
                                 <span style={{ fontSize: 9, color: COLORS.muted, background: COLORS.containerHigh, borderRadius: 3, padding: "1px 4px" }}>Σ</span>
                               </span>
                             : editingPlannedKey === `cat-${group.catId}`
                               ? <input autoFocus type="number" placeholder="0" defaultValue={grpPlanned || ""} onClick={e => e.stopPropagation()} onBlur={ev => { const v = parseFloat(ev.target.value) || 0; setViewExpenseBudgets(prev => ({ ...prev, [group.catId]: v })); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); if (ev.key === "Escape") setEditingPlannedKey(null); }} style={{ width:"100%", background:COLORS.containerLow, border:`1px solid ${COLORS.primary}`, borderRadius:6, padding:"3px 6px", fontSize:12, color:COLORS.text, outline:"none" }} />
-                              : <span onClick={e => { e.stopPropagation(); setEditingPlannedKey(`cat-${group.catId}`); }} title="Click to edit category budget" style={{ fontSize: 12, fontWeight: 700, color: grpPlanned > 0 ? COLORS.subtext : COLORS.muted, cursor: "text", borderRadius: 4, padding: "2px 4px" }}>{viewExpenseBudgets[group.catId] != null ? fmt(grpPlanned) : <span style={{ display:"flex", alignItems:"center", gap:3 }}>—<span style={{ fontSize:9, opacity:0.5 }}>✏</span></span>}</span>
+                              : <span onClick={e => { e.stopPropagation(); setEditingPlannedKey(`cat-${group.catId}`); }} title="Click to edit category budget" style={{ fontSize: 12, fontWeight: FW.bold, color: grpPlanned > 0 ? COLORS.subtext : COLORS.muted, cursor: "text", borderRadius: 4, padding: "2px 4px" }}>{viewExpenseBudgets[group.catId] != null ? fmt(grpPlanned) : <span style={{ display:"flex", alignItems:"center", gap:3 }}>—<span style={{ fontSize:9, opacity:0.5 }}>✏</span></span>}</span>
                           }
                           {/* actual */}
-                          <span style={{ fontSize: 12, fontWeight: 700, color: utilColor }}>{grpActual > 0 ? fmt(grpActual) : "—"}</span>
+                          <span style={{ fontSize: 12, fontWeight: FW.bold, color: utilColor }}>{grpActual > 0 ? fmt(grpActual) : "—"}</span>
                           {/* variance */}
-                          {(() => { const left = effectivePlanned - grpActual; const showDash = effectivePlanned === 0 && grpActual === 0; return <span style={{ fontSize: 12, fontWeight: 700, color: showDash ? COLORS.muted : left >= 0 ? COLORS.success : COLORS.danger }}>{showDash ? "—" : left > 0 ? `+${fmt(left)}` : fmt(left)}</span>; })()}
+                          {(() => { const left = effectivePlanned - grpActual; const showDash = effectivePlanned === 0 && grpActual === 0; return <span style={{ fontSize: 12, fontWeight: FW.bold, color: showDash ? COLORS.muted : left >= 0 ? COLORS.success : COLORS.danger }}>{showDash ? "—" : left > 0 ? `+${fmt(left)}` : fmt(left)}</span>; })()}
                           {/* actions col — chevron */}
                           <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.muted, transition: "transform .2s", transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)", textAlign: "center" }}>expand_more</span>
                         </div>
@@ -2243,14 +2245,14 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                               return (
                               <div key={e.id} style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "7px 10px", alignItems: "center", borderRadius: 8, background: COLORS.card, marginBottom: 2, boxShadow: COLORS.shadowSm }}>
                                 <EditableText id={e.id} field="label" value={e.label} />
-                                <span style={{ fontSize: 11, fontWeight: 600, color: e.fixed ? COLORS.subtext : COLORS.muted, background: e.fixed ? COLORS.containerHigh : COLORS.containerLow, borderRadius: 9999, padding: "2px 7px", justifySelf: "start" }}>{e.fixed ? "Fixed" : "Variable"}</span>
+                                <span style={{ fontSize: 11, fontWeight: FW.semibold, color: e.fixed ? COLORS.subtext : COLORS.muted, background: e.fixed ? COLORS.containerHigh : COLORS.containerLow, borderRadius: 9999, padding: "2px 7px", justifySelf: "start" }}>{e.fixed ? "Fixed" : "Variable"}</span>
                                 <EditableDate id={e.id} field="date" value={displayDate} />
                                 {editingPlannedKey === `exp-${e.id}`
                                   ? <input autoFocus type="number" placeholder="0" defaultValue={expPlanned || ""} onBlur={ev => { const v = parseFloat(ev.target.value) || 0; if (v) setMonthItemBudget(`exp-${e.id}`, v); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); if (ev.key === "Escape") setEditingPlannedKey(null); }} style={{ width:"100%", background:COLORS.containerLow, border:`1px solid ${COLORS.primary}`, borderRadius:6, padding:"3px 6px", fontSize:12, color:COLORS.text, outline:"none" }} />
                                   : <span onClick={() => setEditingPlannedKey(`exp-${e.id}`)} title="Click to set planned budget" style={{ fontSize: 12, color: expPlanned ? COLORS.subtext : COLORS.muted, cursor: "text", display:"block", borderRadius:4, padding:"2px 4px" }}>{expPlanned ? fmt(expPlanned) : <span style={{ display:"flex", alignItems:"center", gap:3 }}>—<span style={{ fontSize:9, opacity:0.5 }}>✏</span></span>}</span>
                                 }
                                 <EditableNum id={e.id} field="amount" value={e.amount} />
-                                <span style={{ fontSize: 12, fontWeight: 700, color: expVar === null ? COLORS.muted : expVar >= 0 ? COLORS.success : COLORS.danger }}>
+                                <span style={{ fontSize: 12, fontWeight: FW.bold, color: expVar === null ? COLORS.muted : expVar >= 0 ? COLORS.success : COLORS.danger }}>
                                   {expVar === null ? "—" : expVar > 0 ? `+${fmt(expVar)}` : fmt(expVar)}
                                 </span>
                                 <div style={{ display: "flex", gap: 2 }}>
@@ -2301,7 +2303,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       <div style={{ marginBottom: 6 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", background: COLORS.containerLow, borderRadius: 10, marginBottom: 6 }}>
                           <span className="material-symbols-outlined" style={{ fontSize: 15, color: COLORS.subtext }}>category</span>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>Uncategorized</span>
+                          <span style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.text }}>Uncategorized</span>
                           <span style={{ fontSize: 11, color: COLORS.muted }}>({others.length})</span>
                         </div>
                         {others.map(e => (
@@ -2329,7 +2331,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         <div style={{ padding: "5px 7px", background: "rgba(23,102,132,0.12)", borderRadius: 8 }}>
                           <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.secondary }}>trending_up</span>
                         </div>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>Income</span>
+                        <span style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.text }}>Income</span>
                       </div>
                       <button onClick={() => setModal("addIncome")} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
                         <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.primary }}>add_circle</span>
@@ -2341,13 +2343,13 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           <span className="material-symbols-outlined" style={{ fontSize: 14, color: COLORS.subtext, flexShrink: 0 }}>work</span>
                           {editingIncomeCell?.id === i.id && editingIncomeCell?.field === "label"
                             ? <input autoFocus value={i.label} onChange={e => updateIncomeField(i.id, "label", e.target.value)} onBlur={() => setEditingIncomeCell(null)} onKeyDown={e => { if (e.key === "Enter") setEditingIncomeCell(null); }} style={{ flex:1, background:COLORS.containerLow, border:"none", borderRadius:6, padding:"2px 6px", fontSize:12, color:COLORS.text, outline:"none" }} />
-                            : <span onClick={() => setEditingIncomeCell({id:i.id, field:"label"})} title="Click to edit" style={{ fontSize: 12, fontWeight: 500, color: COLORS.text, cursor:"text", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{i.label}{i.recurring ? " ↺" : ""}</span>
+                            : <span onClick={() => setEditingIncomeCell({id:i.id, field:"label"})} title="Click to edit" style={{ fontSize: 12, fontWeight: FW.medium, color: COLORS.text, cursor:"text", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{i.label}{i.recurring ? " ↺" : ""}</span>
                           }
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                           {editingIncomeCell?.id === i.id && editingIncomeCell?.field === "amount"
                             ? <input autoFocus type="number" defaultValue={i.amount} onBlur={e => { updateIncomeField(i.id, "amount", e.target.value); setEditingIncomeCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }} style={{ width:80, background:COLORS.containerLow, border:"none", borderRadius:6, padding:"2px 6px", fontSize:13, color:COLORS.text, outline:"none" }} />
-                            : <span onClick={() => setEditingIncomeCell({id:i.id, field:"amount"})} title="Click to edit" style={{ fontSize: 13, fontWeight: 700, color: COLORS.secondary, cursor:"text" }}>+{fmt(i.amount)}</span>
+                            : <span onClick={() => setEditingIncomeCell({id:i.id, field:"amount"})} title="Click to edit" style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.secondary, cursor:"text" }}>+{fmt(i.amount)}</span>
                           }
                           <button onClick={() => deleteIncomeFromView(i.id)} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
                         </div>
@@ -2355,7 +2357,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     ))}
                     <div style={{ borderTop: `1px solid rgba(23,102,132,0.15)`, marginTop: 8, paddingTop: 8, display: "flex", justifyContent: "space-between" }}>
                       <span style={{ fontSize: 12, color: COLORS.subtext }}>Total Monthly</span>
-                      <span style={{ fontSize: 16, fontWeight: 800, color: COLORS.secondary }}>{fmt(viewTotalIncome)}</span>
+                      <span style={{ fontSize: 16, fontWeight: FW.extrabold, color: COLORS.secondary }}>{fmt(viewTotalIncome)}</span>
                     </div>
                   </div>
                   {/* Bills summary card — links to Bill Calendar */}
@@ -2363,14 +2365,14 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.primary }}>receipt_long</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>Bills</span>
+                        <span style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.text }}>Bills</span>
                       </div>
-                      <button onClick={() => setTab("weekly")} style={{ fontSize: 11, fontWeight: 700, color: COLORS.primary, background: "none", border: "none", cursor: "pointer" }}>Manage →</button>
+                      <button onClick={() => setTab("weekly")} style={{ fontSize: 11, fontWeight: FW.bold, color: COLORS.primary, background: "none", border: "none", cursor: "pointer" }}>Manage →</button>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <div><p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 2 }}>Total</p><p style={{ fontSize: 15, fontWeight: 800, color: COLORS.text }}>{fmt(billsBudgetTotal)}</p></div>
-                      <div style={{ textAlign: "right" }}><p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 2 }}>Paid</p><p style={{ fontSize: 15, fontWeight: 800, color: COLORS.success }}>{fmt(billsActualTotal)}</p></div>
-                      <div style={{ textAlign: "right" }}><p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 2 }}>Remaining</p><p style={{ fontSize: 15, fontWeight: 800, color: COLORS.warning }}>{fmt(billsBudgetTotal - billsActualTotal)}</p></div>
+                      <div><p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 2 }}>Total</p><p style={{ fontSize: 15, fontWeight: FW.extrabold, color: COLORS.text }}>{fmt(billsBudgetTotal)}</p></div>
+                      <div style={{ textAlign: "right" }}><p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 2 }}>Paid</p><p style={{ fontSize: 15, fontWeight: FW.extrabold, color: COLORS.success }}>{fmt(billsActualTotal)}</p></div>
+                      <div style={{ textAlign: "right" }}><p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 2 }}>Remaining</p><p style={{ fontSize: 15, fontWeight: FW.extrabold, color: COLORS.warning }}>{fmt(billsBudgetTotal - billsActualTotal)}</p></div>
                     </div>
                     {bills.length === 0 && (
                       <p style={{ fontSize: 12, color: COLORS.muted, marginTop: 8 }}>No bills added yet. Add your first bill on the Bill Calendar.</p>
@@ -2381,13 +2383,13 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.danger }}>credit_card</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>Debts</span>
+                        <span style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.text }}>Debts</span>
                       </div>
-                      <button onClick={() => setTab("debts")} style={{ fontSize: 11, fontWeight: 700, color: COLORS.danger, background: "none", border: "none", cursor: "pointer" }}>Manage →</button>
+                      <button onClick={() => setTab("debts")} style={{ fontSize: 11, fontWeight: FW.bold, color: COLORS.danger, background: "none", border: "none", cursor: "pointer" }}>Manage →</button>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <div><p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 2 }}>Total Owed</p><p style={{ fontSize: 15, fontWeight: 800, color: COLORS.danger }}>{fmt(totalDebt)}</p></div>
-                      <div style={{ textAlign: "right" }}><p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 2 }}>Min/mo</p><p style={{ fontSize: 15, fontWeight: 800, color: COLORS.text }}>{fmt(debtPayments)}</p></div>
+                      <div><p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 2 }}>Total Owed</p><p style={{ fontSize: 15, fontWeight: FW.extrabold, color: COLORS.danger }}>{fmt(totalDebt)}</p></div>
+                      <div style={{ textAlign: "right" }}><p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 2 }}>Min/mo</p><p style={{ fontSize: 15, fontWeight: FW.extrabold, color: COLORS.text }}>{fmt(debtPayments)}</p></div>
                     </div>
                     {debts.length === 0 && (
                       <p style={{ fontSize: 12, color: COLORS.muted, marginTop: 8 }}>No debts tracked yet. Add a debt to start your payoff plan.</p>
@@ -2400,7 +2402,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         <div style={{ padding: "6px 8px", background: "rgba(97,205,253,0.15)", borderRadius: 10 }}>
                           <span className="material-symbols-outlined" style={{ fontSize: 17, color: COLORS.primary }}>savings</span>
                         </div>
-                        <h3 style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>Savings</h3>
+                        <h3 style={{ fontSize: 15, fontWeight: FW.bold, color: COLORS.text }}>Savings</h3>
                       </div>
                       <button onClick={() => { setSavingsItems(prev => [...prev, { id: Date.now(), label: "New Goal", expected: 100, actual: 0 }]); showToast("Savings goal added"); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
                         <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.primary }}>add_circle</span>
@@ -2419,7 +2421,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         return (
                         <div key={s.id}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
-                            <SavText id={s.id} field="label" value={s.label} style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }} />
+                            <SavText id={s.id} field="label" value={s.label} style={{ fontSize: 13, fontWeight: FW.semibold, color: COLORS.text }} />
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                               <span style={{ fontSize: 12, color: COLORS.subtext }}>
                                 {fmt(s.actual)} /&nbsp;
@@ -2431,16 +2433,16 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           <div style={{ height: 6, background: COLORS.containerLow, borderRadius: 9999, overflow: "hidden", marginBottom: goalReached ? 4 : 6 }}>
                             <div style={{ width: `${savPct}%`, height: "100%", background: goalReached ? COLORS.success : COLORS.primary, borderRadius: 9999 }} />
                           </div>
-                          {goalReached && <p style={{ fontSize: 11, color: COLORS.success, fontWeight: 700, marginBottom: 6 }}>🎉 Goal reached!</p>}
+                          {goalReached && <p style={{ fontSize: 11, color: COLORS.success, fontWeight: FW.bold, marginBottom: 6 }}>🎉 Goal reached!</p>}
                           {addingSavingsId === s.id
                             ? <div style={{ display:"flex", gap:6, alignItems:"center" }}>
                                 <input id={`sav-inp-${s.id}`} autoFocus type="number" placeholder={savingsMode === "add" ? "Contribute" : "Withdraw"} style={{ flex:1, background:COLORS.containerLow, border:"none", borderRadius:8, padding:"5px 8px", fontSize:12, color:COLORS.text, outline:"none" }} onKeyDown={e=>{if(e.key==="Escape"){ setAddingSavingsId(null); setSavingsMode(null); }}} />
-                                <button onClick={()=>{ const v=parseFloat(document.getElementById(`sav-inp-${s.id}`)?.value)||0; if(v>0){ if(savingsMode==="add"){ updateSavingsField(s.id,"actual",s.actual+v); setExpenses(prev=>[...prev,{id:Date.now(),label:`${s.label} savings`,amount:v,category:"Savings",date:new Date().toISOString().slice(0,10),fixed:false}]); showToast(`Contributed ${fmt(v)} to ${s.label}`); } else { updateSavingsField(s.id,"actual",Math.max(0,s.actual-v)); showToast(`Withdrew ${fmt(v)} from ${s.label}`, "−"); } } setAddingSavingsId(null); setSavingsMode(null); }} style={{background:savingsMode==="add"?COLORS.primary:`rgba(172,49,73,0.12)`,color:savingsMode==="add"?"#fff":COLORS.danger,border:"none",borderRadius:8,padding:"5px 10px",fontSize:12,fontWeight:700,cursor:"pointer"}}>✓</button>
+                                <button onClick={()=>{ const v=parseFloat(document.getElementById(`sav-inp-${s.id}`)?.value)||0; if(v>0){ if(savingsMode==="add"){ updateSavingsField(s.id,"actual",s.actual+v); setExpenses(prev=>[...prev,{id:Date.now(),label:`${s.label} savings`,amount:v,category:"Savings",date:new Date().toISOString().slice(0,10),fixed:false}]); showToast(`Contributed ${fmt(v)} to ${s.label}`); } else { updateSavingsField(s.id,"actual",Math.max(0,s.actual-v)); showToast(`Withdrew ${fmt(v)} from ${s.label}`, "−"); } } setAddingSavingsId(null); setSavingsMode(null); }} style={{background:savingsMode==="add"?COLORS.primary:`rgba(172,49,73,0.12)`,color:savingsMode==="add"?"#fff":COLORS.danger,border:"none",borderRadius:8,padding:"5px 10px",fontSize:12,fontWeight:FW.bold,cursor:"pointer"}}>✓</button>
                                 <button onClick={()=>{ setAddingSavingsId(null); setSavingsMode(null); }} style={{background:"none",border:"none",color:COLORS.muted,cursor:"pointer",fontSize:16,padding:"0 4px"}}>×</button>
                               </div>
                             : <div style={{ display: "flex", gap: 6 }}>
-                                <button onClick={() => { setAddingSavingsId(s.id); setSavingsMode("add"); }} style={{ flex:1, background: `rgba(0,103,136,0.09)`, border:"none", borderRadius:8, padding:"5px 0", fontSize:12, fontWeight:700, color:COLORS.primary, cursor:"pointer" }}>+ Contribute</button>
-                                <button onClick={() => { setAddingSavingsId(s.id); setSavingsMode("remove"); }} style={{ flex:0.6, background: `rgba(172,49,73,0.08)`, border:"none", borderRadius:8, padding:"5px 0", fontSize:12, fontWeight:700, color:COLORS.danger, cursor:"pointer" }}>− Withdraw</button>
+                                <button onClick={() => { setAddingSavingsId(s.id); setSavingsMode("add"); }} style={{ flex:1, background: `rgba(0,103,136,0.09)`, border:"none", borderRadius:8, padding:"5px 0", fontSize:12, fontWeight:FW.bold, color:COLORS.primary, cursor:"pointer" }}>+ Contribute</button>
+                                <button onClick={() => { setAddingSavingsId(s.id); setSavingsMode("remove"); }} style={{ flex:0.6, background: `rgba(172,49,73,0.08)`, border:"none", borderRadius:8, padding:"5px 0", fontSize:12, fontWeight:FW.bold, color:COLORS.danger, cursor:"pointer" }}>− Withdraw</button>
                               </div>
                           }
                         </div>
@@ -2474,14 +2476,14 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               {/* ── Header ── */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
                 <div>
-                  <h2 style={{ fontSize: 24, fontWeight: 800, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 4 }}>Bill Calendar</h2>
+                  <h2 style={{ fontSize: 24, fontWeight: FW.extrabold, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 4 }}>Bill Calendar</h2>
                   <p style={{ fontSize: 14, color: COLORS.subtext }}>Upcoming bills and payment schedule</p>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <button onClick={() => { navigator.clipboard.writeText(window.location.href); setBillLinkToast(true); setTimeout(() => setBillLinkToast(false), 2000); }} title="Copy link to this month" style={{ background: billLinkToast ? COLORS.success + "18" : COLORS.containerLow, border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 12, fontWeight: 600, color: billLinkToast ? COLORS.success : COLORS.subtext, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                  <button onClick={() => { navigator.clipboard.writeText(window.location.href); setBillLinkToast(true); setTimeout(() => setBillLinkToast(false), 2000); }} title="Copy link to this month" style={{ background: billLinkToast ? COLORS.success + "18" : COLORS.containerLow, border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 12, fontWeight: FW.semibold, color: billLinkToast ? COLORS.success : COLORS.subtext, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>link</span>{billLinkToast ? "Link copied!" : "Copy link"}
                   </button>
-                  <button onClick={() => setModal("addBill")} style={{ display: "flex", alignItems: "center", gap: 6, background: COLORS.primary, color: "#fff", border: "none", borderRadius: 10, padding: "9px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                  <button onClick={() => setModal("addBill")} style={{ display: "flex", alignItems: "center", gap: 6, background: COLORS.primary, color: "#fff", border: "none", borderRadius: 10, padding: "9px 18px", fontSize: 13, fontWeight: FW.bold, cursor: "pointer" }}>
                     <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>Add Bill
                   </button>
                 </div>
@@ -2499,8 +2501,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       <span className="material-symbols-outlined" style={{ fontSize: 20, color: stat.color }}>{stat.icon}</span>
                     </div>
                     <div>
-                      <p style={{ fontSize: 11, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700, marginBottom: 3 }}>{stat.label}</p>
-                      <p style={{ fontSize: 22, fontWeight: 800, color: stat.color, letterSpacing: "-0.02em" }}>{fmt(stat.value)}</p>
+                      <p style={{ fontSize: 11, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: FW.bold, marginBottom: 3 }}>{stat.label}</p>
+                      <p style={{ fontSize: 22, fontWeight: FW.extrabold, color: stat.color, letterSpacing: "-0.02em" }}>{fmt(stat.value)}</p>
                     </div>
                   </div>
                 ))}
@@ -2509,10 +2511,10 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               {/* ── Full-width calendar card ── */}
               <div style={{ background: COLORS.card, borderRadius: 20, padding: 28, boxShadow: COLORS.shadowSm, marginBottom: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-                  <h3 style={{ fontSize: 18, fontWeight: 700, color: COLORS.text }}>{MONTH_FULL[calMonth]} {calYear}</h3>
+                  <h3 style={{ fontSize: 18, fontWeight: FW.bold, color: COLORS.text }}>{MONTH_FULL[calMonth]} {calYear}</h3>
                   <div style={{ display: "flex", gap: 4 }}>
                     {[["Month","month"], ["List","list"]].map(([label, val]) => (
-                      <button key={val} onClick={() => setBillCalView(val)} style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: billCalView === val ? COLORS.primary : COLORS.containerLow, color: billCalView === val ? "#fff" : COLORS.subtext, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{label}</button>
+                      <button key={val} onClick={() => setBillCalView(val)} style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: billCalView === val ? COLORS.primary : COLORS.containerLow, color: billCalView === val ? "#fff" : COLORS.subtext, fontSize: 12, fontWeight: FW.semibold, cursor: "pointer" }}>{label}</button>
                     ))}
                   </div>
                 </div>
@@ -2520,7 +2522,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 {billCalView === "month" && <>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 2 }}>
                     {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => (
-                      <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: COLORS.muted, textTransform: "uppercase", padding: "6px 0" }}>{d}</div>
+                      <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", padding: "6px 0" }}>{d}</div>
                     ))}
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
@@ -2534,14 +2536,14 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       return (
                         <div key={day} style={{ background: COLORS.card, borderRadius: 8, minHeight: 80, padding: 8, border: `1px solid ${COLORS.containerLow}` }}>
                           <div style={{ width: 24, height: 24, borderRadius: "50%", background: isToday ? COLORS.primary : "transparent", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
-                            <span style={{ fontSize: 12, fontWeight: isToday ? 800 : 500, color: isToday ? "#fff" : COLORS.text }}>{day}</span>
+                            <span style={{ fontSize: 12, fontWeight: isToday ? FW.extrabold : FW.medium, color: isToday ? "#fff" : COLORS.text }}>{day}</span>
                           </div>
                           {dayBills.map(b => {
                             const bPaidCal = getBillPaid(b, calMk);
                             const colorSet = bPaidCal ? { bg: COLORS.success + "18", text: COLORS.success } : { bg: "rgba(97,205,253,0.15)", text: COLORS.primary };
                             return (
                               <div key={b.id} onClick={() => setActiveBillDetail(b)} style={{ background: colorSet.bg, borderRadius: 4, padding: "2px 6px", marginBottom: 2, cursor: "pointer", border: bPaidCal ? `1px solid ${COLORS.success}40` : "1px solid transparent" }}>
-                                <p style={{ fontSize: 10, fontWeight: 700, color: colorSet.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.label}{bPaidCal ? " ✓" : ""}</p>
+                                <p style={{ fontSize: 10, fontWeight: FW.bold, color: colorSet.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.label}{bPaidCal ? " ✓" : ""}</p>
                               </div>
                             );
                           })}
@@ -2554,7 +2556,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 {billCalView === "list" && (
                   <div>
                     <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 60px 28px", gap: 8, padding: "8px 12px", background: COLORS.containerLow, borderRadius: 10, marginBottom: 8 }}>
-                      {["Bill", "Due Date", "Amount", "Status", "Action", ""].map(h => <span key={h} style={{ fontSize: 11, fontWeight: 700, color: COLORS.subtext, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</span>)}
+                      {["Bill", "Due Date", "Amount", "Status", "Action", ""].map(h => <span key={h} style={{ fontSize: 11, fontWeight: FW.bold, color: COLORS.subtext, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</span>)}
                     </div>
                     {bills.length === 0 && <p style={{ fontSize: 14, color: COLORS.muted, padding: "20px 0", textAlign: "center" }}>No bills yet.</p>}
                     {[...bills].sort((a,b) => a.dayOfMonth - b.dayOfMonth).map(b => {
@@ -2565,11 +2567,11 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       const isOverdueL = !bPaidL && dDate < nowL;
                       return (
                         <div key={b.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 60px 28px", gap: 8, padding: "10px 12px", borderRadius: 8, background: COLORS.card, marginBottom: 4, boxShadow: COLORS.shadowSm, alignItems: "center", borderLeft: `3px solid ${bPaidL ? COLORS.success : isOverdueL ? COLORS.danger : "transparent"}` }}>
-                          <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>{b.label}</span>
+                          <span style={{ fontSize: 13, fontWeight: FW.semibold, color: COLORS.text }}>{b.label}</span>
                           <span style={{ fontSize: 12, color: COLORS.subtext }}>{fmtDate(bDueDateL)}</span>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>{fmt(b.budget)}</span>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: bPaidL ? COLORS.success : isOverdueL ? COLORS.danger : COLORS.subtext, background: (bPaidL ? COLORS.success : isOverdueL ? COLORS.danger : COLORS.muted) + "18", borderRadius: 9999, padding: "2px 8px" }}>{bPaidL ? "Paid" : isOverdueL ? "Overdue" : "Upcoming"}</span>
-                          {!bPaidL ? <button onClick={() => markBillPaid(b.id, calMk)} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:9999, padding:"4px 8px", fontSize:11, fontWeight:700, cursor:"pointer" }}>Mark Paid</button> : <span style={{ fontSize: 14, color: COLORS.success }}>✓</span>}
+                          <span style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.text }}>{fmt(b.budget)}</span>
+                          <span style={{ fontSize: 11, fontWeight: FW.bold, color: bPaidL ? COLORS.success : isOverdueL ? COLORS.danger : COLORS.subtext, background: (bPaidL ? COLORS.success : isOverdueL ? COLORS.danger : COLORS.muted) + "18", borderRadius: 9999, padding: "2px 8px" }}>{bPaidL ? "Paid" : isOverdueL ? "Overdue" : "Upcoming"}</span>
+                          {!bPaidL ? <button onClick={() => markBillPaid(b.id, calMk)} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:9999, padding:"4px 8px", fontSize:11, fontWeight:FW.bold, cursor:"pointer" }}>Mark Paid</button> : <span style={{ fontSize: 14, color: COLORS.success }}>✓</span>}
                           <button onClick={() => { setBills(p => p.filter(x => x.id !== b.id)); showToast(`${b.label} removed`, "✕"); }} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 16, padding: 0 }}>×</button>
                         </div>
                       );
@@ -2581,14 +2583,14 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               {/* ── Always-visible editable bills list ── */}
               <div style={{ background: COLORS.card, borderRadius: 20, padding: 28, boxShadow: COLORS.shadowSm, marginBottom: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, color: COLORS.text }}>Bills This Month</h3>
-                  <button onClick={() => setNewBillInline({ label: "", budget: "", dayOfMonth: "" })} style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(0,103,136,0.08)", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, color: COLORS.primary, cursor: "pointer" }}>
+                  <h3 style={{ fontSize: 16, fontWeight: FW.bold, color: COLORS.text }}>Bills This Month</h3>
+                  <button onClick={() => setNewBillInline({ label: "", budget: "", dayOfMonth: "" })} style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(0,103,136,0.08)", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: FW.bold, color: COLORS.primary, cursor: "pointer" }}>
                     <span className="material-symbols-outlined" style={{ fontSize: 15 }}>add</span>+ Add Bill
                   </button>
                 </div>
                 {/* Table header */}
                 <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 80px 28px", gap: 8, padding: "8px 12px", background: COLORS.containerLow, borderRadius: 10, marginBottom: 10 }}>
-                  {["Bill Name", "Due Date", "Amount", "Status", "Action", ""].map(h => <span key={h} style={{ fontSize: 11, fontWeight: 700, color: COLORS.subtext, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</span>)}
+                  {["Bill Name", "Due Date", "Amount", "Status", "Action", ""].map(h => <span key={h} style={{ fontSize: 11, fontWeight: FW.bold, color: COLORS.subtext, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</span>)}
                 </div>
                 {bills.length === 0 && <p style={{ fontSize: 13, color: COLORS.muted, padding: "16px 0", textAlign: "center" }}>No bills added yet.</p>}
                 {[...bills].sort((a,b) => a.dayOfMonth - b.dayOfMonth).map(b => {
@@ -2605,21 +2607,21 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     <div key={b.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 80px 28px", gap: 8, padding: "10px 12px", borderRadius: 10, background: bPaidE ? COLORS.success + "08" : isOverdueE ? COLORS.danger + "06" : COLORS.containerLow + "60", marginBottom: 6, alignItems: "center", borderLeft: `3px solid ${bPaidE ? COLORS.success : isOverdueE ? COLORS.danger : "transparent"}` }}>
                       {/* Bill Name */}
                       {isEL ? <input autoFocus defaultValue={b.label} style={cellInp} onBlur={e => { setBills(p => p.map(x => x.id===b.id?{...x,label:e.target.value||x.label}:x)); setEditingBillCell(null); }} onKeyDown={e=>{ if(e.key==="Enter")e.target.blur(); if(e.key==="Escape")setEditingBillCell(null); }} />
-                        : <span onClick={() => setEditingBillCell({id:b.id,field:"label"})} style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, cursor: "text" }}>{b.label}</span>}
+                        : <span onClick={() => setEditingBillCell({id:b.id,field:"label"})} style={{ fontSize: 13, fontWeight: FW.semibold, color: COLORS.text, cursor: "text" }}>{b.label}</span>}
                       {/* Due Date */}
                       {isED ? <input autoFocus type="number" min="1" max="31" defaultValue={b.dayOfMonth} style={cellInp} onBlur={e => { const v = parseInt(e.target.value); if(v >= 1 && v <= 31) setBills(p => p.map(x => x.id===b.id?{...x,dayOfMonth:v}:x)); setEditingBillCell(null); }} onKeyDown={e=>{ if(e.key==="Enter")e.target.blur(); if(e.key==="Escape")setEditingBillCell(null); }} />
                         : <span onClick={() => setEditingBillCell({id:b.id,field:"dueDate"})} style={{ fontSize: 12, color: isOverdueE ? COLORS.danger : COLORS.subtext, cursor: "text" }}>{fmtDate(bDueDateE)}</span>}
                       {/* Amount */}
                       {isEA ? <input autoFocus type="number" defaultValue={b.budget} style={cellInp} onBlur={e => { const v=parseFloat(e.target.value); if(!isNaN(v)&&v>=0) setBills(p=>p.map(x=>x.id===b.id?{...x,budget:v}:x)); setEditingBillCell(null); }} onKeyDown={e=>{ if(e.key==="Enter")e.target.blur(); if(e.key==="Escape")setEditingBillCell(null); }} />
-                        : <span onClick={() => setEditingBillCell({id:b.id,field:"budget"})} style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, cursor: "text" }}>{fmt(b.budget)}</span>}
+                        : <span onClick={() => setEditingBillCell({id:b.id,field:"budget"})} style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.text, cursor: "text" }}>{fmt(b.budget)}</span>}
                       {/* Status */}
-                      <span style={{ fontSize: 11, fontWeight: 700, color: bPaidE ? COLORS.success : isOverdueE ? COLORS.danger : COLORS.subtext, background: (bPaidE ? COLORS.success : isOverdueE ? COLORS.danger : COLORS.muted) + "18", borderRadius: 9999, padding: "3px 10px", display: "inline-block" }}>
+                      <span style={{ fontSize: 11, fontWeight: FW.bold, color: bPaidE ? COLORS.success : isOverdueE ? COLORS.danger : COLORS.subtext, background: (bPaidE ? COLORS.success : isOverdueE ? COLORS.danger : COLORS.muted) + "18", borderRadius: 9999, padding: "3px 10px", display: "inline-block" }}>
                         {bPaidE ? "Paid" : isOverdueE ? "Overdue" : "Upcoming"}
                       </span>
                       {/* Action */}
                       {bPaidE
-                        ? <button onClick={() => markBillPaid(b.id, calMk, false)} style={{ background: COLORS.containerLow, border:"none", borderRadius:8, padding:"5px 8px", fontSize:11, fontWeight:700, color:COLORS.subtext, cursor:"pointer" }}>Unpay</button>
-                        : <button onClick={() => { markBillPaid(b.id, calMk); showToast(`${b.label} marked as paid`); }} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:8, padding:"5px 8px", fontSize:11, fontWeight:700, cursor:"pointer" }}>Mark Paid</button>
+                        ? <button onClick={() => markBillPaid(b.id, calMk, false)} style={{ background: COLORS.containerLow, border:"none", borderRadius:8, padding:"5px 8px", fontSize:11, fontWeight:FW.bold, color:COLORS.subtext, cursor:"pointer" }}>Unpay</button>
+                        : <button onClick={() => { markBillPaid(b.id, calMk); showToast(`${b.label} marked as paid`); }} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:8, padding:"5px 8px", fontSize:11, fontWeight:FW.bold, cursor:"pointer" }}>Mark Paid</button>
                       }
                       {/* Delete */}
                       <button onClick={() => setBills(p => p.filter(x => x.id !== b.id))} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 16, padding: 0 }}>×</button>
@@ -2633,7 +2635,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     <input type="number" min="1" max="31" placeholder="Day" value={newBillInline.dayOfMonth} onChange={e => setNewBillInline(p => ({...p, dayOfMonth: e.target.value}))} style={{ ...inpStyleInline, width: "100%" }} />
                     <input type="number" placeholder="Amount" value={newBillInline.budget} onChange={e => setNewBillInline(p => ({...p, budget: e.target.value}))} style={{ ...inpStyleInline, width: "100%" }} />
                     <span style={{ fontSize: 11, color: COLORS.muted }}>Upcoming</span>
-                    <button onClick={() => { if(!newBillInline.label || !newBillInline.budget) return; setBills(p => [...p, { id: Date.now(), label: newBillInline.label, budget: parseFloat(newBillInline.budget)||0, dayOfMonth: parseInt(newBillInline.dayOfMonth)||1 }]); showToast(`Bill "${newBillInline.label}" added`); setNewBillInline(null); }} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:8, padding:"6px 8px", fontSize:11, fontWeight:700, cursor:"pointer" }}>Save</button>
+                    <button onClick={() => { if(!newBillInline.label || !newBillInline.budget) return; setBills(p => [...p, { id: Date.now(), label: newBillInline.label, budget: parseFloat(newBillInline.budget)||0, dayOfMonth: parseInt(newBillInline.dayOfMonth)||1 }]); showToast(`Bill "${newBillInline.label}" added`); setNewBillInline(null); }} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:8, padding:"6px 8px", fontSize:11, fontWeight:FW.bold, cursor:"pointer" }}>Save</button>
                     <button onClick={() => setNewBillInline(null)} style={{ background:"none", border:"none", color:COLORS.muted, cursor:"pointer", fontSize:18, padding:0 }}>×</button>
                   </div>
                 )}
@@ -2641,7 +2643,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
 
               {/* ── Statements panel ── */}
               <div style={{ background: COLORS.card, borderRadius: 20, padding: 28, boxShadow: COLORS.shadowSm }}>
-                <h4 style={{ fontSize: 15, fontWeight: 700, color: COLORS.text, marginBottom: 16 }}>Statements</h4>
+                <h4 style={{ fontSize: 15, fontWeight: FW.bold, color: COLORS.text, marginBottom: 16 }}>Statements</h4>
                 {(() => {
                   const now2 = new Date(); now2.setHours(0,0,0,0);
                   const in14 = new Date(now2.getTime() + 14 * 86400000);
@@ -2654,13 +2656,13 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           <span className="material-symbols-outlined" style={{ fontSize: 14, color }}>receipt_long</span>
                         </div>
                         <div>
-                          <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>{b.label}</p>
+                          <p style={{ fontSize: 13, fontWeight: FW.semibold, color: COLORS.text }}>{b.label}</p>
                           <p style={{ fontSize: 11, color }}>{fmtDate(getBillDueDate(b, calMk))}</p>
                         </div>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>{fmt(b.budget)}</span>
-                        <button onClick={() => markBillPaid(b.id, calMk)} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:9999, padding:"3px 9px", fontSize:10, fontWeight:700, cursor:"pointer" }}>Paid</button>
+                        <span style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.text }}>{fmt(b.budget)}</span>
+                        <button onClick={() => markBillPaid(b.id, calMk)} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:9999, padding:"3px 9px", fontSize:10, fontWeight:FW.bold, cursor:"pointer" }}>Paid</button>
                       </div>
                     </div>
                   );
@@ -2668,13 +2670,13 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     <div style={{ display: "grid", gridTemplateColumns: overdueBills2.length > 0 && upcomingBills2.length > 0 ? "1fr 1fr" : "1fr", gap: 20 }}>
                       {overdueBills2.length > 0 && (
                         <div>
-                          <p style={{ fontSize: 10, fontWeight: 800, color: COLORS.danger, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>● Overdue</p>
+                          <p style={{ fontSize: 10, fontWeight: FW.extrabold, color: COLORS.danger, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>● Overdue</p>
                           {overdueBills2.map(b => <StmtRow key={b.id} b={b} color={COLORS.danger} />)}
                         </div>
                       )}
                       {upcomingBills2.length > 0 && (
                         <div>
-                          <p style={{ fontSize: 10, fontWeight: 800, color: COLORS.primary, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>● Next 14 Days</p>
+                          <p style={{ fontSize: 10, fontWeight: FW.extrabold, color: COLORS.primary, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>● Next 14 Days</p>
                           {upcomingBills2.map(b => <StmtRow key={b.id} b={b} color={COLORS.subtext} />)}
                         </div>
                       )}
@@ -2699,8 +2701,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   <div onClick={e => e.stopPropagation()} style={{ background: COLORS.card, borderRadius: 20, padding: 32, minWidth: 320, boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, alignItems: "flex-start" }}>
                       {isELabel
-                        ? <input autoFocus defaultValue={b.label} style={{ ...popInpStyle, textAlign: "left", fontSize: 18, fontWeight: 800, flex: 1, marginRight: 8 }} onBlur={e => { setBills(p => p.map(x => x.id === b.id ? {...x, label: e.target.value || x.label} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
-                        : <h3 onClick={() => setEditingBillCell({id: b.id, field: "label"})} title="Click to edit" style={{ fontSize: 18, fontWeight: 800, color: COLORS.text, cursor: "text", flex: 1 }}>{b.label}</h3>
+                        ? <input autoFocus defaultValue={b.label} style={{ ...popInpStyle, textAlign: "left", fontSize: 18, fontWeight: FW.extrabold, flex: 1, marginRight: 8 }} onBlur={e => { setBills(p => p.map(x => x.id === b.id ? {...x, label: e.target.value || x.label} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
+                        : <h3 onClick={() => setEditingBillCell({id: b.id, field: "label"})} title="Click to edit" style={{ fontSize: 18, fontWeight: FW.extrabold, color: COLORS.text, cursor: "text", flex: 1 }}>{b.label}</h3>
                       }
                       <div style={{ display: "flex", gap: 6 }}>
                         <button onClick={() => { setBills(p => p.filter(x => x.id !== b.id)); setActiveBillDetail(null); setEditingBillCell(null); }} title="Delete bill" style={{ background: COLORS.danger + "18", border: "none", color: COLORS.danger, borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>🗑</button>
@@ -2712,7 +2714,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         <span style={{ fontSize: 13, color: COLORS.subtext }}>Amount</span>
                         {isEAmt
                           ? <input autoFocus type="number" defaultValue={b.budget} style={popInpStyle} onBlur={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v >= 0) setBills(p => p.map(x => x.id === b.id ? {...x, budget: v} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
-                          : <span onClick={() => setEditingBillCell({id: b.id, field: "budget"})} title="Click to edit" style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, cursor: "text" }}>{fmt(b.budget)}</span>
+                          : <span onClick={() => setEditingBillCell({id: b.id, field: "budget"})} title="Click to edit" style={{ fontSize: 14, fontWeight: FW.bold, color: COLORS.text, cursor: "text" }}>{fmt(b.budget)}</span>
                         }
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -2724,10 +2726,10 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between" }}>
                         <span style={{ fontSize: 13, color: COLORS.subtext }}>Status</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: bPaidPop ? COLORS.success : isPast ? COLORS.danger : COLORS.subtext }}>{bPaidPop ? "Paid ✓" : isPast ? "Overdue" : "Upcoming"}</span>
+                        <span style={{ fontSize: 13, fontWeight: FW.bold, color: bPaidPop ? COLORS.success : isPast ? COLORS.danger : COLORS.subtext }}>{bPaidPop ? "Paid ✓" : isPast ? "Overdue" : "Upcoming"}</span>
                       </div>
                     </div>
-                    {!bPaidPop && <button onClick={() => { markBillPaid(b.id, calMk); setActiveBillDetail(null); }} style={{ width: "100%", background: COLORS.primary, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Mark as Paid</button>}
+                    {!bPaidPop && <button onClick={() => { markBillPaid(b.id, calMk); setActiveBillDetail(null); }} style={{ width: "100%", background: COLORS.primary, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: 14, fontWeight: FW.bold, cursor: "pointer" }}>Mark as Paid</button>}
                   </div>
                 </div>
               );
@@ -2741,7 +2743,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             {/* Header row */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, flexWrap: "wrap", gap: 14 }}>
               <div>
-                <h2 style={{ fontWeight: 800, fontSize: 24, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 4 }}>Monthly Insights</h2>
+                <h2 style={{ fontWeight: FW.extrabold, fontSize: 24, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 4 }}>Monthly Insights</h2>
                 <p style={{ color: COLORS.subtext, fontSize: 14 }}>January – December 2026 · Click any month for details & AI analysis</p>
               </div>
             </div>
@@ -2749,7 +2751,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             <div style={{ marginBottom: 28 }}>
               <button onClick={() => setInsightsMonthsOpen(p => !p)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, padding: "6px 0", marginBottom: insightsMonthsOpen ? 12 : 0 }}>
                 <span className="material-symbols-outlined" style={{ fontSize: 18, color: COLORS.muted, transition: "transform .2s", transform: insightsMonthsOpen ? "rotate(0deg)" : "rotate(-90deg)" }}>expand_more</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.sidebarText }}>All Months</span>
+                <span style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.sidebarText }}>All Months</span>
                 <span style={{ fontSize: 11, color: COLORS.muted }}>({allInsightMonths.filter(k => monthStats(k).hasData).length} with data)</span>
               </button>
               {insightsMonthsOpen && (
@@ -2771,12 +2773,12 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         transition: "all .2s", position: "relative",
                       }}>
                         {isToday && <div style={{ position: "absolute", top: 8, right: 8, width: 6, height: 6, borderRadius: "50%", background: COLORS.accent }} />}
-                        <p style={{ fontSize: 11, fontWeight: 800, color: isActive ? COLORS.accentBlue : COLORS.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>
+                        <p style={{ fontSize: 11, fontWeight: FW.extrabold, color: isActive ? COLORS.accentBlue : COLORS.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>
                           {MONTH_NAMES[month0]} {String(year).slice(2)}
                         </p>
                         {hasData ? (
                           <>
-                            <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, marginBottom: 2 }}>{fmt(s.exp)}</p>
+                            <p style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.text, marginBottom: 2 }}>{fmt(s.exp)}</p>
                             <p style={{ fontSize: 11, color: netColor }}>{s.net >= 0 ? "+" : ""}{fmt(s.net)}</p>
                             {/* Tiny bar */}
                             <div style={{ marginTop: 8, background: COLORS.border, borderRadius: 99, height: 3 }}>
@@ -2805,7 +2807,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
                     <div>
-                      <h3 style={{ fontWeight: 800, fontSize: 18 }}>
+                      <h3 style={{ fontWeight: FW.extrabold, fontSize: 18 }}>
                         {MONTH_FULL[month0]} {year}
                         {isCurrent && <span style={{ marginLeft: 10, fontSize: 11, background: COLORS.accent + "22", color: COLORS.accent, border: `1px solid ${COLORS.accent}44`, borderRadius: 6, padding: "2px 8px", verticalAlign: "middle" }}>Current</span>}
                       </h3>
@@ -2818,7 +2820,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     <button
                       onClick={() => generateInsight(key)}
                       disabled={!s.hasData || insightLoading[key]}
-                      style={{ background: COLORS.primary + "18", border: `1px solid ${COLORS.primary}44`, color: COLORS.primary, borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: s.hasData ? "pointer" : "not-allowed", opacity: s.hasData ? 1 : 0.4, display: "flex", alignItems: "center", gap: 8 }}
+                      style={{ background: COLORS.primary + "18", border: `1px solid ${COLORS.primary}44`, color: COLORS.primary, borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: FW.bold, cursor: s.hasData ? "pointer" : "not-allowed", opacity: s.hasData ? 1 : 0.4, display: "flex", alignItems: "center", gap: 8 }}
                     >
                       {insightLoading[key] ? <><div style={{ width: 12, height: 12, border: `2px solid ${COLORS.primary}44`, borderTopColor: COLORS.primary, borderRadius: "50%", animation: "spin 1s linear infinite" }} /> Analyzing…</> : "✦ AI Insights"}
                     </button>
@@ -2835,7 +2837,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   {!s.hasData ? (
                     <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 40, textAlign: "center" }}>
                       <p style={{ fontSize: 32, marginBottom: 12 }}>📭</p>
-                      <p style={{ fontWeight: 700, color: COLORS.text, marginBottom: 6 }}>No data for {MONTH_FULL[month0]}</p>
+                      <p style={{ fontWeight: FW.bold, color: COLORS.text, marginBottom: 6 }}>No data for {MONTH_FULL[month0]}</p>
                       <p style={{ color: COLORS.muted, fontSize: 13 }}>Switch to this month and use the + button to add entries,<br />or they'll appear here automatically.</p>
                     </div>
                   ) : (
@@ -2850,7 +2852,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         ].map(k => (
                           <div key={k.label} style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "16px 16px 12px" }}>
                             <p style={{ fontSize: 10, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>{k.label}</p>
-                            <p style={{ fontSize: 20, fontWeight: 800, color: k.color }}>{k.raw ? k.val : fmt(k.val)}</p>
+                            <p style={{ fontSize: 20, fontWeight: FW.extrabold, color: k.color }}>{k.raw ? k.val : fmt(k.val)}</p>
                             {prevS.hasData && !k.raw && (() => {
                               const prev = k.label === "Income" ? prevS.inc : k.label === "Expenses" ? prevS.exp : prevS.net;
                               const diff = k.val - prev;
@@ -2872,7 +2874,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                             ].map(k => (
                               <div key={k.label} style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "14px 16px" }}>
                                 <p style={{ fontSize: 10, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 5 }}>{k.label}</p>
-                                <p style={{ fontSize: 18, fontWeight: 800, color: k.color }}>{k.val}</p>
+                                <p style={{ fontSize: 18, fontWeight: FW.extrabold, color: k.color }}>{k.val}</p>
                               </div>
                             ))}
                           </div>
@@ -2882,7 +2884,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 20 }}>
                         {/* Spending by Category */}
                         <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
-                          <h4 style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}>Spending by Category</h4>
+                          <h4 style={{ fontWeight: FW.bold, fontSize: 14, marginBottom: 14 }}>Spending by Category</h4>
                           {CATEGORIES.filter(c => s.cats[c.id] > 0 || viewExpenseBudgets[c.id] > 0).sort((a,b) => (s.cats[b.id]||0)-(s.cats[a.id]||0)).map(c => {
                             const budget = viewExpenseBudgets[c.id] || 0;
                             const spent = s.cats[c.id] || 0;
@@ -2906,7 +2908,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         </div>
                         {/* Debt Details */}
                         <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
-                          <h4 style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}>Debt Details</h4>
+                          <h4 style={{ fontWeight: FW.bold, fontSize: 14, marginBottom: 14 }}>Debt Details</h4>
                           {debts.length === 0 ? (
                             <p style={{ color: COLORS.muted, fontSize: 13 }}>No debts recorded.</p>
                           ) : (
@@ -2915,8 +2917,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                               return (
                                 <div key={d.id} style={{ marginBottom: 14, padding: "10px 12px", borderRadius: 10, background: COLORS.containerLow }}>
                                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                                    <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>{d.label}</span>
-                                    <span style={{ fontSize: 13, color: paidOff ? COLORS.success : COLORS.danger, fontWeight: 700 }}>{paidOff ? "Paid off!" : fmt(d.balance)}</span>
+                                    <span style={{ fontSize: 13, fontWeight: FW.semibold, color: COLORS.text }}>{d.label}</span>
+                                    <span style={{ fontSize: 13, color: paidOff ? COLORS.success : COLORS.danger, fontWeight: FW.bold }}>{paidOff ? "Paid off!" : fmt(d.balance)}</span>
                                   </div>
                                   <div style={{ display: "flex", gap: 12 }}>
                                     <span style={{ fontSize: 11, color: COLORS.muted }}>{d.interest}% APR</span>
@@ -2929,7 +2931,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           {totalDebt > 0 && (
                             <button
                               onClick={() => { setAdvisorMsg(`Can we pay our debt down faster? We have ${debts.map(d => `${d.label}: ${fmt(d.balance)} at ${d.interest}% APR (min payment ${fmt(d.minPayment)})`).join(", ")}. Our monthly income is ${fmt(s.inc)} and total expenses are ${fmt(s.exp)}. Please give us a specific payoff plan with estimated payoff dates.`); pendingAdvisorSend.current = true; setTab("advisor"); }}
-                              style={{ width: "100%", marginTop: 10, background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, color: "#fff", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                              style={{ width: "100%", marginTop: 10, background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, color: "#fff", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: FW.bold, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
                             >
                               🚀 Can we pay this debt down faster?
                             </button>
@@ -2937,7 +2939,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         </div>
                         {/* 50/30/20 */}
                         <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
-                          <h4 style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}>50 / 30 / 20</h4>
+                          <h4 style={{ fontWeight: FW.bold, fontSize: 14, marginBottom: 14 }}>50 / 30 / 20</h4>
                           {(() => {
                             const debtMins = debts.reduce((s,d) => s+d.minPayment, 0);
                             const needs2 = snap.expenses.filter(e => ["Housing","Utilities","Food","Transport","Health"].includes(e.category)).reduce((s,e)=>s+e.amount,0) + debtMins;
@@ -2952,7 +2954,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                                 ].map(b => (
                                   <div key={b.label} style={{ marginBottom: 14 }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-                                      <span style={{ fontSize: 12, color: b.color, fontWeight: 600 }}>{b.label}</span>
+                                      <span style={{ fontSize: 12, color: b.color, fontWeight: FW.semibold }}>{b.label}</span>
                                       <span style={{ fontSize: 12, color: COLORS.muted }}>{fmt(b.val)} / {fmt(b.target)}</span>
                                     </div>
                                     {b.note && <p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 4 }}>{b.note}</p>}
@@ -2963,7 +2965,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                             );
                           })()}
                           <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${COLORS.border}` }}>
-                            <h4 style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: COLORS.muted }}>Notes</h4>
+                            <h4 style={{ fontWeight: FW.bold, fontSize: 13, marginBottom: 10, color: COLORS.muted }}>Notes</h4>
                             <textarea
                               value={snap.notes || ""}
                               onChange={e => updateSnapNotes(key, e.target.value)}
@@ -2977,7 +2979,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       {/* Transactions list */}
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                         <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
-                          <h4 style={{ fontWeight: 700, fontSize: 14, marginBottom: 12, color: COLORS.accent }}>Income ({snap.income.length})</h4>
+                          <h4 style={{ fontWeight: FW.bold, fontSize: 14, marginBottom: 12, color: COLORS.accent }}>Income ({snap.income.length})</h4>
                           {snap.income.length === 0 ? <p style={{ color: COLORS.muted, fontSize: 12 }}>None recorded</p> :
                             snap.income.map(i => (
                               <div key={i.id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${COLORS.border}` }}>
@@ -2988,7 +2990,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           }
                         </div>
                         <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 20 }}>
-                          <h4 style={{ fontWeight: 700, fontSize: 14, marginBottom: 12, color: COLORS.accentWarm }}>Expenses ({snap.expenses.length})</h4>
+                          <h4 style={{ fontWeight: FW.bold, fontSize: 14, marginBottom: 12, color: COLORS.accentWarm }}>Expenses ({snap.expenses.length})</h4>
                           {snap.expenses.length === 0 ? <p style={{ color: COLORS.muted, fontSize: 12 }}>None recorded</p> :
                             snap.expenses.slice().sort((a,b)=>b.amount-a.amount).map(e => (
                               <div key={e.id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${COLORS.border}` }}>
@@ -3009,7 +3011,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             })()}
             {/* Year-at-a-glance summary bar */}
             <div style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: 24, marginTop: 28 }}>
-              <h4 style={{ fontWeight: 700, fontSize: 15, marginBottom: 16 }}>Year-at-a-Glance</h4>
+              <h4 style={{ fontWeight: FW.bold, fontSize: 15, marginBottom: 16 }}>Year-at-a-Glance</h4>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 18 }}>
                 {(() => {
                   const allStats = allInsightMonths.map(k => monthStats(k));
@@ -3025,7 +3027,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   ].map(k => (
                     <div key={k.label} style={{ background: COLORS.surface, borderRadius: 12, padding: 16 }}>
                       <p style={{ fontSize: 10, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>{k.label}</p>
-                      <p style={{ fontSize: 18, fontWeight: 800, color: k.color }}>{k.val}</p>
+                      <p style={{ fontSize: 18, fontWeight: FW.extrabold, color: k.color }}>{k.val}</p>
                     </div>
                   ));
                 })()}
@@ -3061,7 +3063,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 140px)", position: "relative" }}>
             {/* Header */}
             <div style={{ marginBottom: 24, flexShrink: 0 }}>
-              <h2 style={{ fontSize: 24, fontWeight: 800, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 4 }}>How can I help you today?</h2>
+              <h2 style={{ fontSize: 24, fontWeight: FW.extrabold, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 4 }}>How can I help you today?</h2>
               <p style={{ fontSize: 14, color: COLORS.subtext }}>Your family financial co-pilot is ready.</p>
             </div>
             {/* Chat history */}
@@ -3076,7 +3078,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     <button key={chip.label} onClick={() => { setAdvisorMsg(chip.label); handleAdvisor(chip.label); }} style={{
                       display: "flex", alignItems: "center", gap: 8, padding: "10px 16px",
                       background: chip.bg, border: "none", borderRadius: 9999, cursor: "pointer",
-                      fontSize: 13, fontWeight: 600, color: chip.color, fontFamily: "'Plus Jakarta Sans', sans-serif",
+                      fontSize: 13, fontWeight: FW.semibold, color: chip.color, fontFamily: "'Plus Jakarta Sans', sans-serif",
                     }}>
                       <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{chip.icon}</span>
                       {chip.label}
@@ -3131,7 +3133,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     <button key={chip.label} onClick={() => { setAdvisorMsg(chip.label); handleAdvisor(chip.label); }} style={{
                       display: "flex", alignItems: "center", gap: 8, padding: "8px 14px",
                       background: COLORS.containerHighest, border: "none", borderRadius: 9999, cursor: "pointer",
-                      fontSize: 12, fontWeight: 600, color: COLORS.text, fontFamily: "'Plus Jakarta Sans', sans-serif",
+                      fontSize: 12, fontWeight: FW.semibold, color: COLORS.text, fontFamily: "'Plus Jakarta Sans', sans-serif",
                     }}>
                       <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{chip.icon}</span>
                       {chip.label}
@@ -3190,7 +3192,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           <Field label="Type">
             <div style={{ display: "flex", gap: 10 }}>
               {["Fixed", "Variable"].map(t => (
-                <button key={t} onClick={() => setNewExp(p => ({ ...p, fixed: t === "Fixed" }))} style={{ flex: 1, background: (t === "Fixed") === newExp.fixed ? COLORS.accentBlue + "22" : COLORS.inputBg, border: `1px solid ${(t === "Fixed") === newExp.fixed ? COLORS.accentBlue : COLORS.border}`, color: (t === "Fixed") === newExp.fixed ? COLORS.accentBlue : COLORS.muted, borderRadius: 10, padding: "10px", fontWeight: 600, cursor: "pointer" }}>{t}</button>
+                <button key={t} onClick={() => setNewExp(p => ({ ...p, fixed: t === "Fixed" }))} style={{ flex: 1, background: (t === "Fixed") === newExp.fixed ? COLORS.accentBlue + "22" : COLORS.inputBg, border: `1px solid ${(t === "Fixed") === newExp.fixed ? COLORS.accentBlue : COLORS.border}`, color: (t === "Fixed") === newExp.fixed ? COLORS.accentBlue : COLORS.muted, borderRadius: 10, padding: "10px", fontWeight: FW.semibold, cursor: "pointer" }}>{t}</button>
               ))}
             </div>
           </Field>
@@ -3205,7 +3207,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           <Field label="Recurring?">
             <div style={{ display: "flex", gap: 10 }}>
               {["Yes", "No"].map(t => (
-                <button key={t} onClick={() => setNewInc(p => ({ ...p, recurring: t === "Yes" }))} style={{ flex: 1, background: (t === "Yes") === newInc.recurring ? COLORS.accent + "22" : COLORS.inputBg, border: `1px solid ${(t === "Yes") === newInc.recurring ? COLORS.accent : COLORS.border}`, color: (t === "Yes") === newInc.recurring ? COLORS.accent : COLORS.muted, borderRadius: 10, padding: "10px", fontWeight: 600, cursor: "pointer" }}>{t}</button>
+                <button key={t} onClick={() => setNewInc(p => ({ ...p, recurring: t === "Yes" }))} style={{ flex: 1, background: (t === "Yes") === newInc.recurring ? COLORS.accent + "22" : COLORS.inputBg, border: `1px solid ${(t === "Yes") === newInc.recurring ? COLORS.accent : COLORS.border}`, color: (t === "Yes") === newInc.recurring ? COLORS.accent : COLORS.muted, borderRadius: 10, padding: "10px", fontWeight: FW.semibold, cursor: "pointer" }}>{t}</button>
               ))}
             </div>
           </Field>
@@ -3250,7 +3252,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               <p style={{ fontSize: 12, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Active Goals</p>
               {goals.map(g => (
                 <div key={g.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${COLORS.border}` }}>
-                  <span style={{ fontSize: 13, fontWeight: 600 }}>{g.label}</span>
+                  <span style={{ fontSize: 13, fontWeight: FW.semibold }}>{g.label}</span>
                   <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                     <span style={{ fontSize: 13, color: COLORS.accentPurple }}>{fmt(g.limit)}</span>
                     <button onClick={() => setGoals(prev => prev.filter(x => x.id !== g.id))} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer" }}>×</button>
@@ -3273,12 +3275,12 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               return (
                 <div key={b.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: `1px solid ${COLORS.containerLow}` }}>
                   <div>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>{b.label}</p>
+                    <p style={{ fontSize: 14, fontWeight: FW.semibold, color: COLORS.text }}>{b.label}</p>
                     <p style={{ fontSize: 12, color: dLeft <= 0 ? COLORS.danger : COLORS.subtext }}>{dLeft < 0 ? `Overdue by ${Math.abs(dLeft)} day${Math.abs(dLeft)===1?"":"s"}` : dLeft === 0 ? "Due today" : `Due in ${dLeft} day${dLeft===1?"":"s"}`}</p>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.text }}>{fmt(b.budget)}</span>
-                    <button onClick={() => markBillPaid(b.id, viewMonthKey)} style={{ background: COLORS.primary, color: "#fff", border: "none", borderRadius: 9999, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Mark Paid</button>
+                    <span style={{ fontSize: 14, fontWeight: FW.bold, color: COLORS.text }}>{fmt(b.budget)}</span>
+                    <button onClick={() => markBillPaid(b.id, viewMonthKey)} style={{ background: COLORS.primary, color: "#fff", border: "none", borderRadius: 9999, padding: "5px 12px", fontSize: 12, fontWeight: FW.bold, cursor: "pointer" }}>Mark Paid</button>
                   </div>
                 </div>
               );
@@ -3313,19 +3315,19 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             </select>
           </Field>
           <div style={{ borderTop: `1px solid ${COLORS.border}`, marginTop: 16, paddingTop: 16 }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>Household Access</p>
+            <p style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.text, marginBottom: 8 }}>Household Access</p>
             {householdCode ? (
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                  <span style={{ fontSize: 24, fontWeight: 800, letterSpacing: "0.08em", color: COLORS.primary, fontFamily: "monospace" }}>{householdCode}</span>
-                  <button onClick={() => { navigator.clipboard.writeText(householdCode); setToastInfo({ msg: "Code copied!", icon: "content_copy" }); }} style={{ fontSize: 11, fontWeight: 600, background: COLORS.containerLow, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "4px 10px", cursor: "pointer", color: COLORS.subtext }}>Copy code</button>
+                  <span style={{ fontSize: 24, fontWeight: FW.extrabold, letterSpacing: "0.08em", color: COLORS.primary, fontFamily: "monospace" }}>{householdCode}</span>
+                  <button onClick={() => { navigator.clipboard.writeText(householdCode); setToastInfo({ msg: "Code copied!", icon: "content_copy" }); }} style={{ fontSize: 11, fontWeight: FW.semibold, background: COLORS.containerLow, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "4px 10px", cursor: "pointer", color: COLORS.subtext }}>Copy code</button>
                 </div>
                 <p style={{ fontSize: 12, color: COLORS.muted, lineHeight: 1.5 }}>Enter this code on any browser or device to access your budget.</p>
               </div>
             ) : (
               <p style={{ fontSize: 12, color: COLORS.muted }}>No household code available (offline mode)</p>
             )}
-            <button onClick={handleResetHousehold} style={{ marginTop: 12, fontSize: 12, fontWeight: 600, background: "none", border: `1px solid ${COLORS.danger}40`, borderRadius: 8, padding: "6px 12px", color: COLORS.danger, cursor: "pointer" }}>Reset household</button>
+            <button onClick={handleResetHousehold} style={{ marginTop: 12, fontSize: 12, fontWeight: FW.semibold, background: "none", border: `1px solid ${COLORS.danger}40`, borderRadius: 8, padding: "6px 12px", color: COLORS.danger, cursor: "pointer" }}>Reset household</button>
           </div>
           <button onClick={() => setModal(null)} style={btnPrimary}>Save Settings</button>
         </Modal>
