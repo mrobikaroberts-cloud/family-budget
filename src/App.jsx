@@ -1741,13 +1741,14 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         {/* TOP HEADER */}
         <header style={{ background: "rgba(240,244,247,0.82)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", borderBottom: "1px solid rgba(255,255,255,0.75)", padding: "16px 32px 14px", display: "flex", alignItems: "center", gap: 20, flexShrink: 0, boxShadow: "0 2px 16px rgba(0,0,0,0.04)" }}>
           {/* Month picker */}
-          <div style={{ position: "relative" }}>
+          <div style={{ position: "relative", zIndex: 300 }}>
+            {showMonthPicker && <div onClick={() => setShowMonthPicker(false)} style={{ position: "fixed", inset: 0, zIndex: 300 }} />}
             <button onClick={() => setShowMonthPicker(p => !p)} style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.72)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 12, padding: "9px 16px", fontSize: 14, fontWeight: FW.semibold, color: COLORS.text, cursor: "pointer", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", flexShrink: 0 }}>
               {(() => { const { month0, year } = parseKey(viewMonthKey); return `${MONTH_FULL[month0]} ${year}`; })()}
               <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.subtext }}>expand_more</span>
             </button>
             {showMonthPicker && (
-              <div style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, background: "rgba(255,255,255,0.88)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", border: "1px solid rgba(255,255,255,0.92)", borderRadius: 18, boxShadow: "0 16px 40px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,1)", zIndex: 200, padding: 8, minWidth: 200, maxHeight: 320, overflowY: "auto" }}>
+              <div style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, background: "#ffffff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 18, boxShadow: "0 8px 32px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.06)", zIndex: 400, padding: 8, minWidth: 220, maxHeight: 320, overflowY: "auto" }}>
                 {(() => {
                   const { month0: sm, year: sy } = parseKey(startMonthKey);
                   const endDate = new Date(); endDate.setMonth(endDate.getMonth() + 3);
