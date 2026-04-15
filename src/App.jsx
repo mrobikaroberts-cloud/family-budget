@@ -2,6 +2,8 @@ import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, ComposedChart, AreaChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { db } from './firebase'
 import { doc, setDoc, getDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore'
+import { motion, AnimatePresence } from "framer-motion";
+import { BorderBeam } from "@/components/ui/border-beam";
 // ── Design System: "The Modern Hearth" — Roberts Family Finance ───────────────
 const COLORS = {
   // Surface hierarchy (tonal layering — no harsh borders)
@@ -1064,6 +1066,7 @@ export default function App() {
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [advisorHistory]);
   // Sync Monthly Insights expanded month when switching to insights tab
   useEffect(() => { if (tab === "insights") setActiveInsightKey(viewMonthKey); }, [tab]);
+  useEffect(() => { setShowMonthPicker(false); }, [tab]);
   // ── Hash-based URL routing ──
   const TAB_HASH = { dashboard: "overview", transactions: "family-budget", weekly: "bill-calendar", insights: "monthly-insights", advisor: "ai-assistant" };
   const HASH_TAB = Object.fromEntries(Object.entries(TAB_HASH).map(([k,v]) => [v,k]));
@@ -1486,57 +1489,248 @@ If the request doesn't map to a clear category goal, still return JSON with newG
     <style>{`
       @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Figtree:wght@400;500;600;700;800&display=swap');
       * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { background: radial-gradient(ellipse at 20% 20%, rgba(0,120,168,0.08) 0%, transparent 50%), radial-gradient(ellipse at 80% 80%, rgba(74,82,168,0.06) 0%, transparent 50%), #f0f4f7; background-attachment: fixed; }
-      button { transition: all 0.18s cubic-bezier(0.34,1.56,0.64,1); font-family: 'Figtree', sans-serif; }
-      button:hover { opacity: 0.9; } button:active { transform: scale(0.96); }
-      @keyframes fadeInUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+      body {
+        background:
+          radial-gradient(ellipse at 10% 10%, rgba(0,120,168,0.10) 0%, transparent 48%),
+          radial-gradient(ellipse at 90% 85%, rgba(74,82,168,0.07) 0%, transparent 48%),
+          radial-gradient(ellipse at 55% 45%, rgba(16,185,129,0.04) 0%, transparent 55%),
+          #f0f4f7;
+        background-attachment: fixed;
+      }
       @keyframes spin { to { transform: rotate(360deg) } }
+      @keyframes beam-pulse { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
     `}</style>
   );
+
+  /* ── Feature chips shown below the hero card ───────────────────────── */
+  const heroFeatures = [
+    { icon: "📊", label: "Budget breakdown" },
+    { icon: "🤖", label: "AI advisor" },
+    { icon: "📅", label: "Bill tracker" },
+    { icon: "📈", label: "12-month history" },
+  ];
+
   if (joinScreen) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", fontFamily: "'Figtree', sans-serif", padding: 20 }}>
+      <div style={{ minHeight: "100vh", fontFamily: "'Figtree', sans-serif", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px 20px 40px" }}>
         <SplashStyles />
-        <div style={{ animation: "fadeInUp 0.5s cubic-bezier(0.4,0,0.2,1)", width: "100%", maxWidth: 400, display: "flex", flexDirection: "column", alignItems: "center" }}>
-          {/* Logo */}
-          <div style={{ width: 72, height: 72, borderRadius: 24, background: `linear-gradient(140deg, ${COLORS.primary} 0%, #0095d2 50%, ${COLORS.tertiary} 100%)`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 24, boxShadow: `0 12px 36px rgba(0,120,168,0.35), inset 0 1px 0 rgba(255,255,255,0.25)` }}>
-            <span style={{ fontSize: 28, fontWeight: FW.black, color: "#fff", fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.02em" }}>RF</span>
-          </div>
-          <h2 style={{ fontSize: 32, fontWeight: FW.extrabold, color: COLORS.text, marginBottom: 8, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.035em", textAlign: "center" }}>Welcome to FamilyFinance</h2>
-          <p style={{ fontSize: 15, color: COLORS.subtext, marginBottom: 40, textAlign: "center", lineHeight: 1.5 }}>Your family's financial story, together.</p>
 
-          {/* Glass card */}
-          <div style={{ width: "100%", background: "rgba(255,255,255,0.72)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", border: "1px solid rgba(255,255,255,0.88)", borderRadius: 28, padding: "32px", boxShadow: "0 8px 40px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.95)" }}>
-            <button onClick={handleCreateHousehold} disabled={joinLoading} style={{ width: "100%", padding: "16px 20px", fontSize: 16, fontWeight: FW.bold, background: `linear-gradient(140deg, ${COLORS.primary} 0%, #0095d2 100%)`, color: "#fff", border: "none", borderRadius: 16, cursor: "pointer", marginBottom: 24, opacity: joinLoading ? 0.6 : 1, boxShadow: `0 8px 24px rgba(0,120,168,0.35)` }}>
-              🏠 Start Fresh Household
-            </button>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-              <div style={{ flex: 1, height: 1, background: "rgba(0,0,0,0.08)" }} />
-              <span style={{ fontSize: 12, color: COLORS.muted, fontWeight: FW.semibold }}>or join existing</span>
-              <div style={{ flex: 1, height: 1, background: "rgba(0,0,0,0.08)" }} />
-            </div>
-            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-              <input value={joinCode} onChange={e => { setJoinCode(e.target.value.toUpperCase()); setJoinError(''); }} placeholder="e.g. RF-4829" maxLength={7} style={{ flex: 1, padding: "14px 16px", fontSize: 16, fontWeight: FW.semibold, letterSpacing: "0.08em", background: "rgba(0,120,168,0.06)", border: "1px solid rgba(0,120,168,0.14)", borderRadius: 14, color: COLORS.text, textAlign: "center", fontFamily: "'Figtree', sans-serif" }} onKeyDown={e => { if (e.key === 'Enter') handleJoinHousehold(); }} />
-              <button onClick={handleJoinHousehold} disabled={joinLoading || !joinCode.trim()} style={{ padding: "14px 22px", fontSize: 15, fontWeight: FW.bold, background: COLORS.primary, color: "#fff", border: "none", borderRadius: 14, cursor: "pointer", opacity: (joinLoading || !joinCode.trim()) ? 0.5 : 1 }}>
-                Join
-              </button>
-            </div>
-            {joinError && <p style={{ fontSize: 13, color: COLORS.danger, fontWeight: FW.semibold, marginTop: 6 }}>{joinError}</p>}
+        {/* ── Wordmark ──────────────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          style={{ marginBottom: 48, display: "flex", alignItems: "center", gap: 12 }}
+        >
+          {/* App icon — squircle with specular */}
+          <div style={{
+            width: 52, height: 52, borderRadius: 18,
+            background: `linear-gradient(145deg, #0095d2 0%, ${COLORS.primary} 45%, ${COLORS.tertiary} 100%)`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 8px 28px rgba(0,120,168,0.38), inset 0 1px 0 rgba(255,255,255,0.30)",
+            position: "relative", overflow: "hidden",
+          }}>
+            <span style={{ fontSize: 20, fontWeight: FW.black, color: "#fff", fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em", zIndex: 1 }}>FF</span>
+            {/* specular sheen */}
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "52%", background: "linear-gradient(180deg, rgba(255,255,255,0.22) 0%, transparent 100%)", borderRadius: "18px 18px 0 0" }} />
           </div>
-        </div>
+          <div>
+            <div style={{ fontSize: 19, fontWeight: FW.extrabold, color: COLORS.text, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em", lineHeight: 1.1 }}>FamilyFinance</div>
+            <div style={{ fontSize: 11, fontWeight: FW.semibold, color: COLORS.muted, letterSpacing: "0.04em", textTransform: "uppercase" }}>by the Roberts family</div>
+          </div>
+        </motion.div>
+
+        {/* ── Hero heading ──────────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.65, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+          style={{ textAlign: "center", marginBottom: 40, maxWidth: 520 }}
+        >
+          <h1 style={{
+            fontFamily: "'Bricolage Grotesque', sans-serif",
+            fontSize: "clamp(36px, 7vw, 58px)",
+            fontWeight: FW.extrabold,
+            color: COLORS.text,
+            letterSpacing: "-0.04em",
+            lineHeight: 1.08,
+            marginBottom: 16,
+          }}>
+            Your family's money,{" "}
+            <span style={{ color: COLORS.primary }}>together.</span>
+          </h1>
+          <p style={{ fontSize: 17, color: COLORS.subtext, lineHeight: 1.6, fontWeight: FW.normal }}>
+            One shared budget. Real-time spend tracking, smart AI insights,
+            and a clear picture every single month.
+          </p>
+        </motion.div>
+
+        {/* ── Glass action card ─────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 32, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.7, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
+          style={{
+            width: "100%", maxWidth: 420,
+            position: "relative",
+            background: "rgba(255,255,255,0.78)",
+            backdropFilter: "blur(40px) saturate(200%)",
+            WebkitBackdropFilter: "blur(40px) saturate(200%)",
+            border: "1px solid rgba(255,255,255,0.92)",
+            borderRadius: 32,
+            padding: "32px 28px 28px",
+            boxShadow: "0 12px 48px rgba(0,0,0,0.09), 0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,1)",
+            overflow: "hidden",
+          }}
+        >
+          {/* BorderBeam shimmer on the card edge */}
+          <BorderBeam
+            size={260}
+            duration={10}
+            colorFrom={COLORS.primary}
+            colorTo={COLORS.tertiary}
+            borderWidth={1.5}
+          />
+
+          {/* Create CTA */}
+          <button
+            onClick={handleCreateHousehold}
+            disabled={joinLoading}
+            style={{
+              width: "100%", padding: "17px 20px",
+              fontSize: 16, fontWeight: FW.bold,
+              background: `linear-gradient(140deg, ${COLORS.primary} 0%, #0095d2 60%, ${COLORS.tertiary} 140%)`,
+              color: "#fff", border: "none", borderRadius: 18,
+              cursor: joinLoading ? "wait" : "pointer",
+              marginBottom: 22,
+              opacity: joinLoading ? 0.65 : 1,
+              boxShadow: `0 10px 28px rgba(0,120,168,0.38), inset 0 1px 0 rgba(255,255,255,0.20)`,
+              fontFamily: "'Figtree', sans-serif",
+              letterSpacing: "-0.01em",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            }}
+          >
+            <span style={{ fontSize: 18 }}>🏠</span>
+            <span>{joinLoading ? "Setting up…" : "Start a New Household"}</span>
+          </button>
+
+          {/* Divider */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 22 }}>
+            <div style={{ flex: 1, height: 1, background: "rgba(0,0,0,0.07)" }} />
+            <span style={{ fontSize: 11, color: COLORS.muted, fontWeight: FW.semibold, letterSpacing: "0.05em", textTransform: "uppercase" }}>or join existing</span>
+            <div style={{ flex: 1, height: 1, background: "rgba(0,0,0,0.07)" }} />
+          </div>
+
+          {/* Join code input */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+            <input
+              value={joinCode}
+              onChange={e => { setJoinCode(e.target.value.toUpperCase()); setJoinError(''); }}
+              placeholder="e.g. RF-4829"
+              maxLength={7}
+              onKeyDown={e => { if (e.key === 'Enter') handleJoinHousehold(); }}
+              style={{
+                flex: 1, padding: "14px 16px",
+                fontSize: 16, fontWeight: FW.semibold,
+                letterSpacing: "0.10em",
+                background: "rgba(0,120,168,0.06)",
+                border: "1.5px solid rgba(0,120,168,0.14)",
+                borderRadius: 14,
+                color: COLORS.text,
+                textAlign: "center",
+                fontFamily: "'Figtree', sans-serif",
+                outline: "none",
+                transition: "border-color 0.18s ease, box-shadow 0.18s ease",
+              }}
+              onFocus={e => { e.target.style.borderColor = "rgba(0,120,168,0.38)"; e.target.style.boxShadow = "0 0 0 3px rgba(0,120,168,0.12)"; }}
+              onBlur={e => { e.target.style.borderColor = "rgba(0,120,168,0.14)"; e.target.style.boxShadow = "none"; }}
+            />
+            <button
+              onClick={handleJoinHousehold}
+              disabled={joinLoading || !joinCode.trim()}
+              style={{
+                padding: "14px 22px",
+                fontSize: 15, fontWeight: FW.bold,
+                background: joinCode.trim() ? COLORS.primary : "rgba(0,120,168,0.35)",
+                color: "#fff", border: "none", borderRadius: 14,
+                cursor: (joinLoading || !joinCode.trim()) ? "not-allowed" : "pointer",
+                fontFamily: "'Figtree', sans-serif",
+                transition: "all 0.18s cubic-bezier(0.34,1.56,0.64,1)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Join →
+            </button>
+          </div>
+
+          {joinError && (
+            <motion.p
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              style={{ fontSize: 13, color: COLORS.danger, fontWeight: FW.semibold, marginTop: 6, textAlign: "center" }}
+            >
+              {joinError}
+            </motion.p>
+          )}
+        </motion.div>
+
+        {/* ── Feature chips ─────────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.45 }}
+          style={{ display: "flex", gap: 10, marginTop: 32, flexWrap: "wrap", justifyContent: "center" }}
+        >
+          {heroFeatures.map((f, i) => (
+            <div
+              key={i}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "7px 14px",
+                background: "rgba(255,255,255,0.62)",
+                backdropFilter: "blur(16px)",
+                WebkitBackdropFilter: "blur(16px)",
+                border: "1px solid rgba(255,255,255,0.85)",
+                borderRadius: 999,
+                fontSize: 12, fontWeight: FW.semibold,
+                color: COLORS.subtext,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+              }}
+            >
+              <span style={{ fontSize: 14 }}>{f.icon}</span>
+              {f.label}
+            </div>
+          ))}
+        </motion.div>
       </div>
     );
   }
+
   if (firebaseLoading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "'Figtree', sans-serif" }}>
         <SplashStyles />
-        <div style={{ width: 64, height: 64, borderRadius: 22, background: `linear-gradient(140deg, ${COLORS.primary}, #0095d2, ${COLORS.tertiary})`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 24, boxShadow: `0 12px 36px rgba(0,120,168,0.35)` }}>
-          <span style={{ fontSize: 24, fontWeight: FW.black, color: "#fff", fontFamily: "'Bricolage Grotesque', sans-serif" }}>RF</span>
-        </div>
-        <h2 style={{ fontSize: 22, fontWeight: FW.extrabold, color: COLORS.text, marginBottom: 16, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em" }}>FamilyFinance</h2>
-        <div style={{ width: 28, height: 28, border: `2.5px solid rgba(0,120,168,0.15)`, borderTopColor: COLORS.primary, borderRadius: "50%", animation: "spin 0.9s linear infinite", marginBottom: 12 }} />
-        <p style={{ fontSize: 14, color: COLORS.muted, fontWeight: FW.medium }}>Loading your budget…</p>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.88 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
+        >
+          <div style={{
+            width: 72, height: 72, borderRadius: 24,
+            background: `linear-gradient(145deg, #0095d2 0%, ${COLORS.primary} 45%, ${COLORS.tertiary} 100%)`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            marginBottom: 24,
+            boxShadow: `0 14px 40px rgba(0,120,168,0.38)`,
+            position: "relative", overflow: "hidden",
+          }}>
+            <span style={{ fontSize: 26, fontWeight: FW.black, color: "#fff", fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em", zIndex: 1 }}>FF</span>
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "50%", background: "linear-gradient(180deg, rgba(255,255,255,0.22) 0%, transparent 100%)", borderRadius: "24px 24px 0 0" }} />
+          </div>
+          <h2 style={{ fontSize: 24, fontWeight: FW.extrabold, color: COLORS.text, marginBottom: 24, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em" }}>FamilyFinance</h2>
+          <div style={{ width: 28, height: 28, border: `2.5px solid rgba(0,120,168,0.15)`, borderTopColor: COLORS.primary, borderRadius: "50%", animation: "spin 0.85s linear infinite", marginBottom: 12 }} />
+          <p style={{ fontSize: 14, color: COLORS.muted, fontWeight: FW.medium }}>Loading your budget…</p>
+        </motion.div>
       </div>
     );
   }
@@ -1739,10 +1933,10 @@ If the request doesn't map to a clear category goal, still return JSON with newG
       {/* ── MAIN COLUMN ── */}
       <div className="app-main" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
         {/* TOP HEADER */}
-        <header style={{ background: "rgba(240,244,247,0.82)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", borderBottom: "1px solid rgba(255,255,255,0.75)", padding: "16px 32px 14px", display: "flex", alignItems: "center", gap: 20, flexShrink: 0, boxShadow: "0 2px 16px rgba(0,0,0,0.04)" }}>
+        <header style={{ background: "rgba(240,244,247,0.82)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", borderBottom: "1px solid rgba(255,255,255,0.75)", padding: "16px 32px 14px", display: "flex", alignItems: "center", gap: 20, flexShrink: 0, boxShadow: "0 2px 16px rgba(0,0,0,0.04)", position: "relative", zIndex: 1000 }}>
           {/* Month picker */}
           <div style={{ position: "relative", zIndex: 300 }}>
-            {showMonthPicker && <div onClick={() => setShowMonthPicker(false)} style={{ position: "fixed", inset: 0, zIndex: 300 }} />}
+            {showMonthPicker && <div onClick={() => setShowMonthPicker(false)} style={{ position: "fixed", inset: 0, zIndex: 999 }} />}
             <button onClick={() => setShowMonthPicker(p => !p)} style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.72)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 12, padding: "9px 16px", fontSize: 14, fontWeight: FW.semibold, color: COLORS.text, cursor: "pointer", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", flexShrink: 0 }}>
               {(() => { const { month0, year } = parseKey(viewMonthKey); return `${MONTH_FULL[month0]} ${year}`; })()}
               <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.subtext }}>expand_more</span>
@@ -1845,11 +2039,18 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               const { month0, year } = parseKey(viewMonthKey);
               return (
                 <div className="glass-card" style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", border: "1px solid rgba(255,255,255,0.88)", borderRadius: 24, padding: "32px 32px 28px", boxShadow: "0 8px 40px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.95)", marginBottom: 20 }}>
-                  {/* Header: title + income total */}
+                  {/* Header: net cash flow hero + income pill */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
                     <div>
-                      <h2 style={{ fontSize: 28, fontWeight: FW.extrabold, color: COLORS.text, letterSpacing: "-0.035em", marginBottom: 4, fontFamily: "'Bricolage Grotesque', sans-serif", lineHeight: 1.1 }}>Show me the Money! 💰</h2>
-                      <p style={{ fontSize: 13.5, color: COLORS.subtext, fontWeight: FW.medium }}>Your budget for {MONTH_FULL[month0]} {year}</p>
+                      <p style={{ fontSize: 11, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 8, whiteSpace: "nowrap" }}>Net Cash Flow</p>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 4 }}>
+                        <span className="kpi-num" style={{ fontSize: 52, fontWeight: FW.black, color: netCashFlow >= 0 ? "#10b981" : "#F87171", letterSpacing: "-0.04em", fontFamily: "'Bricolage Grotesque', sans-serif", lineHeight: 1 }}>
+                          {netCashFlow >= 0 ? "+" : "−"}{fmt(Math.abs(netCashFlow))}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: 13, color: netCashFlow >= 0 ? "#10b981" : "#F87171", fontWeight: FW.semibold, opacity: 0.85 }}>
+                        {netCashFlow >= 0 ? "net savings this month" : "over budget this month"}
+                      </p>
                     </div>
                     <div style={{ textAlign: "right", background: "rgba(0,120,168,0.07)", borderRadius: 18, padding: "14px 20px", border: "1px solid rgba(0,120,168,0.08)" }}>
                       <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.primary, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 5, opacity: 0.75 }}>Total Income</p>
@@ -1858,8 +2059,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   </div>
                   {/* Budget bar */}
                   <BudgetBar totalIncome={viewTotalIncome} totalPlanned={budgetBarPlanned} totalSpent={budgetBarSpent} />
-                  {/* Bottom row: pace + net cash flow */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, flexWrap: "wrap", gap: 12 }}>
+                  {/* Bottom row: pace + expenses summary */}
+                  <div style={{ display: "flex", justifyContent: "flex-start", alignItems: "center", marginTop: 14, flexWrap: "wrap", gap: 12 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
                       {budgetBarPlanned > 0 && (
                         <p style={{ fontSize: 12, color: paceColor, fontWeight: FW.semibold, margin: 0 }}>
@@ -1870,12 +2071,6 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         <span className="material-symbols-outlined" style={{ fontSize: 14 }}>receipt_long</span>
                         {fmt(viewTotalExpenses)} expenses · {fmt(billsActualTotal)} bills paid
                       </span>
-                    </div>
-                    <div style={{ background: netCashFlow >= 0 ? "rgba(52,211,153,0.12)" : "rgba(248,113,113,0.12)", borderRadius: 16, padding: "12px 20px", textAlign: "center", flexShrink: 0, border: `1px solid ${netCashFlow >= 0 ? "rgba(52,211,153,0.2)" : "rgba(248,113,113,0.2)"}` }}>
-                      <p style={{ fontSize: 9, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 3 }}>Net This Month</p>
-                      <p className="kpi-num" style={{ fontSize: 26, fontWeight: FW.black, color: netCashFlow >= 0 ? "#10b981" : "#F87171", letterSpacing: "-0.03em", fontFamily: "'Bricolage Grotesque', sans-serif", margin: 0 }}>
-                        {netCashFlow >= 0 ? "+" : "−"}{fmt(Math.abs(netCashFlow))}
-                      </p>
                     </div>
                   </div>
                 </div>
@@ -2023,28 +2218,38 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 <div style={{ position: "absolute", top: -40, right: -40, width: 200, height: 200, borderRadius: "50%", background: "rgba(255,255,255,0.06)", pointerEvents: "none" }} />
                 <div style={{ position: "absolute", bottom: -20, left: 60, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,0.04)", pointerEvents: "none" }} />
                 <div style={{ position: "relative", zIndex: 1, height: "100%", display: "flex", flexDirection: "column" }}>
-                  <p style={{ fontSize: 11, fontWeight: FW.bold, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.8)", marginBottom: 28 }}>Cash Flow Summary</p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 20, flex: 1 }}>
-                    {[
-                      { label: "Expenses", amount: fmt(viewTotalExpenses), pctVal: pct(viewTotalExpenses, viewTotalIncome), badge: `${viewSpentPct}% of budget`, barColor: "rgba(255,255,255,0.92)" },
-                      { label: "Bills", amount: fmt(totalBills), pctVal: 100, badge: "100% committed", barColor: "rgba(255,255,255,0.92)" },
-                      { label: "Debt", amount: fmt(totalDebtPayments), pctVal: pct(totalDebtPayments, totalDebtBalance || 1), badge: `${Math.round(pct(totalDebtPayments, totalDebtBalance || 1))}% of target`, barColor: "rgba(255,255,255,0.92)" },
-                      { label: "Savings", amount: fmt(savingsActualTotal), pctVal: pct(savingsActualTotal, savingsExpectedTotal || 1), badge: `${Math.round(pct(savingsActualTotal, savingsExpectedTotal || 1))}% to goal`, barColor: "rgba(255,255,255,0.92)" },
-                      { label: "Income", amount: fmt(viewTotalIncome), pctVal: 100, badge: null, barColor: "rgba(255,255,255,0.92)" },
-                    ].map(row => (
-                      <div key={row.label}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 6 }}>
-                          <span style={{ fontSize: 13, fontWeight: FW.semibold, color: "rgba(255,255,255,0.9)" }}>
-                            {row.label}
-                            {row.badge && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: FW.bold, opacity: 0.8, textTransform: "uppercase", letterSpacing: "0.04em" }}>{row.badge}</span>}
-                          </span>
-                          <span style={{ fontSize: 13, fontWeight: FW.bold, color: "#fff" }}>{row.amount}</span>
-                        </div>
-                        <div style={{ height: 6, background: "rgba(255,255,255,0.2)", borderRadius: 9999, overflow: "hidden" }}>
-                          <div style={{ width: `${Math.min(100, row.pctVal)}%`, height: "100%", background: row.barColor, borderRadius: 9999 }} />
-                        </div>
-                      </div>
-                    ))}
+                  <p style={{ fontSize: 11, fontWeight: FW.bold, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.8)", marginBottom: 20 }}>Cash Flow Summary</p>
+                  <div style={{ flex: 1, minHeight: 210 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={[
+                          { name: "Income", amount: viewTotalIncome },
+                          { name: "Expenses", amount: viewTotalExpenses },
+                          { name: "Bills", amount: totalBills },
+                          { name: "Debt", amount: totalDebtPayments },
+                          { name: "Savings", amount: savingsActualTotal },
+                        ]}
+                        margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
+                        barCategoryGap="28%"
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
+                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: "rgba(255,255,255,0.65)", fontWeight: 600 }} axisLine={false} tickLine={false} />
+                        <YAxis tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)} tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }} axisLine={false} tickLine={false} />
+                        <Tooltip
+                          formatter={(value) => [fmt(value), ""]}
+                          contentStyle={{ background: "rgba(0,30,50,0.95)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, color: "#fff", fontSize: 12 }}
+                          labelStyle={{ color: "rgba(255,255,255,0.75)", fontWeight: 600, marginBottom: 2 }}
+                          cursor={{ fill: "rgba(255,255,255,0.05)" }}
+                        />
+                        <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
+                          <Cell fill="rgba(255,255,255,0.88)" />
+                          <Cell fill="#FBBF24" />
+                          <Cell fill="#93C5FD" />
+                          <Cell fill="#FCA5A5" />
+                          <Cell fill="#6EE7B7" />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
               </div>
@@ -2532,23 +2737,22 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       <p style={{ fontSize: 12, color: COLORS.muted, marginTop: 8 }}>No bills added yet. Add your first bill on the Bill Calendar.</p>
                     )}
                   </div>
-                  {/* Debt summary card — links to Debts tab */}
-                  <div style={{ background: "rgba(172,49,73,0.06)", borderRadius: 16, padding: "16px 18px", border: `1px solid rgba(172,49,73,0.1)` }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.danger }}>credit_card</span>
-                        <span style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.text }}>Debts</span>
-                      </div>
-                      <button onClick={() => setTab("debts")} style={{ fontSize: 11, fontWeight: FW.bold, color: COLORS.danger, background: "none", border: "none", cursor: "pointer" }}>Manage →</button>
+                  {/* Debt Payoff Plan button — links to AI Advisor */}
+                  <button
+                    onClick={() => {
+                      setAdvisorMsg(`Create a personalized debt payoff plan for our family. We have ${debts.length > 0 ? debts.map(d => `${d.label}: ${fmt(d.balance)} at ${d.interest}% APR (min payment ${fmt(d.minPayment)})`).join(", ") : "no debts tracked yet"}. Our monthly income is ${fmt(viewTotalIncome)} and total expenses are ${fmt(viewTotalExpenses)}. Please give us a specific payoff plan with estimated payoff dates.`);
+                      pendingAdvisorSend.current = true;
+                      setTab("advisor");
+                    }}
+                    style={{ width: "100%", background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, color: "#fff", border: "none", borderRadius: 14, padding: "16px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, boxShadow: `0 6px 18px rgba(0,120,168,0.25)`, textAlign: "left" }}
+                  >
+                    <span style={{ fontSize: 20 }}>🚀</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: FW.bold }}>Debt Payoff Plan</div>
+                      <div style={{ fontSize: 11, opacity: 0.8, fontWeight: FW.medium, marginTop: 2 }}>Get an AI-powered payoff strategy</div>
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <div><p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 2 }}>Total Owed</p><p style={{ fontSize: 15, fontWeight: FW.extrabold, color: COLORS.danger }}>{fmt(totalDebt)}</p></div>
-                      <div style={{ textAlign: "right" }}><p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 2 }}>Min/mo</p><p style={{ fontSize: 15, fontWeight: FW.extrabold, color: COLORS.text }}>{fmt(debtPayments)}</p></div>
-                    </div>
-                    {debts.length === 0 && (
-                      <p style={{ fontSize: 12, color: COLORS.muted, marginTop: 8 }}>No debts tracked yet. Add a debt to start your payoff plan.</p>
-                    )}
-                  </div>
+                    <span className="material-symbols-outlined" style={{ fontSize: 20, opacity: 0.8 }}>arrow_forward</span>
+                  </button>
                   {/* Savings — with inline editing, × , and +/- controls */}
                   <div style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)", border: "1px solid rgba(255,255,255,0.88)", borderRadius: 20, padding: 22, boxShadow: "0 4px 24px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.95)" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
@@ -2892,326 +3096,355 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           );
         })()}
         {/* ── MONTHLY INSIGHTS TAB ── */}
-        {tab === "insights" && (
-          <div>
-            {/* Header row */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, flexWrap: "wrap", gap: 14 }}>
-              <div>
-                <h2 style={{ fontWeight: FW.extrabold, fontSize: 24, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 4 }}>Monthly Insights</h2>
-                <p style={{ color: COLORS.subtext, fontSize: 14 }}>January – December 2026 · Click any month for details & AI analysis</p>
-              </div>
-            </div>
-            {/* Collapsible all-months section */}
-            <div style={{ marginBottom: 28 }}>
-              <button onClick={() => setInsightsMonthsOpen(p => !p)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, padding: "6px 0", marginBottom: insightsMonthsOpen ? 12 : 0 }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 18, color: COLORS.muted, transition: "transform .2s", transform: insightsMonthsOpen ? "rotate(0deg)" : "rotate(-90deg)" }}>expand_more</span>
-                <span style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.sidebarText }}>All Months</span>
-                <span style={{ fontSize: 11, color: COLORS.muted }}>({allInsightMonths.filter(k => monthStats(k).hasData).length} with data)</span>
-              </button>
-              {insightsMonthsOpen && (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10 }}>
-                  {allInsightMonths.map((key) => {
-                    const { month0, year } = parseKey(key);
-                    const s = monthStats(key);
-                    const isActive = key === activeInsightKey;
-                    const isToday = key === todayKey;
-                    const isFuture = key > todayKey;
-                    const hasData = s.hasData;
-                    const netColor = s.net >= 0 ? COLORS.success : COLORS.danger;
-                    return (
-                      <button key={key} onClick={() => setActiveInsightKey(key)} style={{
-                        background: isActive ? COLORS.accentBlue + "22" : COLORS.card,
-                        border: `1.5px ${isFuture && !hasData ? "dashed" : "solid"} ${isActive ? COLORS.accentBlue : isToday ? COLORS.accent + "66" : COLORS.border}`,
-                        borderRadius: 14, padding: "14px 12px", cursor: "pointer", textAlign: "left",
-                        boxShadow: isActive ? `0 0 16px ${COLORS.accentBlue}33` : "none",
-                        transition: "all .2s", position: "relative",
-                      }}>
-                        {isToday && <div style={{ position: "absolute", top: 8, right: 8, width: 6, height: 6, borderRadius: "50%", background: COLORS.accent }} />}
-                        <p style={{ fontSize: 11, fontWeight: FW.extrabold, color: isActive ? COLORS.accentBlue : COLORS.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>
-                          {MONTH_NAMES[month0]} {String(year).slice(2)}
-                        </p>
-                        {hasData ? (
-                          <>
-                            <p style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.text, marginBottom: 2 }}>{fmt(s.exp)}</p>
-                            <p style={{ fontSize: 11, color: netColor }}>{s.net >= 0 ? "+" : ""}{fmt(s.net)}</p>
-                            {/* Tiny bar */}
-                            <div style={{ marginTop: 8, background: COLORS.border, borderRadius: 99, height: 3 }}>
-                              <div style={{ width: `${Math.min(100, s.inc > 0 ? (s.exp/s.inc)*100 : 0)}%`, background: s.exp > s.inc ? COLORS.danger : COLORS.accent, height: "100%", borderRadius: 99 }} />
-                            </div>
-                          </>
-                        ) : (
-                          <p style={{ fontSize: 11, color: COLORS.border, marginTop: 6 }}>No data</p>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-            {/* Detail panel for activeInsightKey */}
-            {(() => {
-              const key = activeInsightKey;
-              const { month0, year } = parseKey(key);
-              const snap = getSnap(key);
-              const s = monthStats(key);
-              const prevKey = monthKey(year, month0 - 1);
-              const prevS = monthStats(prevKey);
-              const isCurrent = key === todayKey;
-              return (
+        {tab === "insights" && (() => {
+          const key = activeInsightKey;
+          const { month0, year } = parseKey(key);
+          const snap = getSnap(key);
+          const s = monthStats(key);
+          const prevKey = monthKey(year, month0 - 1);
+          const prevS = monthStats(prevKey);
+          const isCurrent = key === todayKey;
+          const netWorth = savingsActualTotal - totalDebt;
+          const dtiNum = s.inc > 0 ? Math.round((totalDebt / s.inc) * 100) : null;
+          const savingsRate = s.inc > 0 ? Math.max(0, (s.net / s.inc) * 100) : null;
+
+          // ── Year trend data for AreaChart ──────────────────────────────
+          const yearChartData = allInsightMonths.map(mk => {
+            const ms = monthStats(mk);
+            const { month0: m0 } = parseKey(mk);
+            return {
+              month: MONTH_NAMES[m0],
+              Income: ms.hasData && ms.inc > 0 ? ms.inc : null,
+              Expenses: ms.hasData && ms.exp > 0 ? ms.exp : null,
+            };
+          });
+
+          // ── Category donut data ────────────────────────────────────────
+          const catPieData = CATEGORIES
+            .filter(c => (s.cats[c.id] || 0) > 0)
+            .sort((a, b) => (s.cats[b.id] || 0) - (s.cats[a.id] || 0))
+            .map(c => ({ name: c.label, value: s.cats[c.id] || 0, color: CAT_CHART_COLOR[c.id] || COLORS.muted }));
+
+          // ── 50/30/20 ──────────────────────────────────────────────────
+          const debtMinsTotal = debts.reduce((acc, d) => acc + d.minPayment, 0);
+          const needsAmt = snap.expenses.filter(e => ["Housing","Utilities","Food","Transport","Health"].includes(e.category)).reduce((acc,e)=>acc+e.amount,0) + debtMinsTotal;
+          const wantsAmt = snap.expenses.filter(e => ["Entertainment","Personal","Kids","Education","Subscriptions","Travel"].includes(e.category)).reduce((acc,e)=>acc+e.amount,0);
+          const savingsAmt = snap.expenses.filter(e => ["Other","Savings"].includes(e.category)).reduce((acc,e)=>acc+e.amount,0);
+
+          // ── Shared glass card style ────────────────────────────────────
+          const glassCard = { background: "rgba(255,255,255,0.72)", backdropFilter: "blur(28px) saturate(180%)", WebkitBackdropFilter: "blur(28px) saturate(180%)", border: "1px solid rgba(255,255,255,0.88)", borderRadius: 20, boxShadow: "0 4px 24px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.95)" };
+
+          return (
+            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+
+              {/* ── Header ──────────────────────────────────────────────── */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
                 <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-                    <div>
-                      <h3 style={{ fontWeight: FW.extrabold, fontSize: 18 }}>
-                        {MONTH_FULL[month0]} {year}
-                        {isCurrent && <span style={{ marginLeft: 10, fontSize: 11, background: COLORS.accent + "22", color: COLORS.accent, border: `1px solid ${COLORS.accent}44`, borderRadius: 6, padding: "2px 8px", verticalAlign: "middle" }}>Current</span>}
-                      </h3>
-                      {prevS.hasData && (
-                        <p style={{ fontSize: 11, color: COLORS.muted, marginTop: 3 }}>
-                          vs {MONTH_NAMES[parseKey(prevKey).month0]}: expenses {s.exp > prevS.exp ? "▲" : "▼"} {fmt(Math.abs(s.exp - prevS.exp))} · net {s.net > prevS.net ? "▲" : "▼"} {fmt(Math.abs(s.net - prevS.net))}
-                        </p>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => generateInsight(key)}
-                      disabled={!s.hasData || insightLoading[key]}
-                      style={{ background: COLORS.primary + "18", border: `1px solid ${COLORS.primary}44`, color: COLORS.primary, borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: FW.bold, cursor: s.hasData ? "pointer" : "not-allowed", opacity: s.hasData ? 1 : 0.4, display: "flex", alignItems: "center", gap: 8 }}
-                    >
-                      {insightLoading[key] ? <><div style={{ width: 12, height: 12, border: `2px solid ${COLORS.primary}44`, borderTopColor: COLORS.primary, borderRadius: "50%", animation: "spin 1s linear infinite" }} /> Analyzing…</> : "✦ AI Insights"}
-                    </button>
-                  </div>
-                  {/* AI insight box */}
-                  {insightText[key] && (
-                    <div style={{ background: COLORS.accentPurple + "12", border: `1px solid ${COLORS.accentPurple}44`, borderRadius: 14, padding: 18, marginBottom: 20 }}>
-                      <p style={{ fontSize: 12, color: COLORS.accentPurple, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>✦ Claude's Analysis</p>
-                      {insightText[key].split("\n").filter(l => l.trim()).map((line, i) => (
-                        <p key={i} style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.7, marginBottom: 4 }}>{line}</p>
-                      ))}
-                    </div>
-                  )}
-                  {!s.hasData ? (
-                    <div style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(20px) saturate(160%)", WebkitBackdropFilter: "blur(20px) saturate(160%)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 16, padding: 40, textAlign: "center" }}>
-                      <p style={{ fontSize: 32, marginBottom: 12 }}>📭</p>
-                      <p style={{ fontWeight: FW.bold, color: COLORS.text, marginBottom: 6 }}>No data for {MONTH_FULL[month0]}</p>
-                      <p style={{ color: COLORS.muted, fontSize: 13 }}>Switch to this month and use the + button to add entries,<br />or they'll appear here automatically.</p>
-                    </div>
-                  ) : (
-                    <>
-                      {/* KPI row */}
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
-                        {[
-                          { label: "Income", val: s.inc, color: COLORS.accent },
-                          { label: "Expenses", val: s.exp, color: COLORS.accentWarm },
-                          { label: "Net", val: s.net, color: s.net >= 0 ? COLORS.success : COLORS.danger },
-                          { label: "Savings Rate", val: s.inc > 0 ? `${Math.max(0,(s.net/s.inc*100)).toFixed(1)}%` : "—", color: COLORS.accentPurple, raw: true },
-                        ].map(k => (
-                          <div key={k.label} style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(20px) saturate(160%)", WebkitBackdropFilter: "blur(20px) saturate(160%)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 14, padding: "16px 16px 12px" }}>
-                            <p style={{ fontSize: 10, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>{k.label}</p>
-                            <p style={{ fontSize: 20, fontWeight: FW.extrabold, color: k.color }}>{k.raw ? k.val : fmt(k.val)}</p>
-                            {prevS.hasData && !k.raw && (() => {
-                              const prev = k.label === "Income" ? prevS.inc : k.label === "Expenses" ? prevS.exp : prevS.net;
-                              const diff = k.val - prev;
-                              return <p style={{ fontSize: 11, color: diff >= 0 ? (k.label === "Expenses" ? COLORS.danger : COLORS.success) : (k.label === "Expenses" ? COLORS.success : COLORS.danger), marginTop: 3 }}>{diff >= 0 ? "+" : ""}{fmt(diff)} vs prev</p>;
-                            })()}
-                          </div>
-                        ))}
-                      </div>
-                      {/* Debt / Net Worth row */}
-                      {(() => {
-                        const netWorth = savingsActualTotal - totalDebt;
-                        const debtToInc = s.inc > 0 ? ((totalDebt / s.inc) * 100).toFixed(0) : "—";
-                        return (
-                          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 20 }}>
-                            {[
-                              { label: "Total Debt", val: fmt(totalDebt), color: COLORS.danger },
-                              { label: "Net Worth", val: fmt(netWorth), color: netWorth >= 0 ? COLORS.success : COLORS.danger },
-                              { label: "Debt-to-Income", val: debtToInc === "—" ? "—" : `${debtToInc}%`, color: parseFloat(debtToInc) > 200 ? COLORS.danger : parseFloat(debtToInc) > 100 ? COLORS.warning : COLORS.success },
-                            ].map(k => (
-                              <div key={k.label} style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(20px) saturate(160%)", WebkitBackdropFilter: "blur(20px) saturate(160%)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 14, padding: "14px 16px" }}>
-                                <p style={{ fontSize: 10, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 5 }}>{k.label}</p>
-                                <p style={{ fontSize: 18, fontWeight: FW.extrabold, color: k.color }}>{k.val}</p>
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      })()}
-                      {/* Category breakdown */}
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 20 }}>
-                        {/* Spending by Category */}
-                        <div style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(20px) saturate(160%)", WebkitBackdropFilter: "blur(20px) saturate(160%)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 16, padding: 20 }}>
-                          <h4 style={{ fontWeight: FW.bold, fontSize: 14, marginBottom: 14 }}>Spending by Category</h4>
-                          {CATEGORIES.filter(c => s.cats[c.id] > 0 || viewExpenseBudgets[c.id] > 0).sort((a,b) => (s.cats[b.id]||0)-(s.cats[a.id]||0)).map(c => {
-                            const budget = viewExpenseBudgets[c.id] || 0;
-                            const spent = s.cats[c.id] || 0;
-                            const barMax2 = Math.max(spent, budget, 1);
-                            return (
-                            <div key={c.id} style={{ marginBottom: 11 }}>
-                              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                                <span style={{ fontSize: 12, color: COLORS.text }}>{c.label}</span>
-                                <span style={{ fontSize: 12, color: COLORS.muted }}>{fmt(spent)}{budget > 0 ? ` / ${fmt(budget)}` : ""}</span>
-                              </div>
-                              <div style={{ position: "relative", height: 6, background: COLORS.containerLow, borderRadius: 9999, overflow: "visible" }}>
-                                {budget > 0 && (
-                                  <div style={{ position: "absolute", top: 0, left: 0, width: `${pct(budget, barMax2)}%`, height: "100%", background: COLORS.primary + "30", borderRadius: 9999 }} />
-                                )}
-                                <div style={{ position: "absolute", top: 0, left: 0, width: `${pct(spent, barMax2)}%`, height: "100%", background: spent > budget && budget > 0 ? COLORS.danger : COLORS.accentBlue, borderRadius: 9999, transition: "width .4s" }} />
-                              </div>
-                            </div>
-                            );
-                          })}
-                          {CATEGORIES.every(c => s.cats[c.id] === 0) && <p style={{ color: COLORS.muted, fontSize: 13 }}>No expenses recorded.</p>}
-                        </div>
-                        {/* Debt Details */}
-                        <div style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(20px) saturate(160%)", WebkitBackdropFilter: "blur(20px) saturate(160%)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 16, padding: 20 }}>
-                          <h4 style={{ fontWeight: FW.bold, fontSize: 14, marginBottom: 14 }}>Debt Details</h4>
-                          {debts.length === 0 ? (
-                            <p style={{ color: COLORS.muted, fontSize: 13 }}>No debts recorded.</p>
-                          ) : (
-                            debts.map(d => {
-                              const paidOff = d.balance <= 0;
-                              return (
-                                <div key={d.id} style={{ marginBottom: 14, padding: "10px 12px", borderRadius: 10, background: COLORS.containerLow }}>
-                                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                                    <span style={{ fontSize: 13, fontWeight: FW.semibold, color: COLORS.text }}>{d.label}</span>
-                                    <span style={{ fontSize: 13, color: paidOff ? COLORS.success : COLORS.danger, fontWeight: FW.bold }}>{paidOff ? "Paid off!" : fmt(d.balance)}</span>
-                                  </div>
-                                  <div style={{ display: "flex", gap: 12 }}>
-                                    <span style={{ fontSize: 11, color: COLORS.muted }}>{d.interest}% APR</span>
-                                    <span style={{ fontSize: 11, color: COLORS.muted }}>Min: {fmt(d.minPayment)}/mo</span>
-                                  </div>
-                                </div>
-                              );
-                            })
-                          )}
-                          {totalDebt > 0 && (
-                            <button
-                              onClick={() => { setAdvisorMsg(`Can we pay our debt down faster? We have ${debts.map(d => `${d.label}: ${fmt(d.balance)} at ${d.interest}% APR (min payment ${fmt(d.minPayment)})`).join(", ")}. Our monthly income is ${fmt(s.inc)} and total expenses are ${fmt(s.exp)}. Please give us a specific payoff plan with estimated payoff dates.`); pendingAdvisorSend.current = true; setTab("advisor"); }}
-                              style={{ width: "100%", marginTop: 10, background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, color: "#fff", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: FW.bold, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-                            >
-                              🚀 Can we pay this debt down faster?
-                            </button>
-                          )}
-                        </div>
-                        {/* 50/30/20 */}
-                        <div style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(20px) saturate(160%)", WebkitBackdropFilter: "blur(20px) saturate(160%)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 16, padding: 20 }}>
-                          <h4 style={{ fontWeight: FW.bold, fontSize: 14, marginBottom: 14 }}>50 / 30 / 20</h4>
-                          {(() => {
-                            const debtMins = debts.reduce((s,d) => s+d.minPayment, 0);
-                            const needs2 = snap.expenses.filter(e => ["Housing","Utilities","Food","Transport","Health"].includes(e.category)).reduce((s,e)=>s+e.amount,0) + debtMins;
-                            const wants2 = snap.expenses.filter(e => ["Entertainment","Personal","Kids","Education","Subscriptions","Travel"].includes(e.category)).reduce((s,e)=>s+e.amount,0);
-                            const sav2 = snap.expenses.filter(e => ["Other","Savings"].includes(e.category)).reduce((s2,e) => s2+e.amount, 0);
-                            return (
-                              <>
-                                {[
-                                  { label: "Needs (50%)", val: needs2, target: s.inc * 0.5, color: COLORS.accentBlue, note: debtMins > 0 ? `incl. ${fmt(debtMins)} debt mins` : null },
-                                  { label: "Wants (30%)", val: wants2, target: s.inc * 0.3, color: COLORS.accentPurple },
-                                  { label: "Savings (20%)", val: sav2, target: s.inc * 0.2, color: COLORS.accent },
-                                ].map(b => (
-                                  <div key={b.label} style={{ marginBottom: 14 }}>
-                                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-                                      <span style={{ fontSize: 12, color: b.color, fontWeight: FW.semibold }}>{b.label}</span>
-                                      <span style={{ fontSize: 12, color: COLORS.muted }}>{fmt(b.val)} / {fmt(b.target)}</span>
-                                    </div>
-                                    {b.note && <p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 4 }}>{b.note}</p>}
-                                    <ProgressBar value={b.val} max={b.target} color={b.color} />
-                                  </div>
-                                ))}
-                              </>
-                            );
-                          })()}
-                          <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${COLORS.border}` }}>
-                            <h4 style={{ fontWeight: FW.bold, fontSize: 13, marginBottom: 10, color: COLORS.muted }}>Notes</h4>
-                            <textarea
-                              value={snap.notes || ""}
-                              onChange={e => updateSnapNotes(key, e.target.value)}
-                              placeholder="Add notes for this month…"
-                              rows={3}
-                              style={{ ...inputStyle, resize: "none", fontSize: 12, lineHeight: 1.6 }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      {/* Transactions list */}
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                        <div style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(20px) saturate(160%)", WebkitBackdropFilter: "blur(20px) saturate(160%)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 16, padding: 20 }}>
-                          <h4 style={{ fontWeight: FW.bold, fontSize: 14, marginBottom: 12, color: COLORS.accent }}>Income ({snap.income.length})</h4>
-                          {snap.income.length === 0 ? <p style={{ color: COLORS.muted, fontSize: 12 }}>None recorded</p> :
-                            snap.income.map(i => (
-                              <div key={i.id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${COLORS.border}` }}>
-                                <span style={{ fontSize: 13 }}>{i.label}</span>
-                                <span style={{ fontSize: 13, color: COLORS.accent }}>+{fmt(i.amount)}</span>
-                              </div>
-                            ))
-                          }
-                        </div>
-                        <div style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(20px) saturate(160%)", WebkitBackdropFilter: "blur(20px) saturate(160%)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 16, padding: 20 }}>
-                          <h4 style={{ fontWeight: FW.bold, fontSize: 14, marginBottom: 12, color: COLORS.accentWarm }}>Expenses ({snap.expenses.length})</h4>
-                          {snap.expenses.length === 0 ? <p style={{ color: COLORS.muted, fontSize: 12 }}>None recorded</p> :
-                            snap.expenses.slice().sort((a,b)=>b.amount-a.amount).map(e => (
-                              <div key={e.id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${COLORS.border}` }}>
-                                <div>
-                                  <p style={{ fontSize: 13 }}>{e.label}</p>
-                                  <p style={{ fontSize: 10, color: COLORS.muted }}>{e.category}</p>
-                                </div>
-                                <span style={{ fontSize: 13, color: COLORS.accentWarm }}>−{fmt(e.amount)}</span>
-                              </div>
-                            ))
-                          }
-                        </div>
-                      </div>
-                    </>
-                  )}
+                  <h2 style={{ fontWeight: FW.extrabold, fontSize: 24, color: COLORS.sidebarText, letterSpacing: "-0.03em", marginBottom: 3, fontFamily: "'Bricolage Grotesque', sans-serif" }}>Monthly Insights</h2>
+                  <p style={{ color: COLORS.subtext, fontSize: 13 }}>2026 · tap a month to explore</p>
                 </div>
-              );
-            })()}
-            {/* Year-at-a-glance summary bar */}
-            <div style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(20px) saturate(160%)", WebkitBackdropFilter: "blur(20px) saturate(160%)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 16, padding: 24, marginTop: 28 }}>
-              <h4 style={{ fontWeight: FW.bold, fontSize: 15, marginBottom: 16 }}>Year-at-a-Glance</h4>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 18 }}>
-                {(() => {
-                  const allStats = allInsightMonths.map(k => monthStats(k));
-                  const totalInc = allStats.reduce((s,m)=>s+m.inc,0);
-                  const totalExp = allStats.reduce((s,m)=>s+m.exp,0);
-                  const bestMonth = allInsightMonths.reduce((best,k) => monthStats(k).net > monthStats(best).net ? k : best, allInsightMonths[0]);
-                  const worstMonth = allInsightMonths.filter(k=>monthStats(k).hasData).reduce((worst,k) => monthStats(k).net < monthStats(worst).net ? k : worst, allInsightMonths[0]);
-                  return [
-                    { label: "Total Income", val: fmt(totalInc), color: COLORS.accent },
-                    { label: "Total Expenses", val: fmt(totalExp), color: COLORS.accentWarm },
-                    { label: "Net Saved", val: fmt(totalInc - totalExp), color: totalInc >= totalExp ? COLORS.success : COLORS.danger },
-                    { label: "Avg / Month", val: fmt(allStats.filter(m=>m.hasData).length ? totalExp / allStats.filter(m=>m.hasData).length : 0), color: COLORS.accentPurple },
-                  ].map(k => (
-                    <div key={k.label} style={{ background: COLORS.surface, borderRadius: 12, padding: 16 }}>
-                      <p style={{ fontSize: 10, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>{k.label}</p>
-                      <p style={{ fontSize: 18, fontWeight: FW.extrabold, color: k.color }}>{k.val}</p>
-                    </div>
-                  ));
-                })()}
+                <button
+                  onClick={() => generateInsight(key)}
+                  disabled={!s.hasData || insightLoading[key]}
+                  style={{ background: s.hasData ? `linear-gradient(135deg, ${COLORS.accentPurple}22, ${COLORS.accentPurple}11)` : "rgba(0,0,0,0.04)", border: `1px solid ${COLORS.accentPurple}44`, color: s.hasData ? COLORS.accentPurple : COLORS.muted, borderRadius: 12, padding: "10px 18px", fontSize: 13, fontWeight: FW.bold, cursor: s.hasData ? "pointer" : "not-allowed", opacity: s.hasData ? 1 : 0.45, display: "flex", alignItems: "center", gap: 8, transition: "all 0.18s ease" }}
+                >
+                  {insightLoading[key]
+                    ? <><div style={{ width: 12, height: 12, border: `2px solid ${COLORS.accentPurple}44`, borderTopColor: COLORS.accentPurple, borderRadius: "50%", animation: "spin 1s linear infinite" }} />Analyzing…</>
+                    : <>✦ AI Insights</>}
+                </button>
               </div>
-              {/* Dual-series Income vs Expenses bar chart */}
-              <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 10 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 5 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: COLORS.primary }} /><span style={{ fontSize: 11, color: COLORS.subtext }}>Income</span></div>
-                <div style={{ display: "flex", alignItems: "center", gap: 5 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: COLORS.accentWarm }} /><span style={{ fontSize: 11, color: COLORS.subtext }}>Expenses</span></div>
-              </div>
-              <div style={{ display: "flex", gap: 4, alignItems: "flex-end", height: 80 }}>
-                {allInsightMonths.map(key => {
-                  const s = monthStats(key);
-                  const { month0 } = parseKey(key);
-                  const maxVal = Math.max(...allInsightMonths.map(k => Math.max(monthStats(k).inc, monthStats(k).exp)), 1);
-                  const incH = s.hasData && s.inc > 0 ? Math.max(4, (s.inc / maxVal) * 68) : 2;
-                  const expH = s.hasData && s.exp > 0 ? Math.max(4, (s.exp / maxVal) * 68) : 2;
+
+              {/* ── Month pill strip ─────────────────────────────────────── */}
+              <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none" }}>
+                {allInsightMonths.map(mk => {
+                  const ms = monthStats(mk);
+                  const { month0: m0 } = parseKey(mk);
+                  const isActive = mk === key;
+                  const isToday = mk === todayKey;
+                  const isFuture = mk > todayKey;
                   return (
-                    <div key={key} onClick={() => setActiveInsightKey(key)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer", gap: 2 }}>
-                      <div style={{ display: "flex", alignItems: "flex-end", gap: 1, height: 68, width: "100%" }}>
-                        <div style={{ flex: 1, height: incH, background: key === activeInsightKey ? COLORS.primary : COLORS.primary + "66", borderRadius: "3px 3px 0 0", transition: "all .2s" }} />
-                        <div style={{ flex: 1, height: expH, background: key === activeInsightKey ? COLORS.accentWarm : COLORS.accentWarm + "66", borderRadius: "3px 3px 0 0", transition: "all .2s" }} />
+                    <button
+                      key={mk}
+                      onClick={() => setActiveInsightKey(mk)}
+                      style={{
+                        flexShrink: 0,
+                        padding: "8px 14px",
+                        borderRadius: 999,
+                        border: isActive ? `1.5px solid ${COLORS.primary}` : `1.5px solid ${isToday ? COLORS.primary + "55" : "rgba(0,0,0,0.08)"}`,
+                        background: isActive ? COLORS.primary : "rgba(255,255,255,0.70)",
+                        backdropFilter: "blur(12px)",
+                        WebkitBackdropFilter: "blur(12px)",
+                        cursor: "pointer",
+                        transition: "all 0.18s cubic-bezier(0.34,1.56,0.64,1)",
+                        textAlign: "center",
+                        minWidth: 64,
+                      }}
+                    >
+                      <div style={{ fontSize: 11, fontWeight: FW.extrabold, color: isActive ? "#fff" : isToday ? COLORS.primary : COLORS.subtext, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                        {MONTH_NAMES[m0]}
                       </div>
-                      <span style={{ fontSize: 9, color: key === activeInsightKey ? COLORS.primary : COLORS.muted, whiteSpace: "nowrap" }}>{MONTH_NAMES[month0]}</span>
-                    </div>
+                      {ms.hasData && (
+                        <div style={{ fontSize: 10, color: isActive ? "rgba(255,255,255,0.80)" : COLORS.muted, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
+                          {fmt(ms.exp)}
+                        </div>
+                      )}
+                      {!ms.hasData && !isFuture && (
+                        <div style={{ fontSize: 10, color: isActive ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.2)", marginTop: 2 }}>—</div>
+                      )}
+                    </button>
                   );
                 })}
               </div>
+
+              {/* ── AI insight panel ─────────────────────────────────────── */}
+              {insightText[key] && (
+                <div style={{ ...glassCard, padding: "18px 20px", background: `linear-gradient(135deg, ${COLORS.accentPurple}10, ${COLORS.accentPurple}06)`, border: `1px solid ${COLORS.accentPurple}33` }}>
+                  <p style={{ fontSize: 11, fontWeight: FW.extrabold, color: COLORS.accentPurple, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>✦ Claude's Analysis · {MONTH_FULL[month0]}</p>
+                  <div style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.75 }}>{renderMd(insightText[key])}</div>
+                </div>
+              )}
+
+              {/* ── No data empty state ──────────────────────────────────── */}
+              {!s.hasData ? (
+                <div style={{ ...glassCard, padding: 48, textAlign: "center" }}>
+                  <p style={{ fontSize: 36, marginBottom: 12 }}>📭</p>
+                  <p style={{ fontWeight: FW.bold, fontSize: 16, color: COLORS.text, marginBottom: 6, fontFamily: "'Bricolage Grotesque', sans-serif" }}>No data for {MONTH_FULL[month0]}</p>
+                  <p style={{ color: COLORS.muted, fontSize: 13, lineHeight: 1.6 }}>Switch to this month and add income or expenses<br />using the + button — they'll appear here automatically.</p>
+                </div>
+              ) : (
+                <>
+                  {/* ── Hero metrics band ────────────────────────────────── */}
+                  <div style={{ ...glassCard, padding: "22px 24px", position: "relative", overflow: "hidden" }}>
+                    <BorderBeam size={320} duration={12} colorFrom={COLORS.primary} colorTo={COLORS.tertiary} borderWidth={1.5} />
+                    {/* Month label */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
+                      <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: FW.extrabold, fontSize: 17, color: COLORS.text, letterSpacing: "-0.02em" }}>{MONTH_FULL[month0]} {year}</span>
+                      {isCurrent && <span style={{ fontSize: 10, fontWeight: FW.bold, background: COLORS.primary + "18", color: COLORS.primary, border: `1px solid ${COLORS.primary}33`, borderRadius: 999, padding: "2px 9px", letterSpacing: "0.04em", textTransform: "uppercase" }}>Current</span>}
+                    </div>
+                    {/* 6-metric grid */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 0 }}>
+                      {[
+                        { label: "Income",       val: fmt(s.inc),                                                               color: COLORS.success,      prevVal: prevS.hasData ? prevS.inc : null,  higherIsGood: true },
+                        { label: "Expenses",      val: fmt(s.exp),                                                               color: COLORS.accentWarm,   prevVal: prevS.hasData ? prevS.exp : null,  higherIsGood: false },
+                        { label: "Net",           val: fmt(s.net),                                                               color: s.net >= 0 ? COLORS.success : COLORS.danger, prevVal: prevS.hasData ? prevS.net : null, higherIsGood: true },
+                        { label: "Savings Rate",  val: savingsRate !== null ? `${savingsRate.toFixed(1)}%` : "—",                color: COLORS.accentPurple, prevVal: null },
+                        { label: "Net Worth",     val: fmt(netWorth),                                                            color: netWorth >= 0 ? COLORS.success : COLORS.danger, prevVal: null },
+                        { label: "Debt-to-Income",val: dtiNum !== null ? `${dtiNum}%` : "—",                                   color: dtiNum !== null && dtiNum > 200 ? COLORS.danger : dtiNum !== null && dtiNum > 100 ? COLORS.warning : COLORS.success, prevVal: null },
+                      ].map((metric, i) => {
+                        const isLast = i === 5;
+                        const diff = metric.prevVal !== null ? (
+                          metric.label === "Expenses" ? s.exp - prevS.exp : metric.label === "Income" ? s.inc - prevS.inc : s.net - prevS.net
+                        ) : null;
+                        const isPositive = diff !== null && (metric.higherIsGood ? diff >= 0 : diff <= 0);
+                        return (
+                          <div key={metric.label} style={{ padding: "0 20px 0 0", paddingRight: isLast ? 0 : 20, marginRight: isLast ? 0 : 20, borderRight: isLast ? "none" : "1px solid rgba(0,0,0,0.06)" }}>
+                            <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>{metric.label}</p>
+                            <p style={{ fontSize: 22, fontWeight: FW.extrabold, color: metric.color, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{metric.val}</p>
+                            {diff !== null && (
+                              <p style={{ fontSize: 11, color: isPositive ? COLORS.success : COLORS.danger, marginTop: 5, display: "flex", alignItems: "center", gap: 3 }}>
+                                <span>{isPositive ? "▲" : "▼"}</span>
+                                <span>{fmt(Math.abs(diff))} vs {MONTH_NAMES[parseKey(prevKey).month0]}</span>
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* ── Chart row: Year trend + Category donut ───────────── */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+
+                    {/* Year trend AreaChart */}
+                    <div style={{ ...glassCard, padding: "20px 20px 12px" }}>
+                      <h4 style={{ fontWeight: FW.bold, fontSize: 13, color: COLORS.text, marginBottom: 4, letterSpacing: "-0.01em" }}>Income vs Expenses — 2026</h4>
+                      <p style={{ fontSize: 11, color: COLORS.muted, marginBottom: 16 }}>Click a month on the chart to explore it</p>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <ComposedChart data={yearChartData} onClick={d => { if (d?.activeLabel) { const idx = MONTH_NAMES.indexOf(d.activeLabel); if (idx !== -1) setActiveInsightKey(monthKey(2026, idx)); } }} style={{ cursor: "pointer" }}>
+                          <defs>
+                            <linearGradient id="incGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor={COLORS.primary} stopOpacity={0.18} />
+                              <stop offset="95%" stopColor={COLORS.primary} stopOpacity={0} />
+                            </linearGradient>
+                            <linearGradient id="expGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor={COLORS.accentWarm} stopOpacity={0.16} />
+                              <stop offset="95%" stopColor={COLORS.accentWarm} stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
+                          <XAxis dataKey="month" tick={{ fontSize: 10, fill: COLORS.muted }} axisLine={false} tickLine={false} />
+                          <YAxis tickFormatter={v => `$${(v/1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: COLORS.muted }} axisLine={false} tickLine={false} width={38} />
+                          <Tooltip
+                            formatter={(v, name) => [fmt(v), name]}
+                            contentStyle={{ background: "rgba(255,255,255,0.95)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, fontSize: 12, boxShadow: "0 4px 16px rgba(0,0,0,0.10)" }}
+                            cursor={{ stroke: COLORS.primary, strokeWidth: 1, strokeDasharray: "4 4" }}
+                          />
+                          <Area type="monotone" dataKey="Income" stroke={COLORS.primary} strokeWidth={2} fill="url(#incGrad)" dot={{ r: 3, fill: COLORS.primary, strokeWidth: 0 }} activeDot={{ r: 5, fill: COLORS.primary }} connectNulls={false} />
+                          <Area type="monotone" dataKey="Expenses" stroke={COLORS.accentWarm} strokeWidth={2} fill="url(#expGrad)" dot={{ r: 3, fill: COLORS.accentWarm, strokeWidth: 0 }} activeDot={{ r: 5, fill: COLORS.accentWarm }} connectNulls={false} />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    {/* Category donut PieChart */}
+                    <div style={{ ...glassCard, padding: "20px 20px 16px" }}>
+                      <h4 style={{ fontWeight: FW.bold, fontSize: 13, color: COLORS.text, marginBottom: 4, letterSpacing: "-0.01em" }}>Spending by Category</h4>
+                      <p style={{ fontSize: 11, color: COLORS.muted, marginBottom: 8 }}>{MONTH_FULL[month0]} · {fmt(s.exp)} total</p>
+                      {catPieData.length === 0 ? (
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200, color: COLORS.muted, fontSize: 13 }}>No expenses recorded</div>
+                      ) : (
+                        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                          <ResponsiveContainer width={160} height={160}>
+                            <PieChart>
+                              <Pie data={catPieData} cx="50%" cy="50%" innerRadius={44} outerRadius={70} paddingAngle={2} dataKey="value" strokeWidth={0}>
+                                {catPieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                              </Pie>
+                              <Tooltip formatter={(v) => fmt(v)} contentStyle={{ background: "rgba(255,255,255,0.96)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, fontSize: 12 }} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+                            {catPieData.slice(0, 6).map(entry => (
+                              <div key={entry.name} style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                                <div style={{ width: 8, height: 8, borderRadius: 2, background: entry.color, flexShrink: 0 }} />
+                                <span style={{ fontSize: 11, color: COLORS.subtext, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.name}</span>
+                                <span style={{ fontSize: 11, fontWeight: FW.semibold, color: COLORS.text, fontVariantNumeric: "tabular-nums" }}>{s.exp > 0 ? Math.round((entry.value / s.exp) * 100) : 0}%</span>
+                              </div>
+                            ))}
+                            {catPieData.length > 6 && (
+                              <p style={{ fontSize: 10, color: COLORS.muted, marginTop: 2 }}>+{catPieData.length - 6} more</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ── Lower row: 50/30/20 + Debt snapshot ─────────────── */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+
+                    {/* 50/30/20 */}
+                    <div style={{ ...glassCard, padding: "20px 22px" }}>
+                      <h4 style={{ fontWeight: FW.bold, fontSize: 13, color: COLORS.text, marginBottom: 4, letterSpacing: "-0.01em" }}>50 / 30 / 20 Rule</h4>
+                      <p style={{ fontSize: 11, color: COLORS.muted, marginBottom: 18 }}>Based on {fmt(s.inc)} income</p>
+                      {s.inc === 0 ? (
+                        <p style={{ color: COLORS.muted, fontSize: 13 }}>Add income to see your breakdown.</p>
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                          {[
+                            { label: "Needs", target: 50, val: needsAmt, targetAmt: s.inc * 0.5, color: COLORS.accentBlue, note: debtMinsTotal > 0 ? `incl. ${fmt(debtMinsTotal)} debt mins` : null },
+                            { label: "Wants", target: 30, val: wantsAmt, targetAmt: s.inc * 0.3, color: COLORS.accentPurple },
+                            { label: "Savings", target: 20, val: savingsAmt, targetAmt: s.inc * 0.2, color: COLORS.success },
+                          ].map(b => {
+                            const actualPct = b.targetAmt > 0 ? Math.min(100, (b.val / b.targetAmt) * 100) : 0;
+                            const overBudget = b.val > b.targetAmt && b.targetAmt > 0;
+                            return (
+                              <div key={b.label}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                                  <div>
+                                    <span style={{ fontSize: 13, fontWeight: FW.semibold, color: COLORS.text }}>{b.label}</span>
+                                    <span style={{ fontSize: 10, color: COLORS.muted, marginLeft: 6 }}>({b.target}% target)</span>
+                                    {b.note && <span style={{ fontSize: 10, color: COLORS.muted, marginLeft: 6 }}>· {b.note}</span>}
+                                  </div>
+                                  <div style={{ textAlign: "right" }}>
+                                    <span style={{ fontSize: 13, fontWeight: FW.bold, color: overBudget ? COLORS.danger : COLORS.text }}>{fmt(b.val)}</span>
+                                    <span style={{ fontSize: 10, color: COLORS.muted }}> / {fmt(b.targetAmt)}</span>
+                                  </div>
+                                </div>
+                                <div style={{ height: 7, background: "rgba(0,0,0,0.06)", borderRadius: 999, overflow: "hidden" }}>
+                                  <div style={{ width: `${actualPct}%`, height: "100%", background: overBudget ? COLORS.danger : b.color, borderRadius: 999, transition: "width 0.5s cubic-bezier(0.4,0,0.2,1)" }} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {/* Notes */}
+                      <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid rgba(0,0,0,0.06)" }}>
+                        <p style={{ fontSize: 11, fontWeight: FW.semibold, color: COLORS.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>Month Notes</p>
+                        <textarea
+                          value={snap.notes || ""}
+                          onChange={e => updateSnapNotes(key, e.target.value)}
+                          placeholder="Add notes for this month…"
+                          rows={3}
+                          style={{ ...inputStyle, resize: "none", fontSize: 12, lineHeight: 1.6, width: "100%" }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Debt snapshot */}
+                    <div style={{ ...glassCard, padding: "20px 22px" }}>
+                      <h4 style={{ fontWeight: FW.bold, fontSize: 13, color: COLORS.text, marginBottom: 4, letterSpacing: "-0.01em" }}>Debt Snapshot</h4>
+                      <p style={{ fontSize: 11, color: COLORS.muted, marginBottom: 18 }}>{fmt(totalDebt)} outstanding · {dtiNum !== null ? `${dtiNum}% DTI` : "—"}</p>
+                      {debts.length === 0 ? (
+                        <div style={{ textAlign: "center", padding: "24px 0", color: COLORS.muted, fontSize: 13 }}>🎉 No debts recorded</div>
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                          {debts.map(d => {
+                            const paidOff = d.balance <= 0;
+                            // estimate original balance as balance + what's been paid (we don't track that, so use balance as proxy)
+                            // Show as % of totalDebt for the bar
+                            const barPct = totalDebt > 0 ? Math.min(100, (d.balance / totalDebt) * 100) : 0;
+                            const barColor = paidOff ? COLORS.success : d.interest > 15 ? COLORS.danger : d.interest > 7 ? COLORS.warning : COLORS.accentBlue;
+                            return (
+                              <div key={d.id}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 5 }}>
+                                  <div>
+                                    <span style={{ fontSize: 13, fontWeight: FW.semibold, color: COLORS.text }}>{d.label}</span>
+                                    <span style={{ fontSize: 10, color: COLORS.muted, marginLeft: 7 }}>{d.interest}% APR · min {fmt(d.minPayment)}/mo</span>
+                                  </div>
+                                  <span style={{ fontSize: 13, fontWeight: FW.bold, color: paidOff ? COLORS.success : COLORS.text, fontVariantNumeric: "tabular-nums" }}>{paidOff ? "Paid off ✓" : fmt(d.balance)}</span>
+                                </div>
+                                <div style={{ height: 6, background: "rgba(0,0,0,0.06)", borderRadius: 999, overflow: "hidden" }}>
+                                  <div style={{ width: `${barPct}%`, height: "100%", background: barColor, borderRadius: 999, transition: "width 0.5s cubic-bezier(0.4,0,0.2,1)" }} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {totalDebt > 0 && (
+                        <button
+                          onClick={() => { setAdvisorMsg(`Can we pay our debt down faster? We have ${debts.map(d => `${d.label}: ${fmt(d.balance)} at ${d.interest}% APR (min payment ${fmt(d.minPayment)})`).join(", ")}. Our monthly income is ${fmt(s.inc)} and total expenses are ${fmt(s.exp)}. Please give us a specific payoff plan with estimated payoff dates.`); pendingAdvisorSend.current = true; setTab("advisor"); }}
+                          style={{ width: "100%", marginTop: 18, background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, color: "#fff", border: "none", borderRadius: 12, padding: "12px 16px", fontSize: 13, fontWeight: FW.bold, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: `0 6px 18px rgba(0,120,168,0.25)` }}
+                        >
+                          🚀 Get a debt payoff plan
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ── Year summary stats ───────────────────────────────── */}
+                  {(() => {
+                    const allStats = allInsightMonths.map(k => monthStats(k));
+                    const totalInc = allStats.reduce((acc, m) => acc + m.inc, 0);
+                    const totalExp = allStats.reduce((acc, m) => acc + m.exp, 0);
+                    const monthsWithData = allStats.filter(m => m.hasData).length;
+                    const avgMonthlyExp = monthsWithData > 0 ? totalExp / monthsWithData : 0;
+                    const netSaved = totalInc - totalExp;
+                    return (
+                      <div style={{ ...glassCard, padding: "18px 22px" }}>
+                        <h4 style={{ fontWeight: FW.bold, fontSize: 13, color: COLORS.text, marginBottom: 16, letterSpacing: "-0.01em" }}>Year-at-a-Glance · 2026</h4>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0 }}>
+                          {[
+                            { label: "Total Income",    val: fmt(totalInc),    color: COLORS.success },
+                            { label: "Total Expenses",  val: fmt(totalExp),    color: COLORS.accentWarm },
+                            { label: "Net Saved",       val: fmt(netSaved),    color: netSaved >= 0 ? COLORS.success : COLORS.danger },
+                            { label: "Avg / Month",     val: fmt(avgMonthlyExp), color: COLORS.accentPurple },
+                          ].map((stat, i) => (
+                            <div key={stat.label} style={{ paddingRight: i < 3 ? 20 : 0, marginRight: i < 3 ? 20 : 0, borderRight: i < 3 ? "1px solid rgba(0,0,0,0.06)" : "none" }}>
+                              <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>{stat.label}</p>
+                              <p style={{ fontSize: 20, fontWeight: FW.extrabold, color: stat.color, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums" }}>{stat.val}</p>
+                              {monthsWithData > 0 && <p style={{ fontSize: 10, color: COLORS.muted, marginTop: 3 }}>{monthsWithData} months tracked</p>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
             </div>
-          </div>
-        )}
+          );
+        })()}
         {/* ── AI ASSISTANT TAB ── */}
         {tab === "advisor" && (
           <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 140px)", position: "relative" }}>
