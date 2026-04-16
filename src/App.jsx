@@ -2044,7 +2044,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     <div>
                       <p style={{ fontSize: 11, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 8, whiteSpace: "nowrap" }}>Net Cash Flow</p>
                       <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 4 }}>
-                        <span className="kpi-num" style={{ fontSize: 52, fontWeight: FW.black, color: netCashFlow >= 0 ? "#10b981" : "#F87171", letterSpacing: "-0.04em", fontFamily: "'Bricolage Grotesque', sans-serif", lineHeight: 1 }}>
+                        <span className="kpi-num" style={{ fontSize: 80, fontWeight: FW.black, color: netCashFlow >= 0 ? "#10b981" : "#F87171", letterSpacing: "-0.05em", fontFamily: "'Bricolage Grotesque', sans-serif", lineHeight: 0.9 }}>
                           {netCashFlow >= 0 ? "+" : "−"}{fmt(Math.abs(netCashFlow))}
                         </span>
                       </div>
@@ -2077,66 +2077,45 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               );
             })()}
 
-            {/* Month-to-month comparison strip */}
+            {/* ── Hero 195 Metric Band ── */}
             {(() => {
               const { year: vy2, month0: vm2 } = parseKey(viewMonthKey);
               const prevKey2 = monthKey(new Date(vy2, vm2 - 1, 1).getFullYear(), new Date(vy2, vm2 - 1, 1).getMonth());
               const prevS2 = monthStats(prevKey2);
-              const currInc = viewTotalIncome, currExp = viewTotalExpenses;
-              const expDiff = prevS2.hasData ? currExp - prevS2.exp : null;
-              const incDiff = prevS2.hasData ? currInc - prevS2.inc : null;
-              const netDiff = prevS2.hasData ? (currInc - currExp) - prevS2.net : null;
               const { month0: pm2 } = parseKey(prevKey2);
-              return (
-                <div className="comparison-strip" style={{ display: "flex", alignItems: "center", gap: 0, background: "rgba(255,255,255,0.70)", backdropFilter: "blur(24px) saturate(160%)", WebkitBackdropFilter: "blur(24px) saturate(160%)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 20, marginBottom: 16, boxShadow: "0 4px 20px rgba(0,0,0,0.05)", overflow: "hidden" }}>
-                  {prevS2.hasData ? [
-                    { label: "vs " + MONTH_NAMES[pm2] + " Income", val: incDiff, icon: "trending_up", invert: false },
-                    { label: "vs " + MONTH_NAMES[pm2] + " Expenses", val: expDiff, icon: "receipt_long", invert: true },
-                    { label: "vs " + MONTH_NAMES[pm2] + " Net", val: netDiff, icon: "account_balance", invert: false },
-                  ].map((item, i) => {
-                    const isGood = item.invert ? item.val < 0 : item.val >= 0;
-                    const clr = item.val === 0 ? COLORS.muted : isGood ? COLORS.success : COLORS.danger;
-                    return (
-                      <div key={i} style={{ flex: 1, padding: "12px 20px", borderRight: i < 2 ? `1px solid ${COLORS.containerLow}` : "none", display: "flex", alignItems: "center", gap: 10 }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 20, color: clr }}>{item.val === 0 ? "trending_flat" : item.val > 0 ? "trending_up" : "trending_down"}</span>
-                        <div>
-                          <p style={{ fontSize: 10, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>{item.label}</p>
-                          <p style={{ fontSize: 14, fontWeight: FW.extrabold, color: clr }}>{item.val > 0 ? "+" : ""}{fmt(item.val)}</p>
-                        </div>
-                      </div>
-                    );
-                  }) : (
-                    <div style={{ padding: "12px 20px", display: "flex", alignItems: "center", gap: 10 }}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.muted }}>insights</span>
-                      <span style={{ fontSize: 13, color: COLORS.muted }}>No previous month data to compare</span>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-            {/* ── Net Worth / financial health strip ── */}
-            {(() => {
+              const netCF = viewTotalIncome - budgetBarSpent;
               const netWorthVal = savingsActualTotal - totalDebt;
-              const dti = totalIncome > 0 ? Math.round((totalDebt / totalIncome) * 100) : 0;
-              const kwCards = [
-                { label: "Net Worth", val: fmt(netWorthVal), color: netWorthVal >= 0 ? COLORS.success : COLORS.danger, icon: "account_balance_wallet" },
-                { label: "Total Debt", val: fmt(totalDebt), color: COLORS.danger, icon: "credit_card" },
-                { label: "Total Savings", val: fmt(savingsActualTotal), color: COLORS.accent, icon: "savings" },
-                { label: "Debt-to-Income", val: `${dti}%`, color: dti > 200 ? COLORS.danger : dti > 100 ? COLORS.warning : COLORS.success, icon: "percent" },
+              const savRate = viewTotalIncome > 0 ? Math.max(0, (netCF / viewTotalIncome) * 100) : null;
+              const dtiVal = totalIncome > 0 ? Math.round((totalDebt / totalIncome) * 100) : null;
+              const metrics = [
+                { label: "Income",        val: fmt(viewTotalIncome),  color: COLORS.success,    diff: prevS2.hasData ? viewTotalIncome - prevS2.inc : null, higherIsGood: true },
+                { label: "Expenses",      val: fmt(viewTotalExpenses),color: COLORS.accentWarm,  diff: prevS2.hasData ? viewTotalExpenses - prevS2.exp : null, higherIsGood: false },
+                { label: "Net Cash Flow", val: (netCF >= 0 ? "+" : "−") + fmt(Math.abs(netCF)), color: netCF >= 0 ? COLORS.success : COLORS.danger, diff: prevS2.hasData ? netCF - prevS2.net : null, higherIsGood: true },
+                { label: "Net Worth",     val: fmt(netWorthVal),      color: netWorthVal >= 0 ? COLORS.success : COLORS.danger, diff: null },
+                { label: "Total Debt",    val: fmt(totalDebt),        color: totalDebt > 0 ? COLORS.danger : COLORS.success, diff: null },
+                { label: "Savings Rate",  val: savRate !== null ? `${savRate.toFixed(1)}%` : "—", color: COLORS.primary, diff: null },
               ];
               return (
-                <div className="kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
-                  {kwCards.map(k => (
-                    <div key={k.label} className="glass-card" style={{ background: "rgba(255,255,255,0.68)", backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 20, padding: "18px 18px 16px", boxShadow: "0 4px 20px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.95)", display: "flex", flexDirection: "column", gap: 10 }}>
-                      <div style={{ width: 38, height: 38, borderRadius: 12, background: k.color + "1a", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: `1px solid ${k.color}22` }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 20, color: k.color, fontVariationSettings: "'FILL' 1, 'wght' 400" }}>{k.icon}</span>
-                      </div>
-                      <div>
-                        <p style={{ fontSize: 10, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4, fontWeight: FW.semibold }}>{k.label}</p>
-                        <p className="kpi-num" style={{ fontSize: 20, fontWeight: FW.extrabold, color: k.color, fontFamily: "'Bricolage Grotesque', sans-serif" }}>{k.val}</p>
-                      </div>
-                    </div>
-                  ))}
+                <div style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", border: "1px solid rgba(255,255,255,0.90)", borderRadius: 24, padding: "24px 28px", boxShadow: "0 8px 40px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.95)", marginBottom: 20, position: "relative", overflow: "hidden" }}>
+                  <BorderBeam size={320} duration={14} colorFrom={COLORS.primary} colorTo={COLORS.tertiary} borderWidth={1.5} />
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 0 }}>
+                    {metrics.map((metric, i) => {
+                      const isLast = i === metrics.length - 1;
+                      const isPositive = metric.diff !== null && (metric.higherIsGood ? metric.diff >= 0 : metric.diff <= 0);
+                      return (
+                        <div key={metric.label} style={{ paddingRight: isLast ? 0 : 20, marginRight: isLast ? 0 : 20, borderRight: isLast ? "none" : "1px solid rgba(0,0,0,0.06)" }}>
+                          <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>{metric.label}</p>
+                          <p style={{ fontSize: 22, fontWeight: FW.extrabold, color: metric.color, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{metric.val}</p>
+                          {metric.diff !== null && (
+                            <p style={{ fontSize: 11, color: isPositive ? COLORS.success : COLORS.danger, marginTop: 5, display: "flex", alignItems: "center", gap: 3 }}>
+                              <span>{isPositive ? "▲" : "▼"}</span>
+                              <span>{fmt(Math.abs(metric.diff))} vs {MONTH_NAMES[pm2]}</span>
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               );
             })()}
@@ -2459,16 +2438,47 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           })();
           return (
             <div style={{ paddingBottom: 48 }}>
-              {/* ── Page header ── */}
-              <div style={{ marginBottom: 12 }}>
-                <h2 style={{ fontSize: 22, fontWeight: FW.extrabold, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 2 }}>{MONTH_FULL[vm0]} {vy} Budget</h2>
-                <p style={{ fontSize: 13, color: COLORS.subtext }}>{fmt(totalActual)} spent of {fmt(viewTotalIncome)} income{totalPlanned > 0 ? ` · ${fmt(totalPlanned)} planned` : ""}{isCurrentMonth && daysLeft > 0 ? ` · ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left` : ""}</p>
-                {showCopyButton && (
-                  <button onClick={() => { if (Object.values(prevMonthExpBudgets).some(v => v > 0)) setViewExpenseBudgets({ ...prevMonthExpBudgets }); if (Object.keys(prevMonthItemBudgets).length > 0) setItemBudgets(p => ({...p, [viewMonthKey]: {...prevMonthItemBudgets}})); }} style={{ marginTop: 6, background: "rgba(0,103,136,0.08)", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: FW.semibold, color: COLORS.primary, cursor: "pointer" }}>
-                    Copy planned amounts from {MONTH_NAMES[new Date(prevY, prevM0 - 1, 1).getMonth()]}
-                  </button>
-                )}
-              </div>
+              {/* ── Hero 195 Metric Band ── */}
+              {(() => {
+                const remaining = viewTotalIncome - totalActual;
+                const budgetMetrics = [
+                  { label: "Monthly Income",  val: fmt(viewTotalIncome), color: COLORS.success },
+                  { label: "Planned Budget",  val: totalPlanned > 0 ? fmt(totalPlanned) : "—", color: COLORS.primary },
+                  { label: "Spent",           val: fmt(totalActual),     color: COLORS.accentWarm },
+                  { label: "Remaining",       val: remaining >= 0 ? fmt(remaining) : "−" + fmt(Math.abs(remaining)), color: remaining >= 0 ? COLORS.success : COLORS.danger },
+                  { label: "Status",          val: healthStatus.label,   color: healthStatus.color, isStatus: true, statusBg: healthStatus.bg },
+                ];
+                return (
+                  <div style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", border: "1px solid rgba(255,255,255,0.90)", borderRadius: 24, padding: "20px 24px", boxShadow: "0 8px 40px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.95)", marginBottom: 20, position: "relative", overflow: "hidden" }}>
+                    <BorderBeam size={280} duration={16} colorFrom={COLORS.primary} colorTo={COLORS.tertiary} borderWidth={1.5} />
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 0 }}>
+                      {budgetMetrics.map((m, i) => {
+                        const isLast = i === budgetMetrics.length - 1;
+                        return (
+                          <div key={m.label} style={{ paddingRight: isLast ? 0 : 20, marginRight: isLast ? 0 : 20, borderRight: isLast ? "none" : "1px solid rgba(0,0,0,0.06)" }}>
+                            <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>{m.label}</p>
+                            {m.isStatus ? (
+                              <span style={{ display: "inline-block", fontSize: 13, fontWeight: FW.bold, color: m.color, background: m.statusBg, borderRadius: 9999, padding: "4px 12px" }}>{m.val}</span>
+                            ) : (
+                              <p style={{ fontSize: 22, fontWeight: FW.extrabold, color: m.color, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{m.val}</p>
+                            )}
+                            {i === 4 && isCurrentMonth && daysLeft > 0 && (
+                              <p style={{ fontSize: 11, color: COLORS.muted, marginTop: 5 }}>{daysLeft} {daysLeft === 1 ? "day" : "days"} left</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {showCopyButton && (
+                      <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(0,0,0,0.06)" }}>
+                        <button onClick={() => { if (Object.values(prevMonthExpBudgets).some(v => v > 0)) setViewExpenseBudgets({ ...prevMonthExpBudgets }); if (Object.keys(prevMonthItemBudgets).length > 0) setItemBudgets(p => ({...p, [viewMonthKey]: {...prevMonthItemBudgets}})); }} style={{ background: "rgba(0,103,136,0.08)", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: FW.semibold, color: COLORS.primary, cursor: "pointer" }}>
+                          Copy planned amounts from {MONTH_NAMES[new Date(prevY, prevM0 - 1, 1).getMonth()]}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
               {/* ── Main grid ── */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 24 }}>
                 {/* ── Spending Plan Table (col-8) ── */}
@@ -2684,7 +2694,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 {/* ── Right sidebar (col-4) ── */}
                 <div style={{ gridColumn: "span 4", display: "flex", flexDirection: "column", gap: 14 }}>
                   {/* Income card */}
-                  <div style={{ background: "rgba(192,232,255,0.3)", borderRadius: 16, padding: "16px 18px", border: `1px solid rgba(0,103,136,0.12)` }}>
+                  <div style={{ background: "rgba(192,232,255,0.3)", borderRadius: 16, padding: "16px 18px", border: `1px solid rgba(0,103,136,0.12)`, position: "relative", overflow: "hidden" }}>
+                    <BorderBeam size={200} duration={18} colorFrom={COLORS.secondary} colorTo={COLORS.primary} borderWidth={1.2} />
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ padding: "5px 7px", background: "rgba(23,102,132,0.12)", borderRadius: 8 }}>
@@ -2714,9 +2725,9 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         </div>
                       </div>
                     ))}
-                    <div style={{ borderTop: `1px solid rgba(23,102,132,0.15)`, marginTop: 8, paddingTop: 8, display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: 12, color: COLORS.subtext }}>Total Monthly</span>
-                      <span style={{ fontSize: 16, fontWeight: FW.extrabold, color: COLORS.secondary }}>{fmt(viewTotalIncome)}</span>
+                    <div style={{ borderTop: `1px solid rgba(23,102,132,0.15)`, marginTop: 8, paddingTop: 10, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                      <span style={{ fontSize: 11, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>Total Monthly</span>
+                      <span style={{ fontSize: 32, fontWeight: FW.extrabold, color: COLORS.secondary, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.04em", lineHeight: 1 }}>{fmt(viewTotalIncome)}</span>
                     </div>
                   </div>
                   {/* Bills summary card — links to Bill Calendar */}
