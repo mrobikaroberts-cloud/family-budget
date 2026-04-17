@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, ComposedChart, AreaChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { db } from './firebase'
-import { doc, setDoc, getDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, getDoc, addDoc, collection, serverTimestamp, onSnapshot } from 'firebase/firestore'
 import { motion, AnimatePresence } from "framer-motion";
 import { BorderBeam } from "@/components/ui/border-beam";
 // ── Design System: "The Modern Hearth" — Roberts Family Finance ───────────────
@@ -260,7 +260,7 @@ function Modal({ title, onClose, children }) {
       }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: S["3xl"] }}>
           <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: FW.extrabold, color: COLORS.text, fontSize: FS["3xl"], margin: 0, letterSpacing: "-0.025em" }}>{title}</h2>
-          <button onClick={onClose} style={{ background: "rgba(0,0,0,0.06)", border: "none", color: COLORS.subtext, borderRadius: R.circle, width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: FS["2xl"], lineHeight: 1 }}>×</button>
+          <button onClick={onClose} aria-label="Close dialog" style={{ background: "rgba(0,0,0,0.06)", border: "none", color: COLORS.subtext, borderRadius: R.circle, width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: FS["2xl"], lineHeight: 1 }}>×</button>
         </div>
         {children}
       </div>
@@ -512,7 +512,7 @@ If date not visible, use today. If unsure of category, use Other.`
               {step === "preview" && "Review & Import"}
             </h2>
           </div>
-          <button onClick={onClose} style={{ background: "rgba(0,0,0,0.06)", border: "none", color: COLORS.subtext, borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>×</button>
+          <button onClick={onClose} aria-label="Close" style={{ background: "rgba(0,0,0,0.06)", border: "none", color: COLORS.subtext, borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>×</button>
         </div>
         <div style={{ padding: "20px 28px 32px" }}>
           {/* ── HOME ── */}
@@ -717,6 +717,8 @@ export default function App() {
   const [saveStatus, setSaveStatus] = useState(null); // null | 'saving' | 'saved' | 'error'
   const saveTimer = useRef(null);
   const isInitialLoad = useRef(true);
+  const isSavingRef = useRef(false);       // prevents onSnapshot from re-applying our own writes
+  const unsubscribeRef = useRef(null);     // real-time Firestore listener cleanup
   const [income, setIncome] = useState(INITIAL_INCOME);
   const [expenses, setExpenses] = useState(INITIAL_EXPENSES);
   const [debts, setDebts] = useState(INITIAL_DEBTS);
@@ -843,7 +845,7 @@ export default function App() {
           localStorage.setItem('familyfinance_household_code', code);
           setHouseholdCode(code);
         }
-        // Load data
+        // Load data (one-time read for initial hydration)
         const docRef = doc(db, 'households', hId);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
@@ -859,6 +861,25 @@ export default function App() {
           if (data.advisorHistory) setAdvisorHistory(data.advisorHistory);
           if (data.familyName) setFamilyName(data.familyName);
         }
+        // Real-time listener — keeps mobile/desktop in sync.
+        // Skips our own writes (isSavingRef) and the initial load burst.
+        unsubscribeRef.current = onSnapshot(docRef, (snap) => {
+          if (isInitialLoad.current) return;
+          if (snap.metadata.hasPendingWrites) return; // our own local write, not yet server-confirmed
+          if (isSavingRef.current) return;            // our own recently-confirmed write
+          if (!snap.exists()) return;
+          const d = snap.data();
+          if (d.income) setIncome(d.income);
+          if (d.expenses) setExpenses(d.expenses);
+          if (d.bills) setBills(d.bills);
+          if (d.debts) setDebts(d.debts);
+          if (d.savingsItems) setSavingsItems(d.savingsItems);
+          if (d.monthlySnapshots) setMonthlySnapshots(d.monthlySnapshots);
+          if (d.itemBudgets) setItemBudgets(d.itemBudgets);
+          if (d.goals) setGoals(d.goals);
+          if (d.advisorHistory) setAdvisorHistory(d.advisorHistory);
+          if (d.familyName) setFamilyName(d.familyName);
+        });
       } catch (err) {
         console.error('Firebase load error:', err);
       }
@@ -866,6 +887,7 @@ export default function App() {
       setTimeout(() => { isInitialLoad.current = false; }, 1500);
     };
     init();
+    return () => { if (unsubscribeRef.current) unsubscribeRef.current(); };
   }, []);
   // ── Firebase auto-save (debounced) ──
   useEffect(() => {
@@ -873,6 +895,7 @@ export default function App() {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
       setSaveStatus('saving');
+      isSavingRef.current = true; // tell onSnapshot to ignore the echo of this write
       try {
         const savePromise = setDoc(doc(db, 'households', householdId), {
           income,
@@ -896,6 +919,9 @@ export default function App() {
         console.error('Firebase save error:', err);
         setSaveStatus('error');
         setTimeout(() => setSaveStatus(null), 4000);
+      } finally {
+        // Allow 2 s for server-confirmed onSnapshot echo to arrive, then re-enable foreign updates
+        setTimeout(() => { isSavingRef.current = false; }, 2000);
       }
     }, 1000);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
@@ -1017,8 +1043,14 @@ export default function App() {
       return changed ? next : prev;
     });
   }, []);
-  // Sync live income/expenses into snapshots for the currently viewed month
+  // Sync live income/expenses into snapshots for the currently viewed month.
+  // Guard: skip when prevMonthRef hasn't caught up to viewMonthKey yet (mid-transition).
+  // During a month switch, the effect would fire with the OLD income/expenses but the NEW
+  // viewMonthKey, writing stale data into the new month's slot. The month-switch effect
+  // updates prevMonthRef.current synchronously after loading the new month, so by the time
+  // income/expenses change (triggering this effect again), the guard passes correctly.
   useEffect(() => {
+    if (prevMonthRef.current !== viewMonthKey) return;
     setMonthlySnapshots(prev => ({
       ...prev,
       [viewMonthKey]: { ...(prev[viewMonthKey] || { notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } }), income, expenses },
@@ -1176,23 +1208,22 @@ Return plain text bullet points only, no headers.` }]
     }
     setInsightLoading(prev => ({ ...prev, [key]: false }));
   };
-  // ── Derived numbers ──
-  const totalIncome = income.reduce((s, i) => s + i.amount, 0);
-  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
-  const totalDebt = debts.reduce((s, d) => s + d.balance, 0);
-  const fixedExpenses = expenses.filter(e => e.fixed).reduce((s, e) => s + e.amount, 0);
-  const variableExpenses = totalExpenses - fixedExpenses;
+  // ── Derived numbers (memoized — these feed every chart and re-running them on each keystroke is expensive) ──
+  const totalIncome = useMemo(() => income.reduce((s, i) => s + i.amount, 0), [income]);
+  const { totalExpenses, fixedExpenses, variableExpenses, needs, wants, savings, catTotals } = useMemo(() => {
+    const te = expenses.reduce((s, e) => s + e.amount, 0);
+    const fe = expenses.filter(e => e.fixed).reduce((s, e) => s + e.amount, 0);
+    const n = expenses.filter(e => ["Housing","Utilities","Food","Transport","Health"].includes(e.category)).reduce((s,e)=>s+e.amount,0);
+    const w = expenses.filter(e => ["Entertainment","Personal","Kids","Education","Subscriptions","Travel"].includes(e.category)).reduce((s,e)=>s+e.amount,0);
+    const sv = expenses.filter(e => ["Other","Savings"].includes(e.category)).reduce((s, e) => s + e.amount, 0);
+    const cats = {};
+    CATEGORIES.forEach(c => { cats[c.id] = expenses.filter(e => e.category === c.id).reduce((s,e)=>s+e.amount,0); });
+    return { totalExpenses: te, fixedExpenses: fe, variableExpenses: te - fe, needs: n, wants: w, savings: sv, catTotals: cats };
+  }, [expenses]);
+  const totalDebt = useMemo(() => debts.reduce((s, d) => s + d.balance, 0), [debts]);
+  const debtPayments = useMemo(() => debts.reduce((s, d) => s + d.minPayment, 0), [debts]);
   const leftover = totalIncome - totalExpenses;
-  const debtPayments = debts.reduce((s, d) => s + d.minPayment, 0);
-  // 50/30/20 actual spending breakdown
-  const needs = expenses.filter(e => ["Housing","Utilities","Food","Transport","Health"].includes(e.category)).reduce((s,e)=>s+e.amount,0);
-  const wants = expenses.filter(e => ["Entertainment","Personal","Kids","Education","Subscriptions","Travel"].includes(e.category)).reduce((s,e)=>s+e.amount,0);
-  const savings = expenses.filter(e => ["Other","Savings"].includes(e.category)).reduce((s, e) => s + e.amount, 0);
-  // category totals
-  const catTotals = {};
-  CATEGORIES.forEach(c => { catTotals[c.id] = expenses.filter(e => e.category === c.id).reduce((s,e)=>s+e.amount,0); });
-  // weekly report helper
-  const weeklyData = CATEGORIES.map(c => ({ name: c.label, amount: catTotals[c.id] })).filter(c => c.amount > 0);
+  const weeklyData = useMemo(() => CATEGORIES.map(c => ({ name: c.label, amount: catTotals[c.id] })).filter(c => c.amount > 0), [catTotals]);
   // ── Dashboard derived ──
   const billsBudgetTotal = bills.reduce((s, b) => s + b.budget, 0);
   const billsActualTotal = bills.reduce((s, b) => s + (getBillPaid(b, viewMonthKey) ? b.budget : 0), 0);
@@ -1210,20 +1241,20 @@ Return plain text bullet points only, no headers.` }]
     setToastInfo({ msg, icon });
     toastTimer.current = setTimeout(() => setToastInfo(null), 2400);
   }, []);
-  const cashFlowData = [
+  const cashFlowData = useMemo(() => [
     ...(showIncomeInCharts ? [{ name: "Income",   value: totalIncome,        color: CASH_FLOW_COLORS.Income   }] : []),
     { name: "Expenses", value: totalExpenses,     color: CASH_FLOW_COLORS.Expenses },
     { name: "Bills",    value: billsActualTotal,  color: CASH_FLOW_COLORS.Bills    },
     { name: "Debt",     value: debtPayments,      color: CASH_FLOW_COLORS.Debt     },
     { name: "Savings",  value: savingsActualTotal, color: CASH_FLOW_COLORS.Savings },
-  ].filter(d => d.value > 0);
-  const budgetVsActualData = CATEGORIES.filter(c => (viewExpenseBudgets[c.id] || 0) > 0 || catTotals[c.id] > 0).map(c => ({
+  ].filter(d => d.value > 0), [showIncomeInCharts, totalIncome, totalExpenses, billsActualTotal, debtPayments, savingsActualTotal]);
+  const budgetVsActualData = useMemo(() => CATEGORIES.filter(c => (viewExpenseBudgets[c.id] || 0) > 0 || catTotals[c.id] > 0).map(c => ({
     name: c.label.slice(0, 5), Budget: viewExpenseBudgets[c.id] || 0, Actual: catTotals[c.id] || 0,
-  }));
-  const expBreakdownData = CATEGORIES.filter(c => catTotals[c.id] > 0).map(c => ({
+  })), [viewExpenseBudgets, catTotals]);
+  const expBreakdownData = useMemo(() => CATEGORIES.filter(c => catTotals[c.id] > 0).map(c => ({
     name: c.label, value: catTotals[c.id], color: CAT_CHART_COLOR[c.id] ?? COLORS.primary,
-  }));
-  const dailyExpenseData = (() => {
+  })), [catTotals]);
+  const dailyExpenseData = useMemo(() => {
     const map = {};
     expenses.forEach(e => { map[e.date] = (map[e.date] || 0) + e.amount; });
     const start = new Date(budgetStartDate), end = new Date(budgetEndDate);
@@ -1236,8 +1267,8 @@ Return plain text bullet points only, no headers.` }]
       d = new Date(d.getTime() + 86400000);
     }
     return result;
-  })();
-  const balanceOverviewData = (() => {
+  }, [expenses, budgetStartDate, budgetEndDate, totalIncome]);
+  const balanceOverviewData = useMemo(() => {
     const expMap = {}, incMap = {};
     expenses.forEach(e => { expMap[e.date] = (expMap[e.date] || 0) + e.amount; });
     income.forEach(i => { incMap[i.date] = (incMap[i.date] || 0) + i.amount; });
@@ -1250,7 +1281,7 @@ Return plain text bullet points only, no headers.` }]
       d = new Date(d.getTime() + 86400000);
     }
     return result;
-  })();
+  }, [expenses, income, budgetStartDate, budgetEndDate, startingBalance]);
   // ── Dashboard derived ──
   const today0 = new Date(); today0.setHours(0, 0, 0, 0);
   // Next bill due — uses month-scoped bill data (getBillDueDate / getBillPaid)
@@ -1284,8 +1315,8 @@ Return plain text bullet points only, no headers.` }]
     const grpItemsSum = grpExp.reduce((s, e) => s + (monthItemBudgetsGlobal[`exp-${e.id}`] || 0), 0);
     const grpCatBudget = viewExpenseBudgets[group.catId] ?? 0;
     return sum + (grpItemsSum > 0 ? grpItemsSum : grpCatBudget);
-  }, 0);
-  const budgetBarSpent = viewTotalExpenses;
+  }, 0) + billsBudgetTotal; // bills are always planned spending
+  const budgetBarSpent = viewTotalExpenses + billsActualTotal; // paid bills count as spent
   const remainingToBudget = viewTotalIncome - budgetBarPlanned;
   // ── Add forms state ──
   const [newExp, setNewExp] = useState({ label: "", amount: "", category: "Food", date: getDefaultDate(viewMonthKey), fixed: false });
@@ -1800,7 +1831,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         /* Keyframes */
         @keyframes toastSlideUp { from { opacity: 0; transform: translateX(-50%) translateY(16px) scale(0.96); } to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } }
         @keyframes spin { to { transform: rotate(360deg) } }
-        @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-6px); } }
+        @keyframes typing-dot { 0%, 80%, 100% { opacity: 0.3; transform: scale(0.85); } 40% { opacity: 1; transform: scale(1); } }
         @keyframes pop-in { 0% { transform: scale(0.7); opacity: 0; } 80% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; } }
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
         @keyframes slideInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
@@ -1881,7 +1912,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             overflow-x: auto !important;
             -webkit-overflow-scrolling: touch !important;
           }
-          .budget-table-card .sticky-col-header {
+          .budget-table-card .sticky-col-header,
+          .budget-table-card .budget-row {
             min-width: 500px;
           }
 
@@ -2059,19 +2091,19 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               style={{ width: "100%", background: "rgba(255,255,255,0.70)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 9999, padding: "10px 44px 10px 42px", fontSize: 13.5, color: COLORS.text, boxShadow: "0 2px 12px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9)", fontWeight: FW.medium }}
               onKeyDown={e => { if (e.key === "Enter" && e.target.value.trim()) { setAdvisorMsg(e.target.value.trim()); pendingAdvisorSend.current = true; setTab("advisor"); e.target.value = ""; } }}
             />
-            <button onClick={() => { const v = headerInputRef.current?.value?.trim(); if (v) { setAdvisorMsg(v); pendingAdvisorSend.current = true; setTab("advisor"); headerInputRef.current.value = ""; } }} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: `linear-gradient(135deg, ${COLORS.primary}, #0095d2)`, border: "none", cursor: "pointer", padding: 6, borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,120,168,0.3)" }}>
+            <button onClick={() => { const v = headerInputRef.current?.value?.trim(); if (v) { setAdvisorMsg(v); pendingAdvisorSend.current = true; setTab("advisor"); headerInputRef.current.value = ""; } }} aria-label="Ask AI assistant" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: `linear-gradient(135deg, ${COLORS.primary}, #0095d2)`, border: "none", cursor: "pointer", padding: 6, borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,120,168,0.3)" }}>
               <span className="material-symbols-outlined" style={{ fontSize: 16, color: "#fff" }}>send</span>
             </button>
           </div>
           {/* Icons */}
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginLeft: "auto" }}>
-            <button onClick={() => setModal("notifications")} style={{ background: "rgba(255,255,255,0.65)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 12, cursor: "pointer", padding: "7px", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+            <button onClick={() => setModal("notifications")} aria-label={`Notifications${billsDueIn7Days > 0 ? ` (${billsDueIn7Days} due this week)` : ""}`} style={{ background: "rgba(255,255,255,0.65)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 12, cursor: "pointer", padding: "7px", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
               <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.text }}>notifications</span>
               {billsDueIn7Days > 0 && (
                 <span style={{ position: "absolute", top: 4, right: 4, width: 14, height: 14, borderRadius: "50%", background: COLORS.danger, color: "#fff", fontSize: 8, fontWeight: FW.extrabold, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid white" }}>{billsDueIn7Days}</span>
               )}
             </button>
-            <button onClick={() => setModal("settings")} style={{ background: "rgba(255,255,255,0.65)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 12, cursor: "pointer", padding: "7px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+            <button onClick={() => setModal("settings")} aria-label="Settings" style={{ background: "rgba(255,255,255,0.65)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 12, cursor: "pointer", padding: "7px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
               <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.text }}>settings</span>
             </button>
           </div>
@@ -2094,7 +2126,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         </nav>
 
         {/* Add button for mobile */}
-        <button className="mobile-fab" onClick={() => setModal("addMenu")} style={{ display: "none", position: "fixed", bottom: "calc(80px + env(safe-area-inset-bottom) + 12px)", right: 20, width: 52, height: 52, borderRadius: "50%", background: `linear-gradient(140deg, ${COLORS.primary}, #0095d2)`, border: "none", color: "#fff", fontSize: 26, cursor: "pointer", zIndex: 101, boxShadow: `0 8px 24px rgba(0,120,168,0.45)`, alignItems: "center", justifyContent: "center" }}>+</button>
+        <button className="mobile-fab" aria-label="Add entry" onClick={() => setModal("addMenu")} style={{ display: "none", position: "fixed", bottom: "calc(80px + env(safe-area-inset-bottom) + 12px)", right: 20, width: 52, height: 52, borderRadius: "50%", background: `linear-gradient(140deg, ${COLORS.primary}, #0095d2)`, border: "none", color: "#fff", fontSize: 26, cursor: "pointer", zIndex: 101, boxShadow: `0 8px 24px rgba(0,120,168,0.45)`, alignItems: "center", justifyContent: "center" }}>+</button>
 
         {/* SCROLLABLE CONTENT */}
         <main style={{ flex: 1, overflowY: "auto", padding: "24px 32px" }}>
@@ -2209,8 +2241,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     {/* Arrow buttons */}
                     {hasBills && carouselBills.length > 1 && (
                       <>
-                        <button onClick={() => setBillCarouselIdx(p => (p - 1 + carouselBills.length) % carouselBills.length)} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,89,117,0.12)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2, color: COLORS.onSecondaryContainer, fontSize: 16 }}>‹</button>
-                        <button onClick={() => setBillCarouselIdx(p => (p + 1) % carouselBills.length)} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,89,117,0.12)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2, color: COLORS.onSecondaryContainer, fontSize: 16 }}>›</button>
+                        <button onClick={() => setBillCarouselIdx(p => (p - 1 + carouselBills.length) % carouselBills.length)} aria-label="Previous bill" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,89,117,0.12)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2, color: COLORS.onSecondaryContainer, fontSize: 16 }}>‹</button>
+                        <button onClick={() => setBillCarouselIdx(p => (p + 1) % carouselBills.length)} aria-label="Next bill" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,89,117,0.12)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2, color: COLORS.onSecondaryContainer, fontSize: 16 }}>›</button>
                       </>
                     )}
                     <div>
@@ -2634,7 +2666,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     return (
                       <div key={group.catId} style={{ marginBottom: 6 }}>
                         {/* Group header — uses same grid as rows */}
-                        <div onClick={() => setCollapsedCategories(p => ({ ...p, [group.catId]: !p[group.catId] }))}
+                        <div className="budget-row" onClick={() => setCollapsedCategories(p => ({ ...p, [group.catId]: !p[group.catId] }))}
                           style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, alignItems: "center", padding: "9px 12px", background: util >= 100 ? COLORS.danger + "12" : util >= 80 ? COLORS.warning + "12" : "rgba(255,255,255,0.60)", borderRadius: 10, cursor: "pointer", marginBottom: isCollapsed ? 0 : 6, border: util >= 100 ? `1px solid ${COLORS.danger}30` : util >= 80 ? `1px solid ${COLORS.warning}30` : "1px solid rgba(255,255,255,0.80)" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                             <div style={{ width: 28, height: 28, borderRadius: 8, background: CATEGORY_ICON_BG[group.catId] || COLORS.neutral, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -2684,7 +2716,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                                 return e.date;
                               })();
                               return (
-                              <div key={e.id} style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "7px 10px", alignItems: "center", borderRadius: 8, background: "rgba(255,255,255,0.75)", marginBottom: 2, border: "1px solid rgba(255,255,255,0.88)" }}>
+                              <div key={e.id} className="budget-row" style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "7px 10px", alignItems: "center", borderRadius: 8, background: "rgba(255,255,255,0.75)", marginBottom: 2, border: "1px solid rgba(255,255,255,0.88)" }}>
                                 <EditableText id={e.id} field="label" value={e.label} />
                                 <span style={{ fontSize: 11, fontWeight: FW.semibold, color: e.fixed ? COLORS.subtext : COLORS.muted, background: e.fixed ? COLORS.containerHigh : COLORS.containerLow, borderRadius: 9999, padding: "2px 7px", justifySelf: "start" }}>{e.fixed ? "Fixed" : "Variable"}</span>
                                 <EditableDate id={e.id} field="date" value={displayDate} />
@@ -2708,7 +2740,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                               const tKey = `tmpl-${item}`;
                               const tmplVar = monthItemBudgets[tKey] ? monthItemBudgets[tKey] : null;
                               return (
-                              <div key={item} style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "6px 10px", alignItems: "center", borderRadius: 8, opacity: 0.55, marginBottom: 2 }}>
+                              <div key={item} className="budget-row" style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "6px 10px", alignItems: "center", borderRadius: 8, opacity: 0.55, marginBottom: 2 }}>
                                 <span style={{ fontSize: 13, color: COLORS.muted, fontStyle: "italic" }}>{item}</span>
                                 <span style={{ fontSize: 11, color: COLORS.muted }}>—</span>
                                 <span style={{ fontSize: 12, color: COLORS.muted }}>—</span>
@@ -2748,7 +2780,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           <span style={{ fontSize: 11, color: COLORS.muted }}>({others.length})</span>
                         </div>
                         {others.map(e => (
-                          <div key={e.id} style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "7px 10px", alignItems: "center", borderRadius: 8, background: "rgba(255,255,255,0.75)", marginBottom: 2, border: "1px solid rgba(255,255,255,0.88)" }}>
+                          <div key={e.id} className="budget-row" style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "7px 10px", alignItems: "center", borderRadius: 8, background: "rgba(255,255,255,0.75)", marginBottom: 2, border: "1px solid rgba(255,255,255,0.88)" }}>
                             <EditableText id={e.id} field="label" value={e.label} />
                             <EditableCat id={e.id} field="category" value={e.category} />
                             <EditableDate id={e.id} field="date" value={e.date} />
@@ -3550,21 +3582,37 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             {/* Chat history */}
             <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 24, paddingBottom: 160, paddingRight: 4 }}>
               {advisorHistory.length === 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                  {[
-                    { icon: "shopping_cart", label: "How's our grocery spending?", bg: COLORS.secondaryContainer, color: COLORS.onSecondaryContainer },
-                    { icon: "trending_up", label: "Investment update", bg: COLORS.containerHighest, color: COLORS.text },
-                    { icon: "savings", label: "Vacation goal progress", bg: COLORS.containerHighest, color: COLORS.text },
-                  ].map(chip => (
-                    <button key={chip.label} onClick={() => { setAdvisorMsg(chip.label); handleAdvisor(chip.label); }} style={{
-                      display: "flex", alignItems: "center", gap: 8, padding: "10px 16px",
-                      background: chip.bg, border: "none", borderRadius: 9999, cursor: "pointer",
-                      fontSize: 13, fontWeight: FW.semibold, color: chip.color, fontFamily: "'Figtree', sans-serif",
-                    }}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{chip.icon}</span>
-                      {chip.label}
-                    </button>
-                  ))}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 20, padding: "24px 0" }}>
+                  <div style={{ width: 64, height: 64, borderRadius: 20, background: `linear-gradient(140deg, ${COLORS.primary}, #0095d2)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 12px 32px rgba(0,120,168,0.35)" }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 32, color: "#fff", fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
+                  </div>
+                  <div>
+                    <h3 style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: FW.extrabold, color: COLORS.text, fontSize: 26, margin: 0, letterSpacing: "-0.025em" }}>Ask about your money.</h3>
+                    <p style={{ fontSize: 14, color: COLORS.subtext, marginTop: 8, marginBottom: 0, lineHeight: 1.55, maxWidth: 460 }}>I have context on every dollar you've tracked — budgets, bills, debts, goals. Try one of these, or type your own question.</p>
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 4 }}>
+                    {[
+                      { icon: "shopping_cart", label: "How's our grocery spending?" },
+                      { icon: "trending_down", label: "Where can we cut back this month?" },
+                      { icon: "flag", label: "Am I on track for my goals?" },
+                      { icon: "credit_card", label: "What's the fastest way to pay off debt?" },
+                      { icon: "insights", label: "Summarize this month" },
+                    ].map(chip => (
+                      <button key={chip.label} onClick={() => { setAdvisorMsg(chip.label); handleAdvisor(chip.label); }} style={{
+                        display: "flex", alignItems: "center", gap: 8, padding: "10px 16px",
+                        background: "rgba(255,255,255,0.78)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
+                        border: "1px solid rgba(255,255,255,0.88)", borderRadius: 9999, cursor: "pointer",
+                        fontSize: 13, fontWeight: FW.semibold, color: COLORS.text, fontFamily: "'Figtree', sans-serif",
+                        boxShadow: "0 2px 10px rgba(0,0,0,0.04)", transition: "transform .2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .2s",
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.08)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,0.04)"; }}
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.primary }}>{chip.icon}</span>
+                        {chip.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
               {advisorHistory.map((msg, i) => (
@@ -3596,7 +3644,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   </div>
                   <div style={{ background: "rgba(255,255,255,0.85)", backdropFilter: "blur(20px)", borderRadius: "4px 16px 16px 16px", padding: "16px 20px", boxShadow: COLORS.shadowSm }}>
                     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                      {[0,1,2].map(j => <div key={j} style={{ width: 8, height: 8, background: COLORS.primary, borderRadius: "50%", animation: `bounce .8s ${j*0.15}s infinite alternate` }} />)}
+                      {[0,1,2].map(j => <div key={j} style={{ width: 8, height: 8, background: COLORS.primary, borderRadius: "50%", animation: `typing-dot 1.2s ${j*0.18}s cubic-bezier(0.4, 0, 0.2, 1) infinite` }} />)}
                     </div>
 {/* @keyframes bounce defined in global style block */}
                   </div>
