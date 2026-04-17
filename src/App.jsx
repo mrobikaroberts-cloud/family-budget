@@ -1856,6 +1856,39 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           .bento-grid > * { grid-column: span 1 !important; }
           .comparison-strip { flex-wrap: wrap !important; }
           .comparison-strip > * { flex: 1 1 calc(33% - 8px) !important; min-width: 100px; }
+
+          /* Hero metric bands — 3-column 2-row on mobile */
+          .metric-band-grid {
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 18px 10px !important;
+          }
+          .metric-band-grid > div {
+            padding-right: 0 !important;
+            margin-right: 0 !important;
+            border-right: none !important;
+          }
+
+          /* Family Budget — stack table (span-8) above sidebar (span-4) */
+          .budget-main-grid {
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+          }
+          .budget-table-card, .budget-sidebar {
+            grid-column: span 1 !important;
+          }
+          .budget-table-card {
+            padding: 16px !important;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+          }
+          .budget-table-card .sticky-col-header {
+            min-width: 500px;
+          }
+
+          /* Monthly Insights — single column chart rows */
+          .insights-two-col {
+            grid-template-columns: 1fr !important;
+          }
         }
         @media (min-width: 768px) {
           .mobile-nav { display: none !important; }
@@ -2092,7 +2125,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               return (
                 <div style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", border: "1px solid rgba(255,255,255,0.90)", borderRadius: 24, padding: "24px 28px", boxShadow: "0 8px 40px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.95)", marginBottom: 20, position: "relative", overflow: "hidden" }}>
                   <BorderBeam size={320} duration={14} colorFrom={COLORS.primary} colorTo={COLORS.tertiary} borderWidth={1.5} />
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 0 }}>
+                  <div className="metric-band-grid" style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 0 }}>
                     {metrics.map((metric, i) => {
                       const isLast = i === metrics.length - 1;
                       const isZero = metric.diff === 0;
@@ -2453,7 +2486,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 return (
                   <div style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", border: "1px solid rgba(255,255,255,0.90)", borderRadius: 24, padding: "24px 28px", boxShadow: "0 8px 40px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.95)", marginBottom: 20, position: "relative", overflow: "hidden" }}>
                     <BorderBeam size={280} duration={16} colorFrom={COLORS.primary} colorTo={COLORS.tertiary} borderWidth={1.5} />
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 0 }}>
+                    <div className="metric-band-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 0 }}>
                       {budgetMetrics.map((m, i) => {
                         const isLast = i === budgetMetrics.length - 1;
                         return (
@@ -2478,9 +2511,9 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 );
               })()}
               {/* ── Main grid ── */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 24 }}>
+              <div className="budget-main-grid" style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 24 }}>
                 {/* ── Spending Plan Table (col-8) ── */}
-                <div style={{ gridColumn: "span 8", background: "rgba(255,255,255,0.72)", backdropFilter: "blur(28px) saturate(180%)", WebkitBackdropFilter: "blur(28px) saturate(180%)", border: "1px solid rgba(255,255,255,0.88)", borderRadius: 20, padding: 28, boxShadow: "0 4px 24px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.95)" }}>
+                <div className="budget-table-card" style={{ gridColumn: "span 8", background: "rgba(255,255,255,0.72)", backdropFilter: "blur(28px) saturate(180%)", WebkitBackdropFilter: "blur(28px) saturate(180%)", border: "1px solid rgba(255,255,255,0.88)", borderRadius: 20, padding: 28, boxShadow: "0 4px 24px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.95)" }}>
                   {/* ── Unified Budget Status Bar ── */}
                   <div style={{ paddingBottom: 14, marginBottom: 14, borderBottom: "0.5px solid rgba(172,179,181,0.3)" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -2534,7 +2567,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     </div>
                     <button onClick={() => setShowPlaceholders(p => !p)} style={{ fontSize: 11, background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 6, padding: "3px 8px", color: COLORS.muted, cursor: "pointer" }}>{showPlaceholders ? "Hide placeholders" : "Show placeholders"}</button>
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "10px 12px", background: COLORS.containerLow, borderRadius: 10, marginBottom: 16, position: "sticky", top: 0, zIndex: 10 }}>
+                  <div className="sticky-col-header" style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "10px 12px", background: COLORS.containerLow, borderRadius: 10, marginBottom: 16, position: "sticky", top: 0, zIndex: 10 }}>
                     <span style={colStyle} onClick={() => toggleSort("label")}>Items <SortArrow field="label" /></span>
                     <span style={colStyle} onClick={() => toggleSort("category")}>Type</span>
                     <span style={{ ...colStyle, cursor: "default" }}>Due</span>
@@ -2690,7 +2723,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 </div>
 
                 {/* ── Right sidebar (col-4) ── */}
-                <div style={{ gridColumn: "span 4", display: "flex", flexDirection: "column", gap: 14 }}>
+                <div className="budget-sidebar" style={{ gridColumn: "span 4", display: "flex", flexDirection: "column", gap: 14 }}>
                   {/* Income card */}
                   <div style={{ background: "rgba(192,232,255,0.3)", borderRadius: 16, padding: "16px 18px", border: `1px solid rgba(0,103,136,0.12)`, position: "relative", overflow: "hidden" }}>
                     <BorderBeam size={200} duration={18} colorFrom={COLORS.secondary} colorTo={COLORS.primary} borderWidth={1.2} />
@@ -3231,7 +3264,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       {isCurrent && <span style={{ fontSize: 10, fontWeight: FW.bold, background: COLORS.primary + "18", color: COLORS.primary, border: `1px solid ${COLORS.primary}33`, borderRadius: 999, padding: "2px 9px", letterSpacing: "0.04em", textTransform: "uppercase" }}>Current</span>}
                     </div>
                     {/* 6-metric grid */}
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 0 }}>
+                    <div className="metric-band-grid" style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 0 }}>
                       {[
                         { label: "Income",       val: fmt(s.inc),                                                               color: COLORS.success,      prevVal: prevS.hasData ? prevS.inc : null,  higherIsGood: true },
                         { label: "Expenses",      val: fmt(s.exp),                                                               color: COLORS.accentWarm,   prevVal: prevS.hasData ? prevS.exp : null,  higherIsGood: false },
@@ -3269,7 +3302,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   </div>
 
                   {/* ── Chart row: Year trend + Category donut ───────────── */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <div className="insights-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
 
                     {/* Year trend AreaChart */}
                     <div style={{ ...glassCard, padding: "20px 20px 12px" }}>
@@ -3335,7 +3368,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   </div>
 
                   {/* ── Lower row: 50/30/20 + Debt snapshot ─────────────── */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <div className="insights-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
 
                     {/* 50/30/20 */}
                     <div style={{ ...glassCard, padding: "20px 22px" }}>
