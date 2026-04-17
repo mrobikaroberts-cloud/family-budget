@@ -1853,7 +1853,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           .mobile-fab { display: flex !important; }
           .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
           .bento-grid { grid-template-columns: 1fr !important; gap: 14px !important; }
-          .bento-grid > * { grid-column: span 1 !important; }
+          .bento-grid > * { grid-column: span 1 !important; min-width: 0; }
           .comparison-strip { flex-wrap: wrap !important; }
           .comparison-strip > * { flex: 1 1 calc(33% - 8px) !important; min-width: 100px; }
 
@@ -1888,6 +1888,47 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           /* Monthly Insights — single column chart rows */
           .insights-two-col {
             grid-template-columns: 1fr !important;
+          }
+
+          /* Overview bento cards — reduce padding on mobile */
+          .bill-due-card {
+            padding: 16px !important;
+            min-height: auto !important;
+          }
+          .cashflow-summary-card {
+            padding: 20px 16px !important;
+            min-height: 260px !important;
+          }
+          .savings-goal-card,
+          .savings-invest-card {
+            padding: 20px !important;
+          }
+
+          /* Bill Calendar — tighter card + smaller cells on mobile */
+          .bill-cal-card {
+            padding: 12px !important;
+          }
+          .cal-day-cell {
+            min-height: 56px !important;
+            padding: 4px !important;
+          }
+          .cal-scroll-wrap {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+          }
+
+          /* Bills summary stat boxes — compact on mobile */
+          .bills-stat-grid {
+            gap: 8px !important;
+          }
+          .bills-stat-grid > div {
+            padding: 12px 10px !important;
+            gap: 8px !important;
+          }
+          .bills-stat-grid > div > div:first-child {
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 8px !important;
           }
         }
         @media (min-width: 768px) {
@@ -2164,7 +2205,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 const carouselBill = hasBills ? carouselBills[safeBillIdx] : null;
                 const carouselDaysUntil = carouselBill ? Math.round((carouselBill._due.getTime() - today0.getTime()) / 86400000) : null;
                 return (
-                  <div style={{ gridColumn: "span 4", background: `linear-gradient(145deg, rgba(0,120,168,0.12) 0%, rgba(0,149,210,0.09) 50%, rgba(74,82,168,0.08) 100%)`, backdropFilter: "blur(24px) saturate(160%)", WebkitBackdropFilter: "blur(24px) saturate(160%)", border: "1px solid rgba(0,120,168,0.15)", borderRadius: 24, padding: "28px", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 320, position: "relative", boxShadow: "0 8px 32px rgba(0,120,168,0.10), inset 0 1px 0 rgba(255,255,255,0.6)" }}>
+                  <div className="bill-due-card" style={{ gridColumn: "span 4", background: `linear-gradient(145deg, rgba(0,120,168,0.12) 0%, rgba(0,149,210,0.09) 50%, rgba(74,82,168,0.08) 100%)`, backdropFilter: "blur(24px) saturate(160%)", WebkitBackdropFilter: "blur(24px) saturate(160%)", border: "1px solid rgba(0,120,168,0.15)", borderRadius: 24, padding: "28px", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 320, position: "relative", boxShadow: "0 8px 32px rgba(0,120,168,0.10), inset 0 1px 0 rgba(255,255,255,0.6)" }}>
                     {/* Arrow buttons */}
                     {hasBills && carouselBills.length > 1 && (
                       <>
@@ -2227,13 +2268,13 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               })()}
 
               {/* ── ROW 1, COL 5–12: Cash Flow Summary ── */}
-              <div style={{ gridColumn: "span 8", position: "relative", overflow: "hidden", background: `linear-gradient(145deg, #0078a8 0%, #0095d2 40%, #0069a0 75%, #2e347a 100%)`, borderRadius: 24, padding: "36px 40px", color: "#fff", boxShadow: "0 16px 48px rgba(0,120,168,0.35), 0 4px 16px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.2)", minHeight: 320 }}>
+              <div className="cashflow-summary-card" style={{ gridColumn: "span 8", position: "relative", overflow: "hidden", background: `linear-gradient(145deg, #0078a8 0%, #0095d2 40%, #0069a0 75%, #2e347a 100%)`, borderRadius: 24, padding: "36px 40px", color: "#fff", boxShadow: "0 16px 48px rgba(0,120,168,0.35), 0 4px 16px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.2)", minHeight: 320 }}>
                 {/* Decorative glass orbs */}
                 <div style={{ position: "absolute", top: -40, right: -40, width: 200, height: 200, borderRadius: "50%", background: "rgba(255,255,255,0.06)", pointerEvents: "none" }} />
                 <div style={{ position: "absolute", bottom: -20, left: 60, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,0.04)", pointerEvents: "none" }} />
                 <div style={{ position: "relative", zIndex: 1, height: "100%", display: "flex", flexDirection: "column" }}>
                   <p style={{ fontSize: 11, fontWeight: FW.bold, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.8)", marginBottom: 20 }}>Cash Flow Summary</p>
-                  <div style={{ flex: 1, minHeight: 210 }}>
+                  <div style={{ flex: 1, minHeight: 210, minWidth: 0 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={[
@@ -2339,7 +2380,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 const label = goal ? goal.label.toLowerCase() : "";
                 const goalIcon = label.includes("holiday") || label.includes("travel") || label.includes("trip") || label.includes("vacation") ? "flight" : label.includes("house") || label.includes("home") ? "home" : label.includes("car") || label.includes("vehicle") ? "directions_car" : label.includes("school") || label.includes("college") || label.includes("education") ? "school" : "savings";
                 return (
-                  <div style={{ gridColumn: "span 6", background: `linear-gradient(145deg, rgba(74,82,168,0.10) 0%, rgba(168,174,255,0.14) 50%, rgba(74,82,168,0.08) 100%)`, backdropFilter: "blur(24px) saturate(150%)", WebkitBackdropFilter: "blur(24px) saturate(150%)", border: "1px solid rgba(168,174,255,0.30)", borderRadius: 24, padding: "32px", position: "relative", overflow: "hidden", boxShadow: "0 8px 32px rgba(74,82,168,0.12), inset 0 1px 0 rgba(255,255,255,0.5)" }}>
+                  <div className="savings-goal-card" style={{ gridColumn: "span 6", background: `linear-gradient(145deg, rgba(74,82,168,0.10) 0%, rgba(168,174,255,0.14) 50%, rgba(74,82,168,0.08) 100%)`, backdropFilter: "blur(24px) saturate(150%)", WebkitBackdropFilter: "blur(24px) saturate(150%)", border: "1px solid rgba(168,174,255,0.30)", borderRadius: 24, padding: "32px", position: "relative", overflow: "hidden", boxShadow: "0 8px 32px rgba(74,82,168,0.12), inset 0 1px 0 rgba(255,255,255,0.5)" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
                       <div>
                         <h4 style={{ fontSize: 22, fontWeight: FW.extrabold, color: COLORS.text, marginBottom: 4, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.025em" }}>
@@ -2366,7 +2407,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               })()}
 
               {/* ── ROW 3, COL 7–12: Savings & Investments ── */}
-              <div style={{ gridColumn: "span 6", background: `linear-gradient(145deg, rgba(0,120,168,0.09) 0%, rgba(0,149,210,0.12) 50%, rgba(13,148,136,0.08) 100%)`, backdropFilter: "blur(24px) saturate(150%)", WebkitBackdropFilter: "blur(24px) saturate(150%)", border: "1px solid rgba(0,149,210,0.20)", borderRadius: 24, padding: "32px", position: "relative", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,120,168,0.10), inset 0 1px 0 rgba(255,255,255,0.55)" }}>
+              <div className="savings-invest-card" style={{ gridColumn: "span 6", background: `linear-gradient(145deg, rgba(0,120,168,0.09) 0%, rgba(0,149,210,0.12) 50%, rgba(13,148,136,0.08) 100%)`, backdropFilter: "blur(24px) saturate(150%)", WebkitBackdropFilter: "blur(24px) saturate(150%)", border: "1px solid rgba(0,149,210,0.20)", borderRadius: 24, padding: "32px", position: "relative", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,120,168,0.10), inset 0 1px 0 rgba(255,255,255,0.55)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
                   <div>
                     <h4 style={{ fontSize: 22, fontWeight: FW.extrabold, color: COLORS.text, marginBottom: 4, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.025em" }}>Savings &amp; Investments</h4>
@@ -2890,7 +2931,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               </div>
 
               {/* ── 3 Summary stat boxes ── */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 20 }}>
+              <div className="bills-stat-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 20 }}>
                 {[
                   { label: "Total Bills", value: totalBillsBudget, icon: "receipt_long", color: COLORS.primary, bg: "rgba(0,103,136,0.08)" },
                   { label: "Paid", value: paidAmountTotal, icon: "check_circle", color: COLORS.success, bg: "rgba(0,103,136,0.06)" },
@@ -2909,7 +2950,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               </div>
 
               {/* ── Full-width calendar card ── */}
-              <div style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)", border: "1px solid rgba(255,255,255,0.88)", borderRadius: 20, padding: 28, boxShadow: "0 4px 24px rgba(0,0,0,0.06)", marginBottom: 20 }}>
+              <div className="bill-cal-card" style={{ background: "rgba(255,255,255,0.72)", backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)", border: "1px solid rgba(255,255,255,0.88)", borderRadius: 20, padding: 28, boxShadow: "0 4px 24px rgba(0,0,0,0.06)", marginBottom: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
                   <h3 style={{ fontSize: 18, fontWeight: FW.bold, color: COLORS.text }}>{MONTH_FULL[calMonth]} {calYear}</h3>
                   <div style={{ display: "flex", gap: 4 }}>
@@ -2920,6 +2961,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 </div>
                 {/* Month view */}
                 {billCalView === "month" && <>
+                  <div className="cal-scroll-wrap" style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+                  <div style={{ minWidth: 300 }}>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 2 }}>
                     {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => (
                       <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", padding: "6px 0" }}>{d}</div>
@@ -2927,14 +2970,14 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
                     {Array.from({ length: firstDayOfWeek }, (_, i) => (
-                      <div key={`empty-${i}`} style={{ background: COLORS.containerLow, borderRadius: 8, minHeight: 80, opacity: 0.3 }} />
+                      <div key={`empty-${i}`} className="cal-day-cell" style={{ background: COLORS.containerLow, borderRadius: 8, minHeight: 80, opacity: 0.3 }} />
                     ))}
                     {Array.from({ length: daysInMonth }, (_, i) => {
                       const day = i + 1;
                       const dayBills = billsOnDay(day);
                       const isToday = day === todayDate;
                       return (
-                        <div key={day} style={{ background: "rgba(255,255,255,0.65)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderRadius: 10, minHeight: 80, padding: 8, border: "1px solid rgba(255,255,255,0.80)" }}>
+                        <div key={day} className="cal-day-cell" style={{ background: "rgba(255,255,255,0.65)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderRadius: 10, minHeight: 80, padding: 8, border: "1px solid rgba(255,255,255,0.80)" }}>
                           <div style={{ width: 24, height: 24, borderRadius: "50%", background: isToday ? COLORS.primary : "transparent", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
                             <span style={{ fontSize: 12, fontWeight: isToday ? FW.extrabold : FW.medium, color: isToday ? "#fff" : COLORS.text }}>{day}</span>
                           </div>
@@ -2951,6 +2994,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       );
                     })}
                   </div>
+                  </div>{/* end min-width wrapper */}
+                  </div>{/* end cal-scroll-wrap */}
                 </>}
                 {/* List view (quick read-only toggle) */}
                 {billCalView === "list" && (
