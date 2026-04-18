@@ -1082,10 +1082,17 @@ export default function App() {
   useEffect(() => {
     const prevKey = prevMonthRef.current;
     if (prevKey === viewMonthKey) return;
+    // Capture the OLD month's income/expenses NOW — before calling setIncome/setExpenses
+    // below. If we read incomeRef.current inside the setMonthlySnapshots updater, the ref
+    // will have been reassigned to the NEW month's values by the time the updater actually
+    // runs (during the next render's useState processing), and we'd write the new month's
+    // data into the old month's slot. This was the root cause of the data-erasure bug.
+    const savedIncome = incomeRef.current;
+    const savedExpenses = expensesRef.current;
     // Save current data to old month
     setMonthlySnapshots(prev => ({
       ...prev,
-      [prevKey]: { ...(prev[prevKey] || { notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } }), income: incomeRef.current, expenses: expensesRef.current },
+      [prevKey]: { ...(prev[prevKey] || { notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } }), income: savedIncome, expenses: savedExpenses },
     }));
     // Load new month data — use ref to get the truly-current snapshot (avoids stale closure)
     const snap = monthlySnapshotsRef.current[viewMonthKey];
