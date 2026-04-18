@@ -797,8 +797,13 @@ export default function App() {
   const prevMonthRef = useRef(viewMonthKey);
   const incomeRef = useRef(income);
   const expensesRef = useRef(expenses);
+  // Always-fresh refs used inside Firebase callbacks / effects to avoid stale closures
+  const viewMonthKeyRef = useRef(viewMonthKey);
+  const monthlySnapshotsRef = useRef(monthlySnapshots);
   incomeRef.current = income;
   expensesRef.current = expenses;
+  viewMonthKeyRef.current = viewMonthKey;
+  monthlySnapshotsRef.current = monthlySnapshots;
   // ── Monthly insights state ──
   const todayKey = monthKey(new Date().getFullYear(), new Date().getMonth());
   const [startMonthKey, setStartMonthKey] = useState("2026-01");
@@ -850,12 +855,19 @@ export default function App() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
-          if (data.income) setIncome(data.income);
-          if (data.expenses) setExpenses(data.expenses);
+          // Load snapshots FIRST — they are the canonical per-month store
+          if (data.monthlySnapshots) setMonthlySnapshots(data.monthlySnapshots);
+          // Derive income/expenses for the CURRENT month from its snapshot.
+          // Never use the top-level income/expenses fields for this — they carry
+          // whatever month was last active and would corrupt the current month.
+          const curSnap = data.monthlySnapshots?.[viewMonthKeyRef.current];
+          if (curSnap?.income?.length) setIncome(curSnap.income);
+          else if (data.income) setIncome(data.income); // backward-compat fallback
+          if (curSnap?.expenses?.length) setExpenses(curSnap.expenses);
+          else if (data.expenses) setExpenses(data.expenses);
           if (data.bills) setBills(data.bills);
           if (data.debts) setDebts(data.debts);
           if (data.savingsItems) setSavingsItems(data.savingsItems);
-          if (data.monthlySnapshots) setMonthlySnapshots(data.monthlySnapshots);
           if (data.itemBudgets) setItemBudgets(data.itemBudgets);
           if (data.goals) setGoals(data.goals);
           if (data.advisorHistory) setAdvisorHistory(data.advisorHistory);
@@ -869,12 +881,17 @@ export default function App() {
           if (isSavingRef.current) return;            // our own recently-confirmed write
           if (!snap.exists()) return;
           const d = snap.data();
-          if (d.income) setIncome(d.income);
-          if (d.expenses) setExpenses(d.expenses);
+          // Snapshots first — source of truth
+          if (d.monthlySnapshots) setMonthlySnapshots(d.monthlySnapshots);
+          // Sync income/expenses for whichever month is currently viewed, not the stale top-level fields
+          if (d.monthlySnapshots) {
+            const curSnap = d.monthlySnapshots[viewMonthKeyRef.current];
+            if (curSnap?.income) setIncome(curSnap.income);
+            if (curSnap?.expenses) setExpenses(curSnap.expenses);
+          }
           if (d.bills) setBills(d.bills);
           if (d.debts) setDebts(d.debts);
           if (d.savingsItems) setSavingsItems(d.savingsItems);
-          if (d.monthlySnapshots) setMonthlySnapshots(d.monthlySnapshots);
           if (d.itemBudgets) setItemBudgets(d.itemBudgets);
           if (d.goals) setGoals(d.goals);
           if (d.advisorHistory) setAdvisorHistory(d.advisorHistory);
@@ -996,13 +1013,16 @@ export default function App() {
       localStorage.setItem('familyfinance_household_code', code);
       setHouseholdId(hId);
       setHouseholdCode(code);
-      // Load data
-      if (hData.income) setIncome(hData.income);
-      if (hData.expenses) setExpenses(hData.expenses);
+      // Load data — snapshots first, then derive current month's income/expenses from them
+      if (hData.monthlySnapshots) setMonthlySnapshots(hData.monthlySnapshots);
+      const jCurSnap = hData.monthlySnapshots?.[viewMonthKeyRef.current];
+      if (jCurSnap?.income?.length) setIncome(jCurSnap.income);
+      else if (hData.income) setIncome(hData.income);
+      if (jCurSnap?.expenses?.length) setExpenses(jCurSnap.expenses);
+      else if (hData.expenses) setExpenses(hData.expenses);
       if (hData.bills) setBills(hData.bills);
       if (hData.debts) setDebts(hData.debts);
       if (hData.savingsItems) setSavingsItems(hData.savingsItems);
-      if (hData.monthlySnapshots) setMonthlySnapshots(hData.monthlySnapshots);
       if (hData.itemBudgets) setItemBudgets(hData.itemBudgets);
       if (hData.goals) setGoals(hData.goals);
       if (hData.advisorHistory) setAdvisorHistory(hData.advisorHistory);
@@ -1065,15 +1085,15 @@ export default function App() {
       ...prev,
       [prevKey]: { ...(prev[prevKey] || { notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } }), income: incomeRef.current, expenses: expensesRef.current },
     }));
-    // Load new month data
-    const snap = monthlySnapshots[viewMonthKey];
+    // Load new month data — use ref to get the truly-current snapshot (avoids stale closure)
+    const snap = monthlySnapshotsRef.current[viewMonthKey];
     if (snap?.income?.length > 0 || snap?.expenses?.length > 0) {
       setIncome(snap.income || []);
       setExpenses(snap.expenses || []);
     } else {
       // Auto-populate: recurring income + fixed expenses from old month
       const newDate = `${viewMonthKey}-01`;
-      const src = monthlySnapshots[prevKey] || { income: incomeRef.current, expenses: expensesRef.current };
+      const src = monthlySnapshotsRef.current[prevKey] || { income: incomeRef.current, expenses: expensesRef.current };
       const recInc = (src.income || []).filter(i => i.recurring).map((i, idx) => ({ ...i, id: Date.now() + idx, date: newDate }));
       const fixExp = (src.expenses || []).filter(e => e.fixed).map((e, idx) => ({ ...e, id: Date.now() + 500 + idx, date: newDate }));
       setIncome(recInc);
