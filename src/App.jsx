@@ -799,11 +799,11 @@ export default function App() {
   const expensesRef = useRef(expenses);
   // Always-fresh refs used inside Firebase callbacks / effects to avoid stale closures
   const viewMonthKeyRef = useRef(viewMonthKey);
-  const monthlySnapshotsRef = useRef(monthlySnapshots);
+  const monthlySnapshotsRef = useRef({});
   incomeRef.current = income;
   expensesRef.current = expenses;
   viewMonthKeyRef.current = viewMonthKey;
-  monthlySnapshotsRef.current = monthlySnapshots;
+  // monthlySnapshotsRef.current is assigned AFTER monthlySnapshots useState (see below)
   // ── Monthly insights state ──
   const todayKey = monthKey(new Date().getFullYear(), new Date().getMonth());
   const [startMonthKey, setStartMonthKey] = useState("2026-01");
@@ -817,6 +817,8 @@ export default function App() {
     "2026-03": { income: [{ id: 121, label: "Primary Salary", amount: 5500, recurring: true },{ id: 122, label: "Tax Refund", amount: 1200, recurring: false }], expenses: [{ id: 221, label: "Mortgage / Rent", amount: 1800, category: "Housing", fixed: true },{ id: 222, label: "Electricity", amount: 105, category: "Utilities", fixed: true },{ id: 223, label: "Groceries", amount: 340, category: "Food", fixed: false },{ id: 224, label: "Clothing", amount: 210, category: "Personal", fixed: false }], notes: "", billStatus: {}, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } },
     [DEMO_MONTH]: { income: INITIAL_INCOME, expenses: INITIAL_EXPENSES, notes: "", billStatus: { 4: true }, expenseBudgets: { ...DEFAULT_EXPENSE_BUDGETS } },
   });
+  // Now that monthlySnapshots is declared, keep ref in sync on every render
+  monthlySnapshotsRef.current = monthlySnapshots;
   // ── Firebase initialization ──
   useEffect(() => {
     const init = async () => {
