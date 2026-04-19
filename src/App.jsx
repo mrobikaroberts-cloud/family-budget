@@ -2023,9 +2023,26 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         ::view-transition-new(active-mobile-pill) {
           animation-duration: 200ms;
         }
-        /* Bill card morph — default browser morph for any view-transition-name
-           starting with "bill-" is already great. We just slow it slightly and
-           use a spring-like ease for a more natural expansion feel. */
+        /* Bill card morph — shared name "bill-active" so we can target one ease
+           globally. Spring-like cubic-bezier gives a natural lift+settle feel. */
+        ::view-transition-group(bill-active) {
+          animation-duration: 520ms;
+          animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+        }
+        ::view-transition-old(bill-active) {
+          animation: vt-bill-old 180ms cubic-bezier(0.4, 0, 1, 1) forwards;
+        }
+        ::view-transition-new(bill-active) {
+          animation: vt-bill-new 320ms cubic-bezier(0.16, 1, 0.3, 1) 120ms backwards;
+        }
+        @keyframes vt-bill-old {
+          0% { opacity: 1; }
+          100% { opacity: 0; }
+        }
+        @keyframes vt-bill-new {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
 
         /* Scroll */
         .cat-scroll { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; padding-bottom: 8px; }
@@ -2157,7 +2174,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
       `}</style>
 
       {/* ── SIDEBAR — glass, rounded-r-3xl ── */}
-      <aside className="app-sidebar" style={{ width: sidebarCollapsed ? 72 : 280, background: "var(--c-glass)", backdropFilter: "blur(40px) saturate(200%)", WebkitBackdropFilter: "blur(40px) saturate(200%)", borderRight: "1px solid var(--c-glass-border)", display: "flex", flexDirection: "column", flexShrink: 0, height: "100vh", borderRadius: "0 28px 28px 0", transition: "width 0.25s cubic-bezier(0.4,0,0.2,1)", overflow: "hidden", boxShadow: "4px 0 24px rgba(0,0,0,0.05)" }}>
+      <aside className="app-sidebar" style={{ width: sidebarCollapsed ? 72 : 280, background: "var(--c-glass)", backdropFilter: "blur(40px) saturate(200%)", WebkitBackdropFilter: "blur(40px) saturate(200%)", borderRight: "1px solid var(--c-glass-border)", display: "flex", flexDirection: "column", flexShrink: 0, height: "100vh", borderRadius: "0 0 28px 0", transition: "width 0.25s cubic-bezier(0.4,0,0.2,1)", overflow: "hidden", boxShadow: "4px 0 24px rgba(0,0,0,0.05)" }}>
         {/* Family branding */}
         <div style={{ padding: sidebarCollapsed ? "22px 0 18px" : "28px 20px 32px", display: "flex", justifyContent: sidebarCollapsed ? "center" : "flex-start" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -2222,7 +2239,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
       {/* ── MAIN COLUMN ── */}
       <div className="app-main" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
         {/* TOP HEADER */}
-        <header style={{ background: "var(--c-glass-strong)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", borderBottom: "1px solid var(--c-glass-border)", padding: "16px 32px 14px", display: "flex", alignItems: "center", gap: 20, flexShrink: 0, boxShadow: "0 2px 16px rgba(0,0,0,0.04)", position: "relative", zIndex: 1000 }}>
+        <header style={{ background: "var(--c-glass-strong)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", borderBottom: "1px solid var(--c-glass-hairline)", padding: "16px 32px 14px", display: "flex", alignItems: "center", gap: 20, flexShrink: 0, boxShadow: "0 1px 0 var(--c-glass-hairline), 0 8px 24px rgba(0,0,0,0.04)", position: "relative", zIndex: 1000 }}>
           {/* Month picker */}
           <div style={{ position: "relative", zIndex: 300 }}>
             {showMonthPicker && <div onClick={() => setShowMonthPicker(false)} style={{ position: "fixed", inset: 0, zIndex: 999 }} />}
@@ -2424,7 +2441,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   <div
                     className="bill-due-card"
                     onClick={carouselBill ? () => openBillDetail(carouselBill) : undefined}
-                    style={{ gridColumn: "span 4", background: `linear-gradient(145deg, rgba(0,120,168,0.12) 0%, rgba(0,149,210,0.09) 50%, rgba(74,82,168,0.08) 100%)`, backdropFilter: "blur(24px) saturate(160%)", WebkitBackdropFilter: "blur(24px) saturate(160%)", border: "1px solid rgba(0,120,168,0.15)", borderRadius: 24, padding: "28px", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 320, position: "relative", boxShadow: "0 8px 32px rgba(0,120,168,0.10), inset 0 1px 0 rgba(255,255,255,0.6)", cursor: carouselBill ? "pointer" : "default", viewTransitionName: carouselBill && morphBillId === carouselBill.id && !activeBillDetail ? `bill-${carouselBill.id}` : undefined }}
+                    style={{ gridColumn: "span 4", background: `linear-gradient(145deg, rgba(0,120,168,0.12) 0%, rgba(0,149,210,0.09) 50%, rgba(74,82,168,0.08) 100%)`, backdropFilter: "blur(24px) saturate(160%)", WebkitBackdropFilter: "blur(24px) saturate(160%)", border: "1px solid rgba(0,120,168,0.15)", borderRadius: 24, padding: "28px", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 320, position: "relative", boxShadow: "0 8px 32px rgba(0,120,168,0.10), inset 0 1px 0 rgba(255,255,255,0.6)", cursor: carouselBill ? "pointer" : "default", viewTransitionName: carouselBill && morphBillId === carouselBill.id && !activeBillDetail ? "bill-active" : undefined }}
                   >
                     {/* Arrow buttons */}
                     {hasBills && carouselBills.length > 1 && (
@@ -3283,7 +3300,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           border: `1px solid ${paid ? "rgba(16,185,129,0.18)" : overdue ? "rgba(248,113,113,0.22)" : "var(--c-glass-border)"}`,
                           boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
                           transition: "transform .2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .2s, background .2s",
-                          viewTransitionName: morphBillId === b.id && !activeBillDetail ? `bill-${b.id}` : undefined,
+                          viewTransitionName: morphBillId === b.id && !activeBillDetail ? "bill-active" : undefined,
                         }}
                         onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.06)"; }}
                         onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.03)"; }}
@@ -3840,8 +3857,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         const isEAmt = editingBillCell?.id === b.id && editingBillCell?.field === "budget";
         const isEDate = editingBillCell?.id === b.id && editingBillCell?.field === "dueDate";
         return (
-          <div onClick={() => { closeBillDetail(); setEditingBillCell(null); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.30)", backdropFilter: "blur(12px) saturate(140%)", WebkitBackdropFilter: "blur(12px) saturate(140%)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <div onClick={e => e.stopPropagation()} style={{ background: "var(--c-glass-border-strong)", backdropFilter: "blur(40px) saturate(200%)", WebkitBackdropFilter: "blur(40px) saturate(200%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 24, padding: 32, minWidth: 320, boxShadow: "0 32px 64px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,1)", viewTransitionName: `bill-${b.id}` }}>
+          <div onClick={() => { closeBillDetail(); setEditingBillCell(null); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.30)", backdropFilter: "blur(12px) saturate(140%)", WebkitBackdropFilter: "blur(12px) saturate(140%)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "var(--c-glass-border-strong)", backdropFilter: "blur(40px) saturate(200%)", WebkitBackdropFilter: "blur(40px) saturate(200%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 24, padding: 32, minWidth: 320, boxShadow: "0 32px 64px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,1)", viewTransitionName: "bill-active" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, alignItems: "flex-start" }}>
                 {isELabel
                   ? <input autoFocus defaultValue={b.label} style={{ ...popInpStyle, textAlign: "left", fontSize: 18, fontWeight: FW.extrabold, flex: 1, marginRight: 8 }} onBlur={e => { setBills(p => p.map(x => x.id === b.id ? {...x, label: e.target.value || x.label} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
