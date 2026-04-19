@@ -759,7 +759,12 @@ export default function App() {
     }
     const reduceMotion = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     if (reduceMotion) { setTab(id); return; }
-    document.startViewTransition(() => { flushSync(() => setTab(id)); });
+    // Mark the root as a tab-swap so the page-main slide/fade keyframes fire.
+    // For non-tab transitions (bill morph), the class is absent and page-main
+    // falls back to the browser's trivial default (old == new → no visible change).
+    document.documentElement.classList.add("vt-tab-swap");
+    const t = document.startViewTransition(() => { flushSync(() => setTab(id)); });
+    t.finished.finally(() => document.documentElement.classList.remove("vt-tab-swap"));
   }, []);
   // Open the bill detail sheet. When View Transitions are supported, the
   // clicked bill gets a unique view-transition-name so it morphs into the
@@ -1984,11 +1989,20 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           0% { opacity: 0; transform: translateY(12px) scale(0.995); filter: blur(4px); }
           100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
         }
-        ::view-transition-old(page-main) {
+        /* page-main slide/fade fires ONLY during tab swaps.
+           For other transitions (e.g. bill morph) the class is absent and
+           the browser applies its trivial default — since the page doesn't
+           actually change, nothing is visible. */
+        html.vt-tab-swap::view-transition-old(page-main) {
           animation: vt-fade-slide-out 280ms cubic-bezier(0.4, 0, 1, 1) forwards;
         }
-        ::view-transition-new(page-main) {
+        html.vt-tab-swap::view-transition-new(page-main) {
           animation: vt-fade-slide-in 460ms cubic-bezier(0.16, 1, 0.3, 1) 60ms backwards;
+        }
+        /* Outside tab-swap, silence page-main entirely — it's not actually changing. */
+        html:not(.vt-tab-swap)::view-transition-old(page-main),
+        html:not(.vt-tab-swap)::view-transition-new(page-main) {
+          animation: none !important;
         }
         /* The active sidebar pill morphs between nav items — spring-like */
         ::view-transition-group(active-nav-pill) {
@@ -2410,7 +2424,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   <div
                     className="bill-due-card"
                     onClick={carouselBill ? () => openBillDetail(carouselBill) : undefined}
-                    style={{ gridColumn: "span 4", background: `linear-gradient(145deg, rgba(0,120,168,0.12) 0%, rgba(0,149,210,0.09) 50%, rgba(74,82,168,0.08) 100%)`, backdropFilter: "blur(24px) saturate(160%)", WebkitBackdropFilter: "blur(24px) saturate(160%)", border: "1px solid rgba(0,120,168,0.15)", borderRadius: 24, padding: "28px", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 320, position: "relative", boxShadow: "0 8px 32px rgba(0,120,168,0.10), inset 0 1px 0 rgba(255,255,255,0.6)", cursor: carouselBill ? "pointer" : "default", viewTransitionName: carouselBill && (!activeBillDetail || activeBillDetail.id === carouselBill.id) ? `bill-${carouselBill.id}` : undefined }}
+                    style={{ gridColumn: "span 4", background: `linear-gradient(145deg, rgba(0,120,168,0.12) 0%, rgba(0,149,210,0.09) 50%, rgba(74,82,168,0.08) 100%)`, backdropFilter: "blur(24px) saturate(160%)", WebkitBackdropFilter: "blur(24px) saturate(160%)", border: "1px solid rgba(0,120,168,0.15)", borderRadius: 24, padding: "28px", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 320, position: "relative", boxShadow: "0 8px 32px rgba(0,120,168,0.10), inset 0 1px 0 rgba(255,255,255,0.6)", cursor: carouselBill ? "pointer" : "default", viewTransitionName: carouselBill && morphBillId === carouselBill.id && !activeBillDetail ? `bill-${carouselBill.id}` : undefined }}
                   >
                     {/* Arrow buttons */}
                     {hasBills && carouselBills.length > 1 && (
@@ -3324,55 +3338,6 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   );
                 })()}
               </div>
-            {/* Bill detail popover (BUG #10) */}
-            {activeBillDetail && (() => {
-              const b = bills.find(x => x.id === activeBillDetail.id) || activeBillDetail;
-              const bDueDatePop = getBillDueDate(b, calMk);
-              const [y2,m2,d2] = bDueDatePop.split("-").map(Number);
-              const isPast = new Date(y2,m2-1,d2) < new Date(new Date().toDateString());
-              const bPaidPop = getBillPaid(b, calMk);
-              const popInpStyle = { background: COLORS.containerLow, border: `1px solid ${COLORS.primary}`, borderRadius: 8, padding: "4px 10px", fontSize: 14, color: COLORS.text, outline: "none", textAlign: "right" };
-              const isELabel = editingBillCell?.id === b.id && editingBillCell?.field === "label";
-              const isEAmt = editingBillCell?.id === b.id && editingBillCell?.field === "budget";
-              const isEDate = editingBillCell?.id === b.id && editingBillCell?.field === "dueDate";
-              return (
-                <div onClick={() => { closeBillDetail(); setEditingBillCell(null); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.30)", backdropFilter: "blur(12px) saturate(140%)", WebkitBackdropFilter: "blur(12px) saturate(140%)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <div onClick={e => e.stopPropagation()} style={{ background: "var(--c-glass-border-strong)", backdropFilter: "blur(40px) saturate(200%)", WebkitBackdropFilter: "blur(40px) saturate(200%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 24, padding: 32, minWidth: 320, boxShadow: "0 32px 64px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,1)", viewTransitionName: `bill-${b.id}` }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, alignItems: "flex-start" }}>
-                      {isELabel
-                        ? <input autoFocus defaultValue={b.label} style={{ ...popInpStyle, textAlign: "left", fontSize: 18, fontWeight: FW.extrabold, flex: 1, marginRight: 8 }} onBlur={e => { setBills(p => p.map(x => x.id === b.id ? {...x, label: e.target.value || x.label} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
-                        : <h3 onClick={() => setEditingBillCell({id: b.id, field: "label"})} title="Click to edit" style={{ fontSize: 18, fontWeight: FW.extrabold, color: COLORS.text, cursor: "text", flex: 1 }}>{b.label}</h3>
-                      }
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={() => { setBills(p => p.filter(x => x.id !== b.id)); closeBillDetail(); setEditingBillCell(null); }} title="Delete bill" style={{ background: COLORS.danger + "18", border: "none", color: COLORS.danger, borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>🗑</button>
-                        <button onClick={() => { closeBillDetail(); setEditingBillCell(null); }} style={{ background: COLORS.containerHigh, border: "none", fontSize: 20, cursor: "pointer", color: COLORS.muted, borderRadius: 8, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontSize: 13, color: COLORS.subtext }}>Amount</span>
-                        {isEAmt
-                          ? <input autoFocus type="number" defaultValue={b.budget} style={popInpStyle} onBlur={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v >= 0) setBills(p => p.map(x => x.id === b.id ? {...x, budget: v} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
-                          : <span onClick={() => setEditingBillCell({id: b.id, field: "budget"})} title="Click to edit" style={{ fontSize: 14, fontWeight: FW.bold, color: COLORS.text, cursor: "text" }}>{fmt(b.budget)}</span>
-                        }
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontSize: 13, color: COLORS.subtext }}>Due Date</span>
-                        {isEDate
-                          ? <input autoFocus type="number" min="1" max="31" defaultValue={b.dayOfMonth} style={popInpStyle} onBlur={e => { const v = parseInt(e.target.value); if (v >= 1 && v <= 31) setBills(p => p.map(x => x.id === b.id ? {...x, dayOfMonth: v} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
-                          : <span onClick={() => setEditingBillCell({id: b.id, field: "dueDate"})} title="Click to edit" style={{ fontSize: 14, color: COLORS.text, cursor: "text" }}>{fmtDate(bDueDatePop)}</span>
-                        }
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between" }}>
-                        <span style={{ fontSize: 13, color: COLORS.subtext }}>Status</span>
-                        <span style={{ fontSize: 13, fontWeight: FW.bold, color: bPaidPop ? COLORS.success : isPast ? COLORS.danger : COLORS.subtext }}>{bPaidPop ? "Paid ✓" : isPast ? "Overdue" : "Upcoming"}</span>
-                      </div>
-                    </div>
-                    {!bPaidPop && <button onClick={() => { markBillPaid(b.id, calMk); closeBillDetail(); }} style={{ width: "100%", background: COLORS.primary, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: 14, fontWeight: FW.bold, cursor: "pointer" }}>Mark as Paid</button>}
-                  </div>
-                </div>
-              );
-            })()}
             </div>
           );
         })()}
@@ -3862,6 +3827,56 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           </div>
         )}
       </main>
+      {/* ── Bill detail popover ── rendered at top level so it's available from any tab (dashboard carousel, bills list, etc.) */}
+      {activeBillDetail && (() => {
+        const b = bills.find(x => x.id === activeBillDetail.id) || activeBillDetail;
+        const billMk = viewMonthKey;
+        const bDueDatePop = getBillDueDate(b, billMk);
+        const [y2,m2,d2] = bDueDatePop.split("-").map(Number);
+        const isPast = new Date(y2,m2-1,d2) < new Date(new Date().toDateString());
+        const bPaidPop = getBillPaid(b, billMk);
+        const popInpStyle = { background: COLORS.containerLow, border: `1px solid ${COLORS.primary}`, borderRadius: 8, padding: "4px 10px", fontSize: 14, color: COLORS.text, outline: "none", textAlign: "right" };
+        const isELabel = editingBillCell?.id === b.id && editingBillCell?.field === "label";
+        const isEAmt = editingBillCell?.id === b.id && editingBillCell?.field === "budget";
+        const isEDate = editingBillCell?.id === b.id && editingBillCell?.field === "dueDate";
+        return (
+          <div onClick={() => { closeBillDetail(); setEditingBillCell(null); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.30)", backdropFilter: "blur(12px) saturate(140%)", WebkitBackdropFilter: "blur(12px) saturate(140%)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "var(--c-glass-border-strong)", backdropFilter: "blur(40px) saturate(200%)", WebkitBackdropFilter: "blur(40px) saturate(200%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 24, padding: 32, minWidth: 320, boxShadow: "0 32px 64px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,1)", viewTransitionName: `bill-${b.id}` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, alignItems: "flex-start" }}>
+                {isELabel
+                  ? <input autoFocus defaultValue={b.label} style={{ ...popInpStyle, textAlign: "left", fontSize: 18, fontWeight: FW.extrabold, flex: 1, marginRight: 8 }} onBlur={e => { setBills(p => p.map(x => x.id === b.id ? {...x, label: e.target.value || x.label} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
+                  : <h3 onClick={() => setEditingBillCell({id: b.id, field: "label"})} title="Click to edit" style={{ fontSize: 18, fontWeight: FW.extrabold, color: COLORS.text, cursor: "text", flex: 1 }}>{b.label}</h3>
+                }
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={() => { setBills(p => p.filter(x => x.id !== b.id)); closeBillDetail(); setEditingBillCell(null); }} title="Delete bill" style={{ background: COLORS.danger + "18", border: "none", color: COLORS.danger, borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>🗑</button>
+                  <button onClick={() => { closeBillDetail(); setEditingBillCell(null); }} style={{ background: COLORS.containerHigh, border: "none", fontSize: 20, cursor: "pointer", color: COLORS.muted, borderRadius: 8, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 13, color: COLORS.subtext }}>Amount</span>
+                  {isEAmt
+                    ? <input autoFocus type="number" defaultValue={b.budget} style={popInpStyle} onBlur={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v >= 0) setBills(p => p.map(x => x.id === b.id ? {...x, budget: v} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
+                    : <span onClick={() => setEditingBillCell({id: b.id, field: "budget"})} title="Click to edit" style={{ fontSize: 14, fontWeight: FW.bold, color: COLORS.text, cursor: "text" }}>{fmt(b.budget)}</span>
+                  }
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 13, color: COLORS.subtext }}>Due Date</span>
+                  {isEDate
+                    ? <input autoFocus type="number" min="1" max="31" defaultValue={b.dayOfMonth} style={popInpStyle} onBlur={e => { const v = parseInt(e.target.value); if (v >= 1 && v <= 31) setBills(p => p.map(x => x.id === b.id ? {...x, dayOfMonth: v} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
+                    : <span onClick={() => setEditingBillCell({id: b.id, field: "dueDate"})} title="Click to edit" style={{ fontSize: 14, color: COLORS.text, cursor: "text" }}>{fmtDate(bDueDatePop)}</span>
+                  }
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 13, color: COLORS.subtext }}>Status</span>
+                  <span style={{ fontSize: 13, fontWeight: FW.bold, color: bPaidPop ? COLORS.success : isPast ? COLORS.danger : COLORS.subtext }}>{bPaidPop ? "Paid ✓" : isPast ? "Overdue" : "Upcoming"}</span>
+                </div>
+              </div>
+              {!bPaidPop && <button onClick={() => { markBillPaid(b.id, billMk); closeBillDetail(); }} style={{ width: "100%", background: COLORS.primary, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: 14, fontWeight: FW.bold, cursor: "pointer" }}>Mark as Paid</button>}
+            </div>
+          </div>
+        );
+      })()}
       {/* ── MODALS ── */}
       {modal === "addMenu" && <SmartAddModal
         onClose={() => setModal(null)}
