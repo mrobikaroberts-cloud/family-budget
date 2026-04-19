@@ -185,6 +185,35 @@ const build12Months = (startKey) => {
     return monthKey(d.getFullYear(), d.getMonth());
   });
 };
+// ── AnimatedNumber ────────────────────────────────────────────────────────────
+// Tweens between numeric values on prop change. format() maps the intermediate
+// number to its display string (e.g. fmt for currency). Respects reduced-motion.
+function AnimatedNumber({ value, format = (v) => String(Math.round(v)), duration = 700, style, className }) {
+  const [display, setDisplay] = useState(value);
+  const fromRef = useRef(value);
+  const rafRef = useRef(null);
+  useEffect(() => {
+    if (typeof window === "undefined") { setDisplay(value); return; }
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) { setDisplay(value); fromRef.current = value; return; }
+    const from = fromRef.current;
+    const to = Number.isFinite(value) ? value : 0;
+    if (from === to) { setDisplay(to); return; }
+    const startT = performance.now();
+    const tick = (now) => {
+      const t = Math.min(1, (now - startT) / duration);
+      const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+      const v = from + (to - from) * eased;
+      setDisplay(v);
+      if (t < 1) rafRef.current = requestAnimationFrame(tick);
+      else { fromRef.current = to; rafRef.current = null; }
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); fromRef.current = display; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, duration]);
+  return <span className={className} style={style}>{format(display)}</span>;
+}
 // ── ProgressBar ───────────────────────────────────────────────────────────────
 function ProgressBar({ value, max, color }) {
   const p = pct(value, max);
@@ -732,6 +761,32 @@ export default function App() {
     if (reduceMotion) { setTab(id); return; }
     document.startViewTransition(() => { flushSync(() => setTab(id)); });
   }, []);
+  // Open the bill detail sheet. When View Transitions are supported, the
+  // clicked bill gets a unique view-transition-name so it morphs into the
+  // modal. We set the name via flushSync BEFORE calling startViewTransition,
+  // so the "old" snapshot includes the name on the source element.
+  const openBillDetail = useCallback((bill) => {
+    if (!bill) return;
+    if (typeof document === "undefined" || typeof document.startViewTransition !== "function") {
+      setActiveBillDetail(bill);
+      return;
+    }
+    const reduceMotion = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) { setActiveBillDetail(bill); return; }
+    flushSync(() => setMorphBillId(bill.id));
+    const t = document.startViewTransition(() => { flushSync(() => setActiveBillDetail(bill)); });
+    t.finished.finally(() => setMorphBillId(null));
+  }, []);
+  const closeBillDetail = useCallback(() => {
+    if (typeof document === "undefined" || typeof document.startViewTransition !== "function") {
+      setActiveBillDetail(null);
+      return;
+    }
+    const reduceMotion = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) { setActiveBillDetail(null); return; }
+    const t = document.startViewTransition(() => { flushSync(() => setActiveBillDetail(null)); });
+    t.finished.finally(() => setMorphBillId(null));
+  }, []);
   const [householdId, setHouseholdId] = useState(() => localStorage.getItem('familyfinance_household_id'));
   const [householdCode, setHouseholdCode] = useState(() => localStorage.getItem('familyfinance_household_code'));
   const [joinScreen, setJoinScreen] = useState(false); // show join/create screen
@@ -800,6 +855,7 @@ export default function App() {
   const [editingIncomeCell, setEditingIncomeCell] = useState(null); // { id, field } for income row editing
   const [payBillConfirm, setPayBillConfirm] = useState(null);      // BUG #3: bill awaiting pay confirmation
   const [activeBillDetail, setActiveBillDetail] = useState(null);  // BUG #10: bill detail popover
+  const [morphBillId, setMorphBillId] = useState(null);            // Tracks the source element that should receive view-transition-name during a bill morph
   const [billCalView, setBillCalView] = useState("month");          // BUG #11: month/list toggle
   const [addingSavingsId, setAddingSavingsId] = useState(null);    // BUG #24: inline savings input
   const [payExtraDebtId, setPayExtraDebtId] = useState(null);      // BUG #25: inline debt extra pay
@@ -1953,6 +2009,9 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         ::view-transition-new(active-mobile-pill) {
           animation-duration: 200ms;
         }
+        /* Bill card morph — default browser morph for any view-transition-name
+           starting with "bill-" is already great. We just slow it slightly and
+           use a spring-like ease for a more natural expansion feel. */
 
         /* Scroll */
         .cat-scroll { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; padding-bottom: 8px; }
@@ -2258,9 +2317,12 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   {/* Header: net cash flow hero */}
                   <div style={{ marginBottom: 24 }}>
                     <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8, whiteSpace: "nowrap" }}>Net Cash Flow</p>
-                    <span className="kpi-num" style={{ fontSize: 80, fontWeight: FW.black, color: netCashFlow >= 0 ? "#10b981" : "#F87171", letterSpacing: "-0.05em", fontFamily: "'Bricolage Grotesque', sans-serif", lineHeight: 0.9, display: "block", marginBottom: 6 }}>
-                      {netCashFlow >= 0 ? "+" : "−"}{fmt(Math.abs(netCashFlow))}
-                    </span>
+                    <AnimatedNumber
+                      value={netCashFlow}
+                      format={(v) => (v >= 0 ? "+" : "−") + fmt(Math.abs(v))}
+                      className="kpi-num"
+                      style={{ fontSize: 80, fontWeight: FW.black, color: netCashFlow >= 0 ? "#10b981" : "#F87171", letterSpacing: "-0.05em", fontFamily: "'Bricolage Grotesque', sans-serif", lineHeight: 0.9, display: "block", marginBottom: 6 }}
+                    />
                     <p style={{ fontSize: 13, color: netCashFlow >= 0 ? "#10b981" : "#F87171", fontWeight: FW.semibold, opacity: 0.85 }}>
                       {netCashFlow >= 0 ? "net savings this month" : "over budget this month"}
                     </p>
@@ -2296,12 +2358,12 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               const savRate = viewTotalIncome > 0 ? Math.max(0, (netCF / viewTotalIncome) * 100) : null;
               const dtiVal = totalIncome > 0 ? Math.round((totalDebt / totalIncome) * 100) : null;
               const metrics = [
-                { label: "Income",        val: fmt(viewTotalIncome),  color: COLORS.success,    diff: prevS2.hasData ? viewTotalIncome - prevS2.inc : null, higherIsGood: true },
-                { label: "Expenses",      val: fmt(viewTotalExpenses),color: COLORS.accentWarm,  diff: prevS2.hasData ? viewTotalExpenses - prevS2.exp : null, higherIsGood: false },
-                { label: "Net Cash Flow", val: (netCF >= 0 ? "+" : "−") + fmt(Math.abs(netCF)), color: netCF >= 0 ? COLORS.success : COLORS.danger, diff: prevS2.hasData ? netCF - prevS2.net : null, higherIsGood: true },
-                { label: "Net Worth",     val: fmt(netWorthVal),      color: netWorthVal >= 0 ? COLORS.success : COLORS.danger, diff: null },
-                { label: "Total Debt",    val: fmt(totalDebt),        color: totalDebt > 0 ? COLORS.danger : COLORS.success, diff: null },
-                { label: "Savings Rate",  val: savRate !== null ? `${savRate.toFixed(1)}%` : "—", color: COLORS.primary, diff: null },
+                { label: "Income",        value: viewTotalIncome,   fmtFn: fmt,                                                         color: COLORS.success,    diff: prevS2.hasData ? viewTotalIncome - prevS2.inc : null, higherIsGood: true },
+                { label: "Expenses",      value: viewTotalExpenses, fmtFn: fmt,                                                         color: COLORS.accentWarm,  diff: prevS2.hasData ? viewTotalExpenses - prevS2.exp : null, higherIsGood: false },
+                { label: "Net Cash Flow", value: netCF,             fmtFn: (v) => (v >= 0 ? "+" : "−") + fmt(Math.abs(v)),              color: netCF >= 0 ? COLORS.success : COLORS.danger, diff: prevS2.hasData ? netCF - prevS2.net : null, higherIsGood: true },
+                { label: "Net Worth",     value: netWorthVal,       fmtFn: fmt,                                                         color: netWorthVal >= 0 ? COLORS.success : COLORS.danger, diff: null },
+                { label: "Total Debt",    value: totalDebt,         fmtFn: fmt,                                                         color: totalDebt > 0 ? COLORS.danger : COLORS.success, diff: null },
+                { label: "Savings Rate",  value: savRate,           fmtFn: (v) => v !== null && Number.isFinite(v) ? `${v.toFixed(1)}%` : "—", color: COLORS.primary, diff: null },
               ];
               return (
                 <div style={{ background: "var(--c-glass)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 24, padding: "24px 28px", boxShadow: "0 8px 40px rgba(0,0,0,0.07), inset 0 1px 0 var(--c-glass-inset)", marginBottom: 20, position: "relative", overflow: "hidden" }}>
@@ -2315,7 +2377,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       return (
                         <div key={metric.label} style={{ paddingRight: isLast ? 0 : 20, marginRight: isLast ? 0 : 20, borderRight: isLast ? "none" : "1px solid var(--c-glass-hairline)" }}>
                           <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>{metric.label}</p>
-                          <p style={{ fontSize: 22, fontWeight: FW.extrabold, color: metric.color, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{metric.val}</p>
+                          <AnimatedNumber value={metric.value ?? 0} format={metric.fmtFn} style={{ fontSize: 22, fontWeight: FW.extrabold, color: metric.color, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", lineHeight: 1.1, display: "block" }} />
                           {metric.diff !== null && (
                             <p style={{ fontSize: 11, color: isZero ? COLORS.muted : isPositive ? COLORS.success : COLORS.danger, marginTop: 5, display: "flex", alignItems: "center", gap: 3 }}>
                               {isZero ? (
@@ -2345,12 +2407,16 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 const carouselBill = hasBills ? carouselBills[safeBillIdx] : null;
                 const carouselDaysUntil = carouselBill ? Math.round((carouselBill._due.getTime() - today0.getTime()) / 86400000) : null;
                 return (
-                  <div className="bill-due-card" style={{ gridColumn: "span 4", background: `linear-gradient(145deg, rgba(0,120,168,0.12) 0%, rgba(0,149,210,0.09) 50%, rgba(74,82,168,0.08) 100%)`, backdropFilter: "blur(24px) saturate(160%)", WebkitBackdropFilter: "blur(24px) saturate(160%)", border: "1px solid rgba(0,120,168,0.15)", borderRadius: 24, padding: "28px", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 320, position: "relative", boxShadow: "0 8px 32px rgba(0,120,168,0.10), inset 0 1px 0 rgba(255,255,255,0.6)" }}>
+                  <div
+                    className="bill-due-card"
+                    onClick={carouselBill ? () => openBillDetail(carouselBill) : undefined}
+                    style={{ gridColumn: "span 4", background: `linear-gradient(145deg, rgba(0,120,168,0.12) 0%, rgba(0,149,210,0.09) 50%, rgba(74,82,168,0.08) 100%)`, backdropFilter: "blur(24px) saturate(160%)", WebkitBackdropFilter: "blur(24px) saturate(160%)", border: "1px solid rgba(0,120,168,0.15)", borderRadius: 24, padding: "28px", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 320, position: "relative", boxShadow: "0 8px 32px rgba(0,120,168,0.10), inset 0 1px 0 rgba(255,255,255,0.6)", cursor: carouselBill ? "pointer" : "default", viewTransitionName: carouselBill && (!activeBillDetail || activeBillDetail.id === carouselBill.id) ? `bill-${carouselBill.id}` : undefined }}
+                  >
                     {/* Arrow buttons */}
                     {hasBills && carouselBills.length > 1 && (
                       <>
-                        <button onClick={() => setBillCarouselIdx(p => (p - 1 + carouselBills.length) % carouselBills.length)} aria-label="Previous bill" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,89,117,0.12)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2, color: COLORS.onSecondaryContainer, fontSize: 16 }}>‹</button>
-                        <button onClick={() => setBillCarouselIdx(p => (p + 1) % carouselBills.length)} aria-label="Next bill" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,89,117,0.12)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2, color: COLORS.onSecondaryContainer, fontSize: 16 }}>›</button>
+                        <button onClick={(e) => { e.stopPropagation(); setBillCarouselIdx(p => (p - 1 + carouselBills.length) % carouselBills.length); }} aria-label="Previous bill" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,89,117,0.12)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2, color: COLORS.onSecondaryContainer, fontSize: 16 }}>‹</button>
+                        <button onClick={(e) => { e.stopPropagation(); setBillCarouselIdx(p => (p + 1) % carouselBills.length); }} aria-label="Next bill" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,89,117,0.12)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2, color: COLORS.onSecondaryContainer, fontSize: 16 }}>›</button>
                       </>
                     )}
                     <div>
@@ -2381,23 +2447,23 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     {carouselBill && (
                       <div style={{ textAlign: "center" }}>
                         <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.onSecondaryContainer, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Amount Due</p>
-                        <p style={{ fontSize: 34, fontWeight: FW.extrabold, color: COLORS.onSecondaryContainer, marginBottom: 16, letterSpacing: "-0.02em" }}>{fmt(carouselBill.budget)}</p>
+                        <AnimatedNumber value={carouselBill.budget} format={fmt} style={{ fontSize: 34, fontWeight: FW.extrabold, color: COLORS.onSecondaryContainer, marginBottom: 16, letterSpacing: "-0.02em", display: "block" }} />
                         {payBillConfirm?.id === carouselBill.id ? (
                           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                             <p style={{ fontSize: 12, color: COLORS.onSecondaryContainer, textAlign: "center", opacity: 0.8 }}>Mark {carouselBill.label} as paid?</p>
                             <div style={{ display: "flex", gap: 8 }}>
-                              <button onClick={() => { markBillPaid(carouselBill.id, viewMonthKey); setPayBillConfirm(null); showToast(`${carouselBill.label} marked as paid`); }} style={{ flex: 1, background: COLORS.onSecondaryContainer, color: "#fff", border: "none", borderRadius: 9999, padding: "11px", fontSize: 13, fontWeight: FW.bold, cursor: "pointer" }}>Confirm</button>
-                              <button onClick={() => setPayBillConfirm(null)} style={{ flex: 1, background: "rgba(0,89,117,0.15)", color: COLORS.onSecondaryContainer, border: "none", borderRadius: 9999, padding: "11px", fontSize: 13, fontWeight: FW.bold, cursor: "pointer" }}>Cancel</button>
+                              <button onClick={(e) => { e.stopPropagation(); markBillPaid(carouselBill.id, viewMonthKey); setPayBillConfirm(null); showToast(`${carouselBill.label} marked as paid`); }} style={{ flex: 1, background: COLORS.onSecondaryContainer, color: "#fff", border: "none", borderRadius: 9999, padding: "11px", fontSize: 13, fontWeight: FW.bold, cursor: "pointer" }}>Confirm</button>
+                              <button onClick={(e) => { e.stopPropagation(); setPayBillConfirm(null); }} style={{ flex: 1, background: "rgba(0,89,117,0.15)", color: COLORS.onSecondaryContainer, border: "none", borderRadius: 9999, padding: "11px", fontSize: 13, fontWeight: FW.bold, cursor: "pointer" }}>Cancel</button>
                             </div>
                           </div>
                         ) : (
-                          <button onClick={() => setPayBillConfirm(carouselBill)} style={{ width: "100%", background: COLORS.onSecondaryContainer, color: "#fff", border: "none", borderRadius: 9999, padding: "12px", fontSize: 14, fontWeight: FW.bold, cursor: "pointer", boxShadow: COLORS.shadowSm }}>Pay Now</button>
+                          <button onClick={(e) => { e.stopPropagation(); setPayBillConfirm(carouselBill); }} style={{ width: "100%", background: COLORS.onSecondaryContainer, color: "#fff", border: "none", borderRadius: 9999, padding: "12px", fontSize: 14, fontWeight: FW.bold, cursor: "pointer", boxShadow: COLORS.shadowSm }}>Pay Now</button>
                         )}
                         {/* Dot indicators */}
                         {carouselBills.length > 1 && (
                           <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 12 }}>
                             {carouselBills.map((_, di) => (
-                              <button key={di} onClick={() => setBillCarouselIdx(di)} style={{ width: di === safeBillIdx ? 16 : 6, height: 6, borderRadius: 9999, background: di === safeBillIdx ? COLORS.onSecondaryContainer : `${COLORS.onSecondaryContainer}50`, border: "none", cursor: "pointer", padding: 0, transition: "all 0.2s" }} />
+                              <button key={di} onClick={(e) => { e.stopPropagation(); setBillCarouselIdx(di); }} style={{ width: di === safeBillIdx ? 16 : 6, height: 6, borderRadius: 9999, background: di === safeBillIdx ? COLORS.onSecondaryContainer : `${COLORS.onSecondaryContainer}50`, border: "none", cursor: "pointer", padding: 0, transition: "all 0.2s" }} />
                             ))}
                           </div>
                         )}
@@ -3070,24 +3136,51 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 </div>
               </div>
 
-              {/* ── 3 Summary stat boxes ── */}
-              <div className="bills-stat-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 20 }}>
-                {[
-                  { label: "Total Bills", value: totalBillsBudget, icon: "receipt_long", color: COLORS.primary, bg: "rgba(0,103,136,0.08)" },
-                  { label: "Paid", value: paidAmountTotal, icon: "check_circle", color: COLORS.success, bg: "rgba(0,103,136,0.06)" },
-                  { label: "Remaining", value: remainingBillsTotal, icon: "pending", color: remainingBillsTotal > 0 ? COLORS.warning : COLORS.success, bg: remainingBillsTotal > 0 ? "rgba(249,115,22,0.07)" : "rgba(0,103,136,0.06)" },
-                ].map(stat => (
-                  <div key={stat.label} style={{ background: "var(--c-glass)", backdropFilter: "blur(20px) saturate(160%)", WebkitBackdropFilter: "blur(20px) saturate(160%)", border: "1px solid var(--c-glass-border)", borderRadius: 16, padding: "18px 20px", boxShadow: "0 4px 16px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: 14 }}>
-                    <div style={{ width: 42, height: 42, borderRadius: 12, background: stat.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 20, color: stat.color }}>{stat.icon}</span>
+              {/* ── Hero progress ring + key numbers ── */}
+              {(() => {
+                const nowR = new Date(); nowR.setHours(0,0,0,0);
+                const in7 = new Date(nowR.getTime() + 7 * 86400000);
+                const overdueCount = bills.filter(b => { if (getBillPaid(b, calMk)) return false; const [y3,m3,d3] = getBillDueDate(b, calMk).split("-").map(Number); return new Date(y3,m3-1,d3) < nowR; }).length;
+                const dueSoonCount = bills.filter(b => { if (getBillPaid(b, calMk)) return false; const [y3,m3,d3] = getBillDueDate(b, calMk).split("-").map(Number); const dt = new Date(y3,m3-1,d3); return dt >= nowR && dt <= in7; }).length;
+                const paidPct = totalBillsBudget > 0 ? Math.min(100, (paidAmountTotal / totalBillsBudget) * 100) : 0;
+                const size = 148, stroke = 12, radius = (size - stroke) / 2, circ = 2 * Math.PI * radius;
+                const ringColor = paidPct === 100 ? COLORS.success : paidPct >= 60 ? COLORS.primary : overdueCount > 0 ? COLORS.danger : COLORS.primary;
+                return (
+                  <div className="bill-hero-card" style={{ background: "var(--c-glass)", backdropFilter: "blur(28px) saturate(180%)", WebkitBackdropFilter: "blur(28px) saturate(180%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 24, padding: 28, boxShadow: "0 8px 32px rgba(0,0,0,0.06), inset 0 1px 0 var(--c-glass-inset)", marginBottom: 20, display: "grid", gridTemplateColumns: "auto 1fr", gap: 32, alignItems: "center" }}>
+                    {/* Ring */}
+                    <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+                      <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+                        <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="var(--c-glass-hairline)" strokeWidth={stroke} />
+                        <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke={ringColor} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={circ - (circ * paidPct) / 100} style={{ transition: "stroke-dashoffset 700ms cubic-bezier(0.33, 1, 0.68, 1), stroke 300ms ease" }} />
+                      </svg>
+                      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                        <AnimatedNumber value={paidPct} format={(v) => `${Math.round(v)}%`} style={{ fontSize: 30, fontWeight: FW.extrabold, color: ringColor, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em", lineHeight: 1 }} />
+                        <span style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 4 }}>Paid</span>
+                      </div>
                     </div>
-                    <div>
-                      <p style={{ fontSize: 11, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: FW.bold, marginBottom: 3 }}>{stat.label}</p>
-                      <p style={{ fontSize: 22, fontWeight: FW.extrabold, color: stat.color, letterSpacing: "-0.02em" }}>{fmt(stat.value)}</p>
+                    {/* Stats */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
+                      <div>
+                        <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Total Bills</p>
+                        <AnimatedNumber value={totalBillsBudget} format={fmt} style={{ fontSize: 24, fontWeight: FW.extrabold, color: COLORS.text, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.025em", display: "block" }} />
+                        <p style={{ fontSize: 11, color: COLORS.muted, marginTop: 4 }}>{bills.length} {bills.length === 1 ? "bill" : "bills"} this month</p>
+                      </div>
+                      <div>
+                        <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Paid</p>
+                        <AnimatedNumber value={paidAmountTotal} format={fmt} style={{ fontSize: 24, fontWeight: FW.extrabold, color: COLORS.success, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.025em", display: "block" }} />
+                        <p style={{ fontSize: 11, color: COLORS.muted, marginTop: 4 }}>{bills.filter(b => getBillPaid(b, calMk)).length} of {bills.length} complete</p>
+                      </div>
+                      <div>
+                        <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Remaining</p>
+                        <AnimatedNumber value={remainingBillsTotal} format={fmt} style={{ fontSize: 24, fontWeight: FW.extrabold, color: remainingBillsTotal > 0 ? (overdueCount > 0 ? COLORS.danger : COLORS.warning) : COLORS.success, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.025em", display: "block" }} />
+                        <p style={{ fontSize: 11, color: overdueCount > 0 ? COLORS.danger : dueSoonCount > 0 ? COLORS.warning : COLORS.muted, marginTop: 4, fontWeight: overdueCount > 0 || dueSoonCount > 0 ? FW.semibold : FW.normal }}>
+                          {overdueCount > 0 ? `${overdueCount} overdue` : dueSoonCount > 0 ? `${dueSoonCount} due this week` : "All caught up"}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
+                );
+              })()}
 
               {/* ── Full-width calendar card ── */}
               <div className="bill-cal-card" style={{ background: "var(--c-glass)", backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 20, padding: 28, boxShadow: "0 4px 24px var(--c-glass-hairline)", marginBottom: 20 }}>
@@ -3125,7 +3218,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                             const bPaidCal = getBillPaid(b, calMk);
                             const colorSet = bPaidCal ? { bg: COLORS.success + "18", text: COLORS.success } : { bg: "rgba(97,205,253,0.15)", text: COLORS.primary };
                             return (
-                              <div key={b.id} onClick={() => setActiveBillDetail(b)} style={{ background: colorSet.bg, borderRadius: 4, padding: "2px 6px", marginBottom: 2, cursor: "pointer", border: bPaidCal ? `1px solid ${COLORS.success}40` : "1px solid transparent" }}>
+                              <div key={b.id} onClick={() => openBillDetail(b)} style={{ background: colorSet.bg, borderRadius: 4, padding: "2px 6px", marginBottom: 2, cursor: "pointer", border: bPaidCal ? `1px solid ${COLORS.success}40` : "1px solid transparent" }}>
                                 <p style={{ fontSize: 10, fontWeight: FW.bold, color: colorSet.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.label}{bPaidCal ? " ✓" : ""}</p>
                               </div>
                             );
@@ -3137,135 +3230,96 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   </div>{/* end min-width wrapper */}
                   </div>{/* end cal-scroll-wrap */}
                 </>}
-                {/* List view (quick read-only toggle) */}
-                {billCalView === "list" && (
-                  <div>
-                    <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 60px 28px", gap: 8, padding: "8px 12px", background: COLORS.containerLow, borderRadius: 10, marginBottom: 8 }}>
-                      {["Bill", "Due Date", "Amount", "Status", "Action", ""].map(h => <span key={h} style={{ fontSize: 11, fontWeight: FW.bold, color: COLORS.subtext, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</span>)}
-                    </div>
-                    {bills.length === 0 && <p style={{ fontSize: 14, color: COLORS.muted, padding: "20px 0", textAlign: "center" }}>No bills yet.</p>}
-                    {[...bills].sort((a,b) => a.dayOfMonth - b.dayOfMonth).map(b => {
-                      const bDueDateL = getBillDueDate(b, calMk);
-                      const [y,m,dd] = bDueDateL.split("-").map(Number);
-                      const dDate = new Date(y,m-1,dd); const nowL = new Date(); nowL.setHours(0,0,0,0);
-                      const bPaidL = getBillPaid(b, calMk);
-                      const isOverdueL = !bPaidL && dDate < nowL;
-                      return (
-                        <div key={b.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 60px 28px", gap: 8, padding: "10px 12px", borderRadius: 10, background: bPaidL ? "rgba(16,185,129,0.05)" : isOverdueL ? "rgba(248,113,113,0.06)" : "var(--c-glass)", marginBottom: 4, boxShadow: "0 2px 8px rgba(0,0,0,0.04)", alignItems: "center", border: `1px solid ${bPaidL ? "rgba(16,185,129,0.15)" : isOverdueL ? "rgba(248,113,113,0.18)" : "var(--c-glass-border)"}` }}>
-                          <span style={{ fontSize: 13, fontWeight: FW.semibold, color: COLORS.text }}>{b.label}</span>
-                          <span style={{ fontSize: 12, color: COLORS.subtext }}>{fmtDate(bDueDateL)}</span>
-                          <span style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.text }}>{fmt(b.budget)}</span>
-                          <span style={{ fontSize: 11, fontWeight: FW.bold, color: bPaidL ? COLORS.success : isOverdueL ? COLORS.danger : COLORS.subtext, background: (bPaidL ? COLORS.success : isOverdueL ? COLORS.danger : COLORS.muted) + "18", borderRadius: 9999, padding: "2px 8px" }}>{bPaidL ? "Paid" : isOverdueL ? "Overdue" : "Upcoming"}</span>
-                          {!bPaidL ? <button onClick={() => markBillPaid(b.id, calMk)} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:9999, padding:"4px 8px", fontSize:11, fontWeight:FW.bold, cursor:"pointer" }}>Mark Paid</button> : <span style={{ fontSize: 14, color: COLORS.success }}>✓</span>}
-                          <button onClick={() => { setBills(p => p.filter(x => x.id !== b.id)); showToast(`${b.label} removed`, "✕"); }} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 16, padding: 0 }}>×</button>
+                {/* List view — unified grouped list */}
+                {billCalView === "list" && (() => {
+                  const nowL = new Date(); nowL.setHours(0,0,0,0);
+                  const in7L = new Date(nowL.getTime() + 7 * 86400000);
+                  const billsEnriched = bills.map(b => {
+                    const due = getBillDueDate(b, calMk);
+                    const [y,m,dd] = due.split("-").map(Number);
+                    const dt = new Date(y, m-1, dd);
+                    const paid = getBillPaid(b, calMk);
+                    const overdue = !paid && dt < nowL;
+                    const dueSoon = !paid && dt >= nowL && dt <= in7L;
+                    return { b, due, dt, paid, overdue, dueSoon };
+                  });
+                  const overdueGroup = billsEnriched.filter(x => x.overdue).sort((a,b) => a.dt - b.dt);
+                  const thisWeekGroup = billsEnriched.filter(x => x.dueSoon).sort((a,b) => a.dt - b.dt);
+                  const upcomingGroup = billsEnriched.filter(x => !x.paid && !x.overdue && !x.dueSoon).sort((a,b) => a.dt - b.dt);
+                  const paidGroup = billsEnriched.filter(x => x.paid).sort((a,b) => a.dt - b.dt);
+                  const sections = [
+                    { key: "overdue",  title: "Overdue",        items: overdueGroup,  color: COLORS.danger,  icon: "warning" },
+                    { key: "week",     title: "Due This Week",  items: thisWeekGroup, color: COLORS.warning, icon: "schedule" },
+                    { key: "upcoming", title: "Upcoming",       items: upcomingGroup, color: COLORS.primary, icon: "event" },
+                    { key: "paid",     title: "Paid",           items: paidGroup,     color: COLORS.success, icon: "check_circle" },
+                  ].filter(s => s.items.length > 0);
+                  const BillRow = ({ b, due, paid, overdue, dueSoon }) => {
+                    const [y,m,dd] = due.split("-").map(Number);
+                    const daysDiff = Math.round((new Date(y,m-1,dd) - nowL) / 86400000);
+                    const relLabel = paid ? "Paid" : daysDiff < 0 ? `${Math.abs(daysDiff)}d overdue` : daysDiff === 0 ? "Due today" : daysDiff === 1 ? "Tomorrow" : `In ${daysDiff}d`;
+                    const relColor = paid ? COLORS.success : overdue ? COLORS.danger : dueSoon ? COLORS.warning : COLORS.muted;
+                    return (
+                      <div
+                        key={b.id}
+                        onClick={() => openBillDetail(b)}
+                        style={{
+                          display: "grid", gridTemplateColumns: "auto 1fr auto auto auto", gap: 16, alignItems: "center",
+                          padding: "14px 18px", borderRadius: 14, marginBottom: 8, cursor: "pointer",
+                          background: paid ? "rgba(16,185,129,0.06)" : overdue ? "rgba(248,113,113,0.06)" : "var(--c-glass)",
+                          border: `1px solid ${paid ? "rgba(16,185,129,0.18)" : overdue ? "rgba(248,113,113,0.22)" : "var(--c-glass-border)"}`,
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+                          transition: "transform .2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .2s, background .2s",
+                          viewTransitionName: morphBillId === b.id && !activeBillDetail ? `bill-${b.id}` : undefined,
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.06)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.03)"; }}
+                      >
+                        <div style={{ width: 38, height: 38, borderRadius: 12, background: paid ? `${COLORS.success}18` : overdue ? `${COLORS.danger}18` : `${COLORS.primary}14`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 19, color: paid ? COLORS.success : overdue ? COLORS.danger : COLORS.primary }}>{paid ? "check" : "receipt_long"}</span>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* ── Always-visible editable bills list ── */}
-              <div style={{ background: "var(--c-glass)", backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 20, padding: 28, boxShadow: "0 4px 24px var(--c-glass-hairline)", marginBottom: 20 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                  <h3 style={{ fontSize: 16, fontWeight: FW.bold, color: COLORS.text }}>Bills This Month</h3>
-                  <button onClick={() => setNewBillInline({ label: "", budget: "", dayOfMonth: "" })} style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(0,103,136,0.08)", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: FW.bold, color: COLORS.primary, cursor: "pointer" }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 15 }}>add</span>+ Add Bill
-                  </button>
-                </div>
-                {/* Table header */}
-                <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 80px 28px", gap: 8, padding: "8px 12px", background: COLORS.containerLow, borderRadius: 10, marginBottom: 10 }}>
-                  {["Bill Name", "Due Date", "Amount", "Status", "Action", ""].map(h => <span key={h} style={{ fontSize: 11, fontWeight: FW.bold, color: COLORS.subtext, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</span>)}
-                </div>
-                {bills.length === 0 && <p style={{ fontSize: 13, color: COLORS.muted, padding: "16px 0", textAlign: "center" }}>No bills added yet.</p>}
-                {[...bills].sort((a,b) => a.dayOfMonth - b.dayOfMonth).map(b => {
-                  const bDueDateE = getBillDueDate(b, calMk);
-                  const [y,m,dd] = bDueDateE.split("-").map(Number);
-                  const dDate = new Date(y,m-1,dd); const nowE = new Date(); nowE.setHours(0,0,0,0);
-                  const bPaidE = getBillPaid(b, calMk);
-                  const isOverdueE = !bPaidE && dDate < nowE;
-                  const isEL = editingBillCell?.id === b.id && editingBillCell?.field === "label";
-                  const isED = editingBillCell?.id === b.id && editingBillCell?.field === "dueDate";
-                  const isEA = editingBillCell?.id === b.id && editingBillCell?.field === "budget";
-                  const cellInp = { background: COLORS.containerLow, border: `1px solid ${COLORS.primary}`, borderRadius: 6, padding: "4px 8px", fontSize: 13, color: COLORS.text, outline: "none", width: "100%" };
-                  return (
-                    <div key={b.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 80px 28px", gap: 8, padding: "10px 12px", borderRadius: 10, background: bPaidE ? "rgba(16,185,129,0.07)" : isOverdueE ? "rgba(248,113,113,0.07)" : "var(--c-glass)", marginBottom: 6, alignItems: "center", border: `1px solid ${bPaidE ? "rgba(16,185,129,0.18)" : isOverdueE ? "rgba(248,113,113,0.18)" : "var(--c-glass-border)"}` }}>
-                      {/* Bill Name */}
-                      {isEL ? <input autoFocus defaultValue={b.label} style={cellInp} onBlur={e => { setBills(p => p.map(x => x.id===b.id?{...x,label:e.target.value||x.label}:x)); setEditingBillCell(null); }} onKeyDown={e=>{ if(e.key==="Enter")e.target.blur(); if(e.key==="Escape")setEditingBillCell(null); }} />
-                        : <span onClick={() => setEditingBillCell({id:b.id,field:"label"})} style={{ fontSize: 13, fontWeight: FW.semibold, color: COLORS.text, cursor: "text" }}>{b.label}</span>}
-                      {/* Due Date */}
-                      {isED ? <input autoFocus type="number" min="1" max="31" defaultValue={b.dayOfMonth} style={cellInp} onBlur={e => { const v = parseInt(e.target.value); if(v >= 1 && v <= 31) setBills(p => p.map(x => x.id===b.id?{...x,dayOfMonth:v}:x)); setEditingBillCell(null); }} onKeyDown={e=>{ if(e.key==="Enter")e.target.blur(); if(e.key==="Escape")setEditingBillCell(null); }} />
-                        : <span onClick={() => setEditingBillCell({id:b.id,field:"dueDate"})} style={{ fontSize: 12, color: isOverdueE ? COLORS.danger : COLORS.subtext, cursor: "text" }}>{fmtDate(bDueDateE)}</span>}
-                      {/* Amount */}
-                      {isEA ? <input autoFocus type="number" defaultValue={b.budget} style={cellInp} onBlur={e => { const v=parseFloat(e.target.value); if(!isNaN(v)&&v>=0) setBills(p=>p.map(x=>x.id===b.id?{...x,budget:v}:x)); setEditingBillCell(null); }} onKeyDown={e=>{ if(e.key==="Enter")e.target.blur(); if(e.key==="Escape")setEditingBillCell(null); }} />
-                        : <span onClick={() => setEditingBillCell({id:b.id,field:"budget"})} style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.text, cursor: "text" }}>{fmt(b.budget)}</span>}
-                      {/* Status */}
-                      <span style={{ fontSize: 11, fontWeight: FW.bold, color: bPaidE ? COLORS.success : isOverdueE ? COLORS.danger : COLORS.subtext, background: (bPaidE ? COLORS.success : isOverdueE ? COLORS.danger : COLORS.muted) + "18", borderRadius: 9999, padding: "3px 10px", display: "inline-block" }}>
-                        {bPaidE ? "Paid" : isOverdueE ? "Overdue" : "Upcoming"}
-                      </span>
-                      {/* Action */}
-                      {bPaidE
-                        ? <button onClick={() => markBillPaid(b.id, calMk, false)} style={{ background: COLORS.containerLow, border:"none", borderRadius:8, padding:"5px 8px", fontSize:11, fontWeight:FW.bold, color:COLORS.subtext, cursor:"pointer" }}>Unpay</button>
-                        : <button onClick={() => { markBillPaid(b.id, calMk); showToast(`${b.label} marked as paid`); }} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:8, padding:"5px 8px", fontSize:11, fontWeight:FW.bold, cursor:"pointer" }}>Mark Paid</button>
-                      }
-                      {/* Delete */}
-                      <button onClick={() => setBills(p => p.filter(x => x.id !== b.id))} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 16, padding: 0 }}>×</button>
-                    </div>
-                  );
-                })}
-                {/* Inline Add Row */}
-                {newBillInline !== null && (
-                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 80px 28px", gap: 8, padding: "10px 12px", borderRadius: 10, background: COLORS.primary + "08", marginTop: 8, alignItems: "center" }}>
-                    <input autoFocus placeholder="Bill name" value={newBillInline.label} onChange={e => setNewBillInline(p => ({...p, label: e.target.value}))} style={{ ...inpStyleInline, width: "100%" }} />
-                    <input type="number" min="1" max="31" placeholder="Day" value={newBillInline.dayOfMonth} onChange={e => setNewBillInline(p => ({...p, dayOfMonth: e.target.value}))} style={{ ...inpStyleInline, width: "100%" }} />
-                    <input type="number" placeholder="Amount" value={newBillInline.budget} onChange={e => setNewBillInline(p => ({...p, budget: e.target.value}))} style={{ ...inpStyleInline, width: "100%" }} />
-                    <span style={{ fontSize: 11, color: COLORS.muted }}>Upcoming</span>
-                    <button onClick={() => { if(!newBillInline.label || !newBillInline.budget) return; setBills(p => [...p, { id: Date.now(), label: newBillInline.label, budget: parseFloat(newBillInline.budget)||0, dayOfMonth: parseInt(newBillInline.dayOfMonth)||1 }]); showToast(`Bill "${newBillInline.label}" added`); setNewBillInline(null); }} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:8, padding:"6px 8px", fontSize:11, fontWeight:FW.bold, cursor:"pointer" }}>Save</button>
-                    <button onClick={() => setNewBillInline(null)} style={{ background:"none", border:"none", color:COLORS.muted, cursor:"pointer", fontSize:18, padding:0 }}>×</button>
-                  </div>
-                )}
-              </div>
-
-              {/* ── Statements panel ── */}
-              <div style={{ background: "var(--c-glass)", backdropFilter: "blur(28px) saturate(180%)", WebkitBackdropFilter: "blur(28px) saturate(180%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 20, padding: 28, boxShadow: "0 4px 24px var(--c-glass-hairline), inset 0 1px 0 var(--c-glass-inset)" }}>
-                <h4 style={{ fontSize: 15, fontWeight: FW.bold, color: COLORS.text, marginBottom: 16 }}>Statements</h4>
-                {(() => {
-                  const now2 = new Date(); now2.setHours(0,0,0,0);
-                  const in14 = new Date(now2.getTime() + 14 * 86400000);
-                  const overdueBills2 = unpaidBills.filter(b => { const dueDateStr = getBillDueDate(b, calMk); const [y2,m2,d2] = dueDateStr.split("-").map(Number); return new Date(y2,m2-1,d2) < now2; });
-                  const upcomingBills2 = unpaidBills.filter(b => { const dueDateStr = getBillDueDate(b, calMk); const [y2,m2,d2] = dueDateStr.split("-").map(Number); const dt = new Date(y2,m2-1,d2); return dt >= now2 && dt <= in14; });
-                  const StmtRow = ({b, color}) => (
-                    <div key={b.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: `1px solid ${COLORS.containerLow}` }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div style={{ width: 30, height: 30, borderRadius: "50%", background: color + "22", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: 14, color }}>receipt_long</span>
+                        <div style={{ minWidth: 0 }}>
+                          <p style={{ fontSize: 14, fontWeight: FW.bold, color: COLORS.text, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.label}</p>
+                          <p style={{ fontSize: 11, color: COLORS.subtext }}>{fmtDate(due)} · <span style={{ color: relColor, fontWeight: FW.semibold }}>{relLabel}</span></p>
                         </div>
-                        <div>
-                          <p style={{ fontSize: 13, fontWeight: FW.semibold, color: COLORS.text }}>{b.label}</p>
-                          <p style={{ fontSize: 11, color }}>{fmtDate(getBillDueDate(b, calMk))}</p>
-                        </div>
+                        <span style={{ fontSize: 16, fontWeight: FW.extrabold, color: COLORS.text, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{fmt(b.budget)}</span>
+                        {paid
+                          ? <button onClick={(e) => { e.stopPropagation(); markBillPaid(b.id, calMk, false); }} style={{ background: "transparent", border: `1px solid ${COLORS.glassBorder || 'var(--c-glass-border)'}`, borderRadius: 9999, padding: "5px 12px", fontSize: 11, fontWeight: FW.bold, color: COLORS.subtext, cursor: "pointer" }}>Undo</button>
+                          : <button onClick={(e) => { e.stopPropagation(); markBillPaid(b.id, calMk); showToast(`${b.label} marked as paid`); }} style={{ background: COLORS.primary, color: "#fff", border: "none", borderRadius: 9999, padding: "6px 14px", fontSize: 11, fontWeight: FW.bold, cursor: "pointer", boxShadow: `0 2px 8px ${COLORS.primary}33` }}>Mark Paid</button>
+                        }
+                        <button onClick={(e) => { e.stopPropagation(); setBills(p => p.filter(x => x.id !== b.id)); showToast(`${b.label} removed`, "✕"); }} aria-label="Delete bill" style={{ background: "transparent", border: "none", color: COLORS.muted, cursor: "pointer", padding: 6, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8 }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+                        </button>
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.text }}>{fmt(b.budget)}</span>
-                        <button onClick={() => markBillPaid(b.id, calMk)} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:9999, padding:"3px 9px", fontSize:10, fontWeight:FW.bold, cursor:"pointer" }}>Paid</button>
-                      </div>
-                    </div>
-                  );
+                    );
+                  };
                   return (
-                    <div style={{ display: "grid", gridTemplateColumns: overdueBills2.length > 0 && upcomingBills2.length > 0 ? "1fr 1fr" : "1fr", gap: 20 }}>
-                      {overdueBills2.length > 0 && (
-                        <div>
-                          <p style={{ fontSize: 10, fontWeight: FW.extrabold, color: COLORS.danger, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>● Overdue</p>
-                          {overdueBills2.map(b => <StmtRow key={b.id} b={b} color={COLORS.danger} />)}
+                    <div>
+                      {bills.length === 0 && <p style={{ fontSize: 14, color: COLORS.muted, padding: "40px 0", textAlign: "center" }}>No bills yet. Click "Add Bill" above to get started.</p>}
+                      {sections.map((sec, i) => (
+                        <div key={sec.key} style={{ marginBottom: i === sections.length - 1 ? 0 : 20 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, padding: "0 4px" }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 16, color: sec.color }}>{sec.icon}</span>
+                            <h4 style={{ fontSize: 11, fontWeight: FW.extrabold, color: sec.color, textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>{sec.title}</h4>
+                            <span style={{ fontSize: 11, fontWeight: FW.semibold, color: COLORS.muted }}>· {sec.items.length}</span>
+                          </div>
+                          {sec.items.map(item => <BillRow key={item.b.id} {...item} />)}
+                        </div>
+                      ))}
+                      {/* Inline add row inside list view */}
+                      {newBillInline !== null && (
+                        <div style={{ display: "grid", gridTemplateColumns: "2fr 80px 1fr auto auto", gap: 10, padding: "14px 18px", borderRadius: 14, background: `${COLORS.primary}0D`, marginTop: 12, alignItems: "center", border: `1px dashed ${COLORS.primary}55` }}>
+                          <input autoFocus placeholder="Bill name" value={newBillInline.label} onChange={e => setNewBillInline(p => ({...p, label: e.target.value}))} style={{ ...inpStyleInline, width: "100%" }} />
+                          <input type="number" min="1" max="31" placeholder="Day" value={newBillInline.dayOfMonth} onChange={e => setNewBillInline(p => ({...p, dayOfMonth: e.target.value}))} style={{ ...inpStyleInline, width: "100%" }} />
+                          <input type="number" placeholder="Amount" value={newBillInline.budget} onChange={e => setNewBillInline(p => ({...p, budget: e.target.value}))} style={{ ...inpStyleInline, width: "100%" }} />
+                          <button onClick={() => { if(!newBillInline.label || !newBillInline.budget) return; setBills(p => [...p, { id: Date.now(), label: newBillInline.label, budget: parseFloat(newBillInline.budget)||0, dayOfMonth: parseInt(newBillInline.dayOfMonth)||1 }]); showToast(`Bill "${newBillInline.label}" added`); setNewBillInline(null); }} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:9999, padding:"7px 14px", fontSize:12, fontWeight:FW.bold, cursor:"pointer" }}>Save</button>
+                          <button onClick={() => setNewBillInline(null)} aria-label="Cancel" style={{ background:"none", border:"none", color:COLORS.muted, cursor:"pointer", display: "flex", alignItems: "center", padding: 4 }}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span></button>
                         </div>
                       )}
-                      {upcomingBills2.length > 0 && (
-                        <div>
-                          <p style={{ fontSize: 10, fontWeight: FW.extrabold, color: COLORS.primary, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>● Next 14 Days</p>
-                          {upcomingBills2.map(b => <StmtRow key={b.id} b={b} color={COLORS.subtext} />)}
-                        </div>
+                      {newBillInline === null && bills.length > 0 && (
+                        <button onClick={() => setNewBillInline({ label: "", budget: "", dayOfMonth: "" })} style={{ marginTop: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", background: "transparent", border: `1px dashed var(--c-glass-border-strong)`, borderRadius: 14, padding: "12px", fontSize: 12, fontWeight: FW.semibold, color: COLORS.subtext, cursor: "pointer", transition: "background .2s, color .2s" }} onMouseEnter={e => { e.currentTarget.style.background = `${COLORS.primary}0D`; e.currentTarget.style.color = COLORS.primary; }} onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = COLORS.subtext; }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>Add a bill
+                        </button>
                       )}
-                      {overdueBills2.length === 0 && upcomingBills2.length === 0 && <p style={{ fontSize: 13, color: COLORS.muted }}>No upcoming bills in the next 14 days.</p>}
                     </div>
                   );
                 })()}
@@ -3282,16 +3336,16 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               const isEAmt = editingBillCell?.id === b.id && editingBillCell?.field === "budget";
               const isEDate = editingBillCell?.id === b.id && editingBillCell?.field === "dueDate";
               return (
-                <div onClick={() => { setActiveBillDetail(null); setEditingBillCell(null); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.30)", backdropFilter: "blur(12px) saturate(140%)", WebkitBackdropFilter: "blur(12px) saturate(140%)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <div onClick={e => e.stopPropagation()} style={{ background: "var(--c-glass-border-strong)", backdropFilter: "blur(40px) saturate(200%)", WebkitBackdropFilter: "blur(40px) saturate(200%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 24, padding: 32, minWidth: 320, boxShadow: "0 32px 64px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,1)" }}>
+                <div onClick={() => { closeBillDetail(); setEditingBillCell(null); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.30)", backdropFilter: "blur(12px) saturate(140%)", WebkitBackdropFilter: "blur(12px) saturate(140%)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div onClick={e => e.stopPropagation()} style={{ background: "var(--c-glass-border-strong)", backdropFilter: "blur(40px) saturate(200%)", WebkitBackdropFilter: "blur(40px) saturate(200%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 24, padding: 32, minWidth: 320, boxShadow: "0 32px 64px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,1)", viewTransitionName: `bill-${b.id}` }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, alignItems: "flex-start" }}>
                       {isELabel
                         ? <input autoFocus defaultValue={b.label} style={{ ...popInpStyle, textAlign: "left", fontSize: 18, fontWeight: FW.extrabold, flex: 1, marginRight: 8 }} onBlur={e => { setBills(p => p.map(x => x.id === b.id ? {...x, label: e.target.value || x.label} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
                         : <h3 onClick={() => setEditingBillCell({id: b.id, field: "label"})} title="Click to edit" style={{ fontSize: 18, fontWeight: FW.extrabold, color: COLORS.text, cursor: "text", flex: 1 }}>{b.label}</h3>
                       }
                       <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={() => { setBills(p => p.filter(x => x.id !== b.id)); setActiveBillDetail(null); setEditingBillCell(null); }} title="Delete bill" style={{ background: COLORS.danger + "18", border: "none", color: COLORS.danger, borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>🗑</button>
-                        <button onClick={() => { setActiveBillDetail(null); setEditingBillCell(null); }} style={{ background: COLORS.containerHigh, border: "none", fontSize: 20, cursor: "pointer", color: COLORS.muted, borderRadius: 8, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+                        <button onClick={() => { setBills(p => p.filter(x => x.id !== b.id)); closeBillDetail(); setEditingBillCell(null); }} title="Delete bill" style={{ background: COLORS.danger + "18", border: "none", color: COLORS.danger, borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>🗑</button>
+                        <button onClick={() => { closeBillDetail(); setEditingBillCell(null); }} style={{ background: COLORS.containerHigh, border: "none", fontSize: 20, cursor: "pointer", color: COLORS.muted, borderRadius: 8, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
                       </div>
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
@@ -3314,7 +3368,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         <span style={{ fontSize: 13, fontWeight: FW.bold, color: bPaidPop ? COLORS.success : isPast ? COLORS.danger : COLORS.subtext }}>{bPaidPop ? "Paid ✓" : isPast ? "Overdue" : "Upcoming"}</span>
                       </div>
                     </div>
-                    {!bPaidPop && <button onClick={() => { markBillPaid(b.id, calMk); setActiveBillDetail(null); }} style={{ width: "100%", background: COLORS.primary, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: 14, fontWeight: FW.bold, cursor: "pointer" }}>Mark as Paid</button>}
+                    {!bPaidPop && <button onClick={() => { markBillPaid(b.id, calMk); closeBillDetail(); }} style={{ width: "100%", background: COLORS.primary, color: "#fff", border: "none", borderRadius: 12, padding: "12px", fontSize: 14, fontWeight: FW.bold, cursor: "pointer" }}>Mark as Paid</button>}
                   </div>
                 </div>
               );
@@ -3451,12 +3505,12 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     {/* 6-metric grid */}
                     <div className="metric-band-grid" style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 0 }}>
                       {[
-                        { label: "Income",       val: fmt(s.inc),                                                               color: COLORS.success,      prevVal: prevS.hasData ? prevS.inc : null,  higherIsGood: true },
-                        { label: "Expenses",      val: fmt(s.exp),                                                               color: COLORS.accentWarm,   prevVal: prevS.hasData ? prevS.exp : null,  higherIsGood: false },
-                        { label: "Net",           val: fmt(s.net),                                                               color: s.net >= 0 ? COLORS.success : COLORS.danger, prevVal: prevS.hasData ? prevS.net : null, higherIsGood: true },
-                        { label: "Savings Rate",  val: savingsRate !== null ? `${savingsRate.toFixed(1)}%` : "—",                color: COLORS.accentPurple, prevVal: null },
-                        { label: "Net Worth",     val: fmt(netWorth),                                                            color: netWorth >= 0 ? COLORS.success : COLORS.danger, prevVal: null },
-                        { label: "Debt-to-Income",val: dtiNum !== null ? `${dtiNum}%` : "—",                                   color: dtiNum !== null && dtiNum > 200 ? COLORS.danger : dtiNum !== null && dtiNum > 100 ? COLORS.warning : COLORS.success, prevVal: null },
+                        { label: "Income",        value: s.inc,         fmtFn: fmt,                                                           color: COLORS.success,      prevVal: prevS.hasData ? prevS.inc : null,  higherIsGood: true },
+                        { label: "Expenses",      value: s.exp,         fmtFn: fmt,                                                           color: COLORS.accentWarm,   prevVal: prevS.hasData ? prevS.exp : null,  higherIsGood: false },
+                        { label: "Net",           value: s.net,         fmtFn: fmt,                                                           color: s.net >= 0 ? COLORS.success : COLORS.danger, prevVal: prevS.hasData ? prevS.net : null, higherIsGood: true },
+                        { label: "Savings Rate",  value: savingsRate,   fmtFn: (v) => v !== null && Number.isFinite(v) ? `${v.toFixed(1)}%` : "—", color: COLORS.accentPurple, prevVal: null },
+                        { label: "Net Worth",     value: netWorth,      fmtFn: fmt,                                                           color: netWorth >= 0 ? COLORS.success : COLORS.danger, prevVal: null },
+                        { label: "Debt-to-Income",value: dtiNum,        fmtFn: (v) => v !== null && Number.isFinite(v) ? `${Math.round(v)}%` : "—", color: dtiNum !== null && dtiNum > 200 ? COLORS.danger : dtiNum !== null && dtiNum > 100 ? COLORS.warning : COLORS.success, prevVal: null },
                       ].map((metric, i) => {
                         const isLast = i === 5;
                         const diff = metric.prevVal !== null ? (
@@ -3467,7 +3521,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         return (
                           <div key={metric.label} style={{ paddingRight: isLast ? 0 : 20, marginRight: isLast ? 0 : 20, borderRight: isLast ? "none" : "1px solid var(--c-glass-hairline)" }}>
                             <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>{metric.label}</p>
-                            <p style={{ fontSize: 22, fontWeight: FW.extrabold, color: metric.color, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{metric.val}</p>
+                            <AnimatedNumber value={metric.value ?? 0} format={metric.fmtFn} style={{ fontSize: 22, fontWeight: FW.extrabold, color: metric.color, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", lineHeight: 1.1, display: "block" }} />
                             {diff !== null && (
                               <p style={{ fontSize: 11, color: isZeroDiff ? COLORS.muted : isPositive ? COLORS.success : COLORS.danger, marginTop: 5, display: "flex", alignItems: "center", gap: 3 }}>
                                 {isZeroDiff ? (
