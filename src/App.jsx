@@ -2365,11 +2365,11 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         )}
                       </div>
                       {carouselBill ? (
-                        <>
+                        <div style={{ textAlign: "center" }}>
                           <p style={{ fontSize: 13, fontWeight: FW.medium, color: COLORS.onSecondaryContainer, marginBottom: 4, opacity: 0.7 }}>Upcoming Bill</p>
                           <h4 style={{ fontSize: 22, fontWeight: FW.bold, color: COLORS.onSecondaryContainer, marginBottom: 4, lineHeight: 1.2 }}>{carouselBill.label}</h4>
                           <p style={{ fontSize: 12, color: COLORS.onSecondaryContainer, opacity: 0.65 }}>{fmtDate(getBillDueDate(carouselBill, viewMonthKey))}</p>
-                        </>
+                        </div>
                       ) : (
                         <div style={{ textAlign: "center", marginTop: 20 }}>
                           <p style={{ fontSize: 28, marginBottom: 8 }}>🎉</p>
@@ -2379,7 +2379,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       )}
                     </div>
                     {carouselBill && (
-                      <div>
+                      <div style={{ textAlign: "center" }}>
                         <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.onSecondaryContainer, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Amount Due</p>
                         <p style={{ fontSize: 34, fontWeight: FW.extrabold, color: COLORS.onSecondaryContainer, marginBottom: 16, letterSpacing: "-0.02em" }}>{fmt(carouselBill.budget)}</p>
                         {payBillConfirm?.id === carouselBill.id ? (
@@ -3708,13 +3708,13 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     ].map(chip => (
                       <button key={chip.label} onClick={() => { setAdvisorMsg(chip.label); handleAdvisor(chip.label); }} style={{
                         display: "flex", alignItems: "center", gap: 8, padding: "10px 16px",
-                        background: "rgba(255,255,255,0.78)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
+                        background: "var(--c-glass-strong)", backdropFilter: "blur(12px) saturate(160%)", WebkitBackdropFilter: "blur(12px) saturate(160%)",
                         border: "1px solid var(--c-glass-border-strong)", borderRadius: 9999, cursor: "pointer",
                         fontSize: 13, fontWeight: FW.semibold, color: COLORS.text, fontFamily: "'Figtree', sans-serif",
-                        boxShadow: "0 2px 10px rgba(0,0,0,0.04)", transition: "transform .2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .2s",
+                        boxShadow: "var(--c-shadow-sm)", transition: "transform .2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .2s, background .2s",
                       }}
-                      onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.08)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,0.04)"; }}
+                      onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "var(--c-shadow)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "var(--c-shadow-sm)"; }}
                       >
                         <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.primary }}>{chip.icon}</span>
                         {chip.label}
@@ -3780,7 +3780,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               )}
             </div>
             {/* Fixed bottom input */}
-            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(248,250,251,0.85)", backdropFilter: "blur(20px)", padding: "16px 0 8px" }}>
+            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "var(--c-glass-strong)", backdropFilter: "blur(20px) saturate(180%)", WebkitBackdropFilter: "blur(20px) saturate(180%)", borderTop: "1px solid var(--c-glass-border)", padding: "16px 0 8px" }}>
               {advisorFile && (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, padding: "6px 12px", background: `rgba(0,103,136,0.1)`, borderRadius: 8, width: "fit-content" }}>
                   <span style={{ fontSize: 13, color: COLORS.primary }}>📎 {advisorFile.name}</span>
