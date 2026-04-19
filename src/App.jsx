@@ -246,7 +246,7 @@ function CategoryCard({ name, spent, goal, color }) {
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <span style={{ fontSize: 12, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 1 }}>{name}</span>
-        <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: FW.bold, fontSize: 15, color: COLORS.text }}>{fmt(spent)}</span>
+        <span style={{ fontFamily: "var(--font-num)", fontWeight: FW.bold, fontSize: 15, color: COLORS.text, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>{fmt(spent)}</span>
       </div>
       {goal && (
         <>
@@ -770,6 +770,8 @@ export default function App() {
   // clicked bill gets a unique view-transition-name so it morphs into the
   // modal. We set the name via flushSync BEFORE calling startViewTransition,
   // so the "old" snapshot includes the name on the source element.
+  // Artifact hardening: always clear morphBillId via .finally() (covers both
+  // `.finished` resolve AND reject — e.g. if a second transition skips this one).
   const openBillDetail = useCallback((bill) => {
     if (!bill) return;
     if (typeof document === "undefined" || typeof document.startViewTransition !== "function") {
@@ -779,8 +781,15 @@ export default function App() {
     const reduceMotion = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     if (reduceMotion) { setActiveBillDetail(bill); return; }
     flushSync(() => setMorphBillId(bill.id));
-    const t = document.startViewTransition(() => { flushSync(() => setActiveBillDetail(bill)); });
-    t.finished.finally(() => setMorphBillId(null));
+    try {
+      const t = document.startViewTransition(() => { flushSync(() => setActiveBillDetail(bill)); });
+      // swallow rejection (happens when a newer transition skips this one) so it
+      // doesn't bubble as an unhandled promise, then clean up morph state either way.
+      t.finished.catch(() => {}).finally(() => setMorphBillId(null));
+    } catch {
+      setActiveBillDetail(bill);
+      setMorphBillId(null);
+    }
   }, []);
   const closeBillDetail = useCallback(() => {
     if (typeof document === "undefined" || typeof document.startViewTransition !== "function") {
@@ -788,9 +797,14 @@ export default function App() {
       return;
     }
     const reduceMotion = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (reduceMotion) { setActiveBillDetail(null); return; }
-    const t = document.startViewTransition(() => { flushSync(() => setActiveBillDetail(null)); });
-    t.finished.finally(() => setMorphBillId(null));
+    if (reduceMotion) { setActiveBillDetail(null); setMorphBillId(null); return; }
+    try {
+      const t = document.startViewTransition(() => { flushSync(() => setActiveBillDetail(null)); });
+      t.finished.catch(() => {}).finally(() => setMorphBillId(null));
+    } catch {
+      setActiveBillDetail(null);
+      setMorphBillId(null);
+    }
   }, []);
   const [householdId, setHouseholdId] = useState(() => localStorage.getItem('familyfinance_household_id'));
   const [householdCode, setHouseholdCode] = useState(() => localStorage.getItem('familyfinance_household_code'));
@@ -1950,7 +1964,13 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         button:active { transform: scale(0.97) !important; }
 
         /* Typography */
-        .kpi-num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; letter-spacing: -0.03em; }
+        :root {
+          /* Apple-native numeric font stack: SF Pro Rounded on macOS/iOS, graceful fallbacks elsewhere.
+             Uses tabular numerals and "ss01" (SF's alternate 6/9) for a crisp, financial feel. */
+          --font-num: -apple-system, BlinkMacSystemFont, "SF Pro Rounded", "SF Pro Display", "SF Pro Text", ui-rounded, system-ui, "Helvetica Neue", "Segoe UI", sans-serif;
+        }
+        .kpi-num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum", "ss01", "cv11"; letter-spacing: -0.03em; }
+        .num-ios { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-feature-settings: "tnum", "ss01"; letter-spacing: -0.02em; }
         h1, h2, h3, h4 { font-family: 'Bricolage Grotesque', sans-serif; letter-spacing: -0.025em; }
 
         /* Keyframes */
@@ -2048,6 +2068,36 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         .cat-scroll { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; padding-bottom: 8px; }
         .cat-scroll::-webkit-scrollbar { display: none; }
         .cat-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Main scroll container — iOS/macOS-grade smoothness.
+           - momentum scrolling on touch (iOS)
+           - no rubber-band bleeding to body
+           - reserved gutter prevents layout shift when scrollbar appears/disappears on tab swap
+           - thin, auto-hiding scrollbar
+           - opt into CSS scroll-behavior for anchor jumps (browsers already handle pointer wheel natively) */
+        html { scroll-behavior: smooth; }
+        .main-scroll {
+          -webkit-overflow-scrolling: touch;
+          overscroll-behavior: contain;
+          scrollbar-gutter: stable;
+          scroll-padding-top: 16px;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(100, 120, 140, 0.28) transparent;
+        }
+        .main-scroll::-webkit-scrollbar { width: 10px; }
+        .main-scroll::-webkit-scrollbar-track { background: transparent; }
+        .main-scroll::-webkit-scrollbar-thumb {
+          background: rgba(100, 120, 140, 0.22);
+          border-radius: 999px;
+          border: 2px solid transparent;
+          background-clip: padding-box;
+          transition: background 0.2s ease;
+        }
+        .main-scroll:hover::-webkit-scrollbar-thumb { background: rgba(100, 120, 140, 0.38); background-clip: padding-box; }
+        .main-scroll::-webkit-scrollbar-thumb:active { background: rgba(100, 120, 140, 0.55); background-clip: padding-box; }
+        html.dark .main-scroll { scrollbar-color: rgba(200, 215, 230, 0.22) transparent; }
+        html.dark .main-scroll::-webkit-scrollbar-thumb { background: rgba(200, 215, 230, 0.18); background-clip: padding-box; }
+        html.dark .main-scroll:hover::-webkit-scrollbar-thumb { background: rgba(200, 215, 230, 0.32); background-clip: padding-box; }
 
         /* Mobile responsive — stack layout for iPhone/iPad */
         @media (max-width: 767px) {
@@ -2327,7 +2377,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         <button className="mobile-fab" aria-label="Add entry" onClick={() => setModal("addMenu")} style={{ display: "none", position: "fixed", bottom: "calc(80px + env(safe-area-inset-bottom) + 12px)", right: 20, width: 52, height: 52, borderRadius: "50%", background: `linear-gradient(140deg, ${COLORS.primary}, #0095d2)`, border: "none", color: "#fff", fontSize: 26, cursor: "pointer", zIndex: 101, boxShadow: `0 8px 24px rgba(0,120,168,0.45)`, alignItems: "center", justifyContent: "center" }}>+</button>
 
         {/* SCROLLABLE CONTENT */}
-        <main style={{ flex: 1, overflowY: "auto", padding: "24px 32px", viewTransitionName: "page-main" }}>
+        <main className="main-scroll" style={{ flex: 1, overflowY: "auto", padding: "24px 32px", viewTransitionName: "page-main" }}>
         {/* ── DASHBOARD TAB ── */}
         {tab === "dashboard" && (
           <div style={{ fontSize: 14, color: COLORS.text }}>
@@ -2352,7 +2402,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       value={netCashFlow}
                       format={(v) => (v >= 0 ? "+" : "−") + fmt(Math.abs(v))}
                       className="kpi-num"
-                      style={{ fontSize: 80, fontWeight: FW.black, color: netCashFlow >= 0 ? "#10b981" : "#F87171", letterSpacing: "-0.05em", fontFamily: "'Bricolage Grotesque', sans-serif", lineHeight: 0.9, display: "block", marginBottom: 6 }}
+                      style={{ fontSize: 80, fontWeight: FW.black, color: netCashFlow >= 0 ? "#10b981" : "#F87171", letterSpacing: "-0.05em", fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', lineHeight: 0.9, display: "block", marginBottom: 6 }}
                     />
                     <p style={{ fontSize: 13, color: netCashFlow >= 0 ? "#10b981" : "#F87171", fontWeight: FW.semibold, opacity: 0.85 }}>
                       {netCashFlow >= 0 ? "net savings this month" : "over budget this month"}
@@ -2408,7 +2458,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       return (
                         <div key={metric.label} style={{ paddingRight: isLast ? 0 : 20, marginRight: isLast ? 0 : 20, borderRight: isLast ? "none" : "1px solid var(--c-glass-hairline)" }}>
                           <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>{metric.label}</p>
-                          <AnimatedNumber value={metric.value ?? 0} format={metric.fmtFn} style={{ fontSize: 22, fontWeight: FW.extrabold, color: metric.color, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", lineHeight: 1.1, display: "block" }} />
+                          <AnimatedNumber value={metric.value ?? 0} format={metric.fmtFn} style={{ fontSize: 22, fontWeight: FW.extrabold, color: metric.color, fontFamily: "var(--font-num)", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', lineHeight: 1.1, display: "block" }} />
                           {metric.diff !== null && (
                             <p style={{ fontSize: 11, color: isZero ? COLORS.muted : isPositive ? COLORS.success : COLORS.danger, marginTop: 5, display: "flex", alignItems: "center", gap: 3 }}>
                               {isZero ? (
@@ -2628,7 +2678,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       <span className="material-symbols-outlined" style={{ fontSize: 40, color: COLORS.tertiary, opacity: 0.35, fontVariationSettings: "'FILL' 1" }}>{goalIcon}</span>
                     </div>
                     <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 8 }}>
-                      <span className="kpi-num" style={{ fontSize: 44, fontWeight: FW.black, color: COLORS.tertiary, letterSpacing: "-0.03em", fontFamily: "'Bricolage Grotesque', sans-serif" }}>{fmt(goal ? goal.actual : 0)}</span>
+                      <span className="kpi-num" style={{ fontSize: 44, fontWeight: FW.black, color: COLORS.tertiary, letterSpacing: "-0.03em", fontFamily: "var(--font-num)" }}>{fmt(goal ? goal.actual : 0)}</span>
                       <span style={{ fontSize: 14, fontWeight: FW.semibold, color: COLORS.subtext }}>/ {fmt(goal ? goal.expected : 0)}</span>
                     </div>
                     <div style={{ width: "100%", height: 10, background: "rgba(74,82,168,0.10)", borderRadius: 9999, overflow: "hidden", marginBottom: 12 }}>
@@ -2653,7 +2703,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   <span className="material-symbols-outlined" style={{ fontSize: 40, color: COLORS.primary, opacity: 0.35, fontVariationSettings: "'FILL' 1" }}>show_chart</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 8 }}>
-                  <span className="kpi-num" style={{ fontSize: 44, fontWeight: FW.black, color: COLORS.primary, letterSpacing: "-0.03em", fontFamily: "'Bricolage Grotesque', sans-serif" }}>{fmt(savingsActualTotal)}</span>
+                  <span className="kpi-num" style={{ fontSize: 44, fontWeight: FW.black, color: COLORS.primary, letterSpacing: "-0.03em", fontFamily: "var(--font-num)" }}>{fmt(savingsActualTotal)}</span>
                   <span style={{ fontSize: 14, fontWeight: FW.semibold, color: COLORS.subtext }}>/ {fmt(savingsExpectedTotal)}</span>
                 </div>
                 <div style={{ width: "100%", height: 10, background: "rgba(0,120,168,0.10)", borderRadius: 9999, overflow: "hidden", marginBottom: 12 }}>
@@ -2770,7 +2820,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         return (
                           <div key={m.label} style={{ paddingRight: isLast ? 0 : 20, marginRight: isLast ? 0 : 20, borderRight: isLast ? "none" : "1px solid var(--c-glass-hairline)" }}>
                             <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>{m.label}</p>
-                            <p style={{ fontSize: 22, fontWeight: FW.extrabold, color: m.color, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{m.val}</p>
+                            <p style={{ fontSize: 22, fontWeight: FW.extrabold, color: m.color, fontFamily: "var(--font-num)", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', lineHeight: 1.1 }}>{m.val}</p>
                             {i === 4 && isCurrentMonth && daysLeft > 0 && (
                               <p style={{ fontSize: 11, color: COLORS.muted, marginTop: 5 }}>{daysLeft} {daysLeft === 1 ? "day" : "days"} left</p>
                             )}
@@ -3036,7 +3086,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     ))}
                     <div style={{ borderTop: `1px solid rgba(23,102,132,0.15)`, marginTop: 8, paddingTop: 10, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
                       <span style={{ fontSize: 11, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>Total Monthly</span>
-                      <span style={{ fontSize: 32, fontWeight: FW.extrabold, color: COLORS.secondary, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.04em", lineHeight: 1 }}>{fmt(viewTotalIncome)}</span>
+                      <span style={{ fontSize: 32, fontWeight: FW.extrabold, color: COLORS.secondary, fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: "-0.04em", lineHeight: 1 }}>{fmt(viewTotalIncome)}</span>
                     </div>
                   </div>
                   {/* Bills summary card — links to Bill Calendar */}
@@ -3185,7 +3235,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke={ringColor} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={circ - (circ * paidPct) / 100} style={{ transition: "stroke-dashoffset 700ms cubic-bezier(0.33, 1, 0.68, 1), stroke 300ms ease" }} />
                       </svg>
                       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                        <AnimatedNumber value={paidPct} format={(v) => `${Math.round(v)}%`} style={{ fontSize: 30, fontWeight: FW.extrabold, color: ringColor, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em", lineHeight: 1 }} />
+                        <AnimatedNumber value={paidPct} format={(v) => `${Math.round(v)}%`} style={{ fontSize: 30, fontWeight: FW.extrabold, color: ringColor, fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: "-0.03em", lineHeight: 1 }} />
                         <span style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 4 }}>Paid</span>
                       </div>
                     </div>
@@ -3193,17 +3243,17 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
                       <div>
                         <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Total Bills</p>
-                        <AnimatedNumber value={totalBillsBudget} format={fmt} style={{ fontSize: 24, fontWeight: FW.extrabold, color: COLORS.text, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.025em", display: "block" }} />
+                        <AnimatedNumber value={totalBillsBudget} format={fmt} style={{ fontSize: 24, fontWeight: FW.extrabold, color: COLORS.text, fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: "-0.025em", display: "block" }} />
                         <p style={{ fontSize: 11, color: COLORS.muted, marginTop: 4 }}>{bills.length} {bills.length === 1 ? "bill" : "bills"} this month</p>
                       </div>
                       <div>
                         <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Paid</p>
-                        <AnimatedNumber value={paidAmountTotal} format={fmt} style={{ fontSize: 24, fontWeight: FW.extrabold, color: COLORS.success, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.025em", display: "block" }} />
+                        <AnimatedNumber value={paidAmountTotal} format={fmt} style={{ fontSize: 24, fontWeight: FW.extrabold, color: COLORS.success, fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: "-0.025em", display: "block" }} />
                         <p style={{ fontSize: 11, color: COLORS.muted, marginTop: 4 }}>{bills.filter(b => getBillPaid(b, calMk)).length} of {bills.length} complete</p>
                       </div>
                       <div>
                         <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Remaining</p>
-                        <AnimatedNumber value={remainingBillsTotal} format={fmt} style={{ fontSize: 24, fontWeight: FW.extrabold, color: remainingBillsTotal > 0 ? (overdueCount > 0 ? COLORS.danger : COLORS.warning) : COLORS.success, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.025em", display: "block" }} />
+                        <AnimatedNumber value={remainingBillsTotal} format={fmt} style={{ fontSize: 24, fontWeight: FW.extrabold, color: remainingBillsTotal > 0 ? (overdueCount > 0 ? COLORS.danger : COLORS.warning) : COLORS.success, fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: "-0.025em", display: "block" }} />
                         <p style={{ fontSize: 11, color: overdueCount > 0 ? COLORS.danger : dueSoonCount > 0 ? COLORS.warning : COLORS.muted, marginTop: 4, fontWeight: overdueCount > 0 || dueSoonCount > 0 ? FW.semibold : FW.normal }}>
                           {overdueCount > 0 ? `${overdueCount} overdue` : dueSoonCount > 0 ? `${dueSoonCount} due this week` : "All caught up"}
                         </p>
@@ -3312,7 +3362,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           <p style={{ fontSize: 14, fontWeight: FW.bold, color: COLORS.text, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.label}</p>
                           <p style={{ fontSize: 11, color: COLORS.subtext }}>{fmtDate(due)} · <span style={{ color: relColor, fontWeight: FW.semibold }}>{relLabel}</span></p>
                         </div>
-                        <span style={{ fontSize: 16, fontWeight: FW.extrabold, color: COLORS.text, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{fmt(b.budget)}</span>
+                        <span style={{ fontSize: 16, fontWeight: FW.extrabold, color: COLORS.text, fontFamily: "var(--font-num)", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"' }}>{fmt(b.budget)}</span>
                         {paid
                           ? <button onClick={(e) => { e.stopPropagation(); markBillPaid(b.id, calMk, false); }} style={{ background: "transparent", border: `1px solid ${COLORS.glassBorder || 'var(--c-glass-border)'}`, borderRadius: 9999, padding: "5px 12px", fontSize: 11, fontWeight: FW.bold, color: COLORS.subtext, cursor: "pointer" }}>Undo</button>
                           : <button onClick={(e) => { e.stopPropagation(); markBillPaid(b.id, calMk); showToast(`${b.label} marked as paid`); }} style={{ background: COLORS.primary, color: "#fff", border: "none", borderRadius: 9999, padding: "6px 14px", fontSize: 11, fontWeight: FW.bold, cursor: "pointer", boxShadow: `0 2px 8px ${COLORS.primary}33` }}>Mark Paid</button>
@@ -3503,7 +3553,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         return (
                           <div key={metric.label} style={{ paddingRight: isLast ? 0 : 20, marginRight: isLast ? 0 : 20, borderRight: isLast ? "none" : "1px solid var(--c-glass-hairline)" }}>
                             <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>{metric.label}</p>
-                            <AnimatedNumber value={metric.value ?? 0} format={metric.fmtFn} style={{ fontSize: 22, fontWeight: FW.extrabold, color: metric.color, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", lineHeight: 1.1, display: "block" }} />
+                            <AnimatedNumber value={metric.value ?? 0} format={metric.fmtFn} style={{ fontSize: 22, fontWeight: FW.extrabold, color: metric.color, fontFamily: "var(--font-num)", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', lineHeight: 1.1, display: "block" }} />
                             {diff !== null && (
                               <p style={{ fontSize: 11, color: isZeroDiff ? COLORS.muted : isPositive ? COLORS.success : COLORS.danger, marginTop: 5, display: "flex", alignItems: "center", gap: 3 }}>
                                 {isZeroDiff ? (
@@ -3702,7 +3752,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           ].map((stat, i) => (
                             <div key={stat.label} style={{ paddingRight: i < 3 ? 20 : 0, marginRight: i < 3 ? 20 : 0, borderRight: i < 3 ? "1px solid var(--c-glass-hairline)" : "none" }}>
                               <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>{stat.label}</p>
-                              <p style={{ fontSize: 20, fontWeight: FW.extrabold, color: stat.color, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums" }}>{stat.val}</p>
+                              <p style={{ fontSize: 20, fontWeight: FW.extrabold, color: stat.color, fontFamily: "var(--font-num)", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"' }}>{stat.val}</p>
                               {monthsWithData > 0 && <p style={{ fontSize: 10, color: COLORS.muted, marginTop: 3 }}>{monthsWithData} months tracked</p>}
                             </div>
                           ))}
