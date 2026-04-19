@@ -2,6 +2,119 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── App theme tokens ── feed COLORS.* in App.jsx and glass/shadow surfaces. */
+/* Light (default) */
+:root {
+  --c-bg: #f7f9fb;
+  --c-surface: #f7f9fb;
+  --c-card: #ffffff;
+  --c-container-low: #eef2f5;
+  --c-container: #e5eaee;
+  --c-container-high: #dce2e7;
+  --c-container-highest: #d3dbe0;
+  --c-neutral: #eaeef0;
+  --c-primary: #0078a8;
+  --c-primary-dim: #006a96;
+  --c-primary-container: #4dc8f7;
+  --c-primary-fixed: #38b8e8;
+  --c-secondary: #0d7ea6;
+  --c-secondary-container: #b0e4ff;
+  --c-on-secondary-container: #005f80;
+  --c-tertiary: #4a52a8;
+  --c-tertiary-container: #a8aeff;
+  --c-on-tertiary-container: #2e347a;
+  --c-sidebar-bg: #f7f9fb;
+  --c-sidebar-active: #3d5068;
+  --c-sidebar-text: #3d5068;
+  --c-accent: #0078a8;
+  --c-accent-warm: #e8930a;
+  --c-accent-blue: #0078a8;
+  --c-accent-purple: #4a52a8;
+  --c-danger: #c5283d;
+  --c-warning: #f06810;
+  --c-success: #0a8a6a;
+  --c-success-fill: #34D399;
+  --c-danger-fill: #F87171;
+  --c-warning-fill: #FBBF24;
+  --c-success-fill-bg: rgba(52,211,153,0.15);
+  --c-danger-fill-bg: rgba(248,113,113,0.15);
+  --c-primary-fill-bg: rgba(0,120,168,0.12);
+  --c-text: #1e2d2f;
+  --c-subtext: #4a5658;
+  --c-muted: #6b7578;
+  --c-input-bg: #eef2f5;
+  --c-border: rgba(160,172,178,0.18);
+  --c-shadow: 0 12px 28px rgba(60,80,104,0.08);
+  --c-shadow-sm: 0 4px 14px rgba(60,80,104,0.05);
+  --c-shadow-lg: 0 24px 48px rgba(0,0,0,0.12);
+  /* Glass surfaces (inline-rgba clusters) — tuned per theme */
+  --c-glass: rgba(255,255,255,0.72);
+  --c-glass-strong: rgba(255,255,255,0.88);
+  --c-glass-border: rgba(255,255,255,0.80);
+  --c-glass-border-strong: rgba(255,255,255,0.95);
+  --c-glass-hairline: rgba(0,0,0,0.06);
+  --c-glass-inset: rgba(255,255,255,0.95);
+  /* Dashboard hero gradient (Cash Flow Summary card) */
+  --c-hero-gradient: linear-gradient(145deg, #0078a8 0%, #0095d2 40%, #0069a0 75%, #2e347a 100%);
+  color-scheme: light;
+}
+
+/* Dark */
+html.dark {
+  --c-bg: #0c1218;
+  --c-surface: #0c1218;
+  --c-card: #161d26;
+  --c-container-low: #1a222c;
+  --c-container: #212a35;
+  --c-container-high: #29333f;
+  --c-container-highest: #323d4a;
+  --c-neutral: #242d37;
+  --c-primary: #38b8e8;
+  --c-primary-dim: #1fa0d2;
+  --c-primary-container: #0078a8;
+  --c-primary-fixed: #4dc8f7;
+  --c-secondary: #5cc4f0;
+  --c-secondary-container: #0f3a54;
+  --c-on-secondary-container: #9ddbff;
+  --c-tertiary: #8f96f4;
+  --c-tertiary-container: #2b3075;
+  --c-on-tertiary-container: #c9cdff;
+  --c-sidebar-bg: #0f1620;
+  --c-sidebar-active: #c4d0df;
+  --c-sidebar-text: #c4d0df;
+  --c-accent: #38b8e8;
+  --c-accent-warm: #f4a934;
+  --c-accent-blue: #38b8e8;
+  --c-accent-purple: #8f96f4;
+  --c-danger: #f56a7e;
+  --c-warning: #f79150;
+  --c-success: #3cc599;
+  --c-success-fill: #34D399;
+  --c-danger-fill: #F87171;
+  --c-warning-fill: #FBBF24;
+  --c-success-fill-bg: rgba(52,211,153,0.18);
+  --c-danger-fill-bg: rgba(248,113,113,0.20);
+  --c-primary-fill-bg: rgba(56,184,232,0.16);
+  --c-text: #e7eef5;
+  --c-subtext: #a8b4c2;
+  --c-muted: #77838f;
+  --c-input-bg: #1a222c;
+  --c-border: rgba(150,165,180,0.18);
+  --c-shadow: 0 12px 28px rgba(0,0,0,0.55);
+  --c-shadow-sm: 0 4px 14px rgba(0,0,0,0.35);
+  --c-shadow-lg: 0 24px 48px rgba(0,0,0,0.72);
+  --c-glass: rgba(24,32,42,0.58);
+  --c-glass-strong: rgba(30,40,52,0.80);
+  --c-glass-border: rgba(255,255,255,0.08);
+  --c-glass-border-strong: rgba(255,255,255,0.12);
+  --c-glass-hairline: rgba(255,255,255,0.06);
+  --c-glass-inset: rgba(255,255,255,0.06);
+  --c-hero-gradient: linear-gradient(145deg, #0a4d6b 0%, #0d6fa0 40%, #094e7a 75%, #1d2161 100%);
+  color-scheme: dark;
+}
+
+html, body { background: var(--c-bg); color: var(--c-text); }
+
 @layer base {
   :root {
     --background: hsl(0 0% 100%);
