@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { flushSync } from "react-dom";
 import { PieChart, Pie, Cell, BarChart, Bar, ComposedChart, AreaChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { db } from './firebase'
 import { doc, setDoc, getDoc, addDoc, collection, serverTimestamp, onSnapshot } from 'firebase/firestore'
@@ -707,6 +708,17 @@ If date not visible, use today. If unsure of category, use Other.`
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
   const [tab, setTab] = useState("dashboard");
+  // ── View Transition navigation ── native cross-document-style morphing between tabs.
+  // Falls back to plain setTab in browsers without the API or when prefers-reduced-motion is set.
+  const navigateToTab = useCallback((id) => {
+    if (typeof document === "undefined" || typeof document.startViewTransition !== "function") {
+      setTab(id);
+      return;
+    }
+    const reduceMotion = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) { setTab(id); return; }
+    document.startViewTransition(() => { flushSync(() => setTab(id)); });
+  }, []);
   const [householdId, setHouseholdId] = useState(() => localStorage.getItem('familyfinance_household_id'));
   const [householdCode, setHouseholdCode] = useState(() => localStorage.getItem('familyfinance_household_code'));
   const [joinScreen, setJoinScreen] = useState(false); // show join/create screen
@@ -1143,7 +1155,7 @@ export default function App() {
       if (parts.length === 0) return;
       const tabSlug = parts[0];
       const tabId = HASH_TAB[tabSlug];
-      if (tabId) { setTab(tabId); }
+      if (tabId) { navigateToTab(tabId); }
       if (parts[1]) {
         const mk = SLUG_MONTH(parts[1]);
         if (mk) setViewMonthKey(mk);
@@ -1875,6 +1887,48 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         /* Reduced motion — respect user preference */
         @media (prefers-reduced-motion: reduce) {
           *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+          ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+        }
+
+        /* ── View Transitions — tab swaps morph natively ── */
+        /* Disable default root cross-fade so we can choreograph specific elements */
+        ::view-transition-old(root), ::view-transition-new(root) {
+          animation-duration: 420ms;
+          animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        /* Main content: soft fade + gentle upward glide */
+        @keyframes vt-fade-slide-out {
+          0% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+          100% { opacity: 0; transform: translateY(-6px) scale(0.995); filter: blur(2px); }
+        }
+        @keyframes vt-fade-slide-in {
+          0% { opacity: 0; transform: translateY(12px) scale(0.995); filter: blur(4px); }
+          100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+        }
+        ::view-transition-old(page-main) {
+          animation: vt-fade-slide-out 280ms cubic-bezier(0.4, 0, 1, 1) forwards;
+        }
+        ::view-transition-new(page-main) {
+          animation: vt-fade-slide-in 460ms cubic-bezier(0.16, 1, 0.3, 1) 60ms backwards;
+        }
+        /* The active sidebar pill morphs between nav items — spring-like */
+        ::view-transition-group(active-nav-pill) {
+          animation-duration: 520ms;
+          animation-timing-function: cubic-bezier(0.34, 1.35, 0.64, 1);
+        }
+        ::view-transition-old(active-nav-pill),
+        ::view-transition-new(active-nav-pill) {
+          animation-duration: 240ms;
+          animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        /* Mobile bottom-nav pill */
+        ::view-transition-group(active-mobile-pill) {
+          animation-duration: 420ms;
+          animation-timing-function: cubic-bezier(0.34, 1.35, 0.64, 1);
+        }
+        ::view-transition-old(active-mobile-pill),
+        ::view-transition-new(active-mobile-pill) {
+          animation-duration: 200ms;
         }
 
         /* Scroll */
@@ -2032,7 +2086,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             { id: "insights",     label: "Monthly Insights",icon: "bar_chart" },
             { id: "advisor",      label: "AI Assistant",    icon: "smart_toy" },
           ].map(item => (
-            <button key={item.id} className={`nav-item${tab === item.id ? " active" : ""}`} onClick={() => setTab(item.id)} title={sidebarCollapsed ? item.label : undefined} style={{
+            <button key={item.id} className={`nav-item${tab === item.id ? " active" : ""}`} onClick={() => navigateToTab(item.id)} title={sidebarCollapsed ? item.label : undefined} style={{
               display: "flex", alignItems: "center", justifyContent: sidebarCollapsed ? "center" : "flex-start", gap: 11, padding: sidebarCollapsed ? "12px 0" : "11px 14px",
               background: tab === item.id ? `linear-gradient(135deg, rgba(0,120,168,0.13), rgba(74,82,168,0.08))` : "transparent",
               border: "none", borderRadius: 14,
@@ -2040,6 +2094,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               fontSize: 14, fontWeight: tab === item.id ? FW.semibold : FW.medium,
               cursor: "pointer", textAlign: "left", width: "100%",
               transition: "all 0.2s ease",
+              viewTransitionName: tab === item.id ? "active-nav-pill" : undefined,
+              position: "relative",
             }}>
               <span className="material-symbols-outlined" style={{ fontSize: 21, color: "inherit", flexShrink: 0, fontVariationSettings: tab === item.id ? "'FILL' 1, 'wght' 500" : "'FILL' 0, 'wght' 300" }}>{item.icon}</span>
               <span className="sidebar-label">{!sidebarCollapsed && item.label}</span>
@@ -2118,7 +2174,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               ref={headerInputRef}
               placeholder="Ask your AI financial assistant…"
               style={{ width: "100%", background: "rgba(255,255,255,0.70)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.85)", borderRadius: 9999, padding: "10px 44px 10px 42px", fontSize: 13.5, color: COLORS.text, boxShadow: "0 2px 12px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9)", fontWeight: FW.medium }}
-              onKeyDown={e => { if (e.key === "Enter" && e.target.value.trim()) { setAdvisorMsg(e.target.value.trim()); pendingAdvisorSend.current = true; setTab("advisor"); e.target.value = ""; } }}
+              onKeyDown={e => { if (e.key === "Enter" && e.target.value.trim()) { setAdvisorMsg(e.target.value.trim()); pendingAdvisorSend.current = true; navigateToTab("advisor"); e.target.value = ""; } }}
             />
             <button onClick={() => { const v = headerInputRef.current?.value?.trim(); if (v) { setAdvisorMsg(v); pendingAdvisorSend.current = true; setTab("advisor"); headerInputRef.current.value = ""; } }} aria-label="Ask AI assistant" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: `linear-gradient(135deg, ${COLORS.primary}, #0095d2)`, border: "none", cursor: "pointer", padding: 6, borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,120,168,0.3)" }}>
               <span className="material-symbols-outlined" style={{ fontSize: 16, color: "#fff" }}>send</span>
@@ -2147,7 +2203,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             { id: "insights",     label: "Insights", icon: "bar_chart" },
             { id: "advisor",      label: "AI",       icon: "smart_toy" },
           ].map(item => (
-            <button key={item.id} className={`mobile-nav-item${tab === item.id ? " active" : ""}`} onClick={() => setTab(item.id)}>
+            <button key={item.id} className={`mobile-nav-item${tab === item.id ? " active" : ""}`} onClick={() => navigateToTab(item.id)} style={{ viewTransitionName: tab === item.id ? "active-mobile-pill" : undefined }}>
               <span className="material-symbols-outlined" style={{ fontVariationSettings: tab === item.id ? "'FILL' 1, 'wght' 500" : "'FILL' 0, 'wght' 300" }}>{item.icon}</span>
               {item.label}
             </button>
@@ -2158,7 +2214,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         <button className="mobile-fab" aria-label="Add entry" onClick={() => setModal("addMenu")} style={{ display: "none", position: "fixed", bottom: "calc(80px + env(safe-area-inset-bottom) + 12px)", right: 20, width: 52, height: 52, borderRadius: "50%", background: `linear-gradient(140deg, ${COLORS.primary}, #0095d2)`, border: "none", color: "#fff", fontSize: 26, cursor: "pointer", zIndex: 101, boxShadow: `0 8px 24px rgba(0,120,168,0.45)`, alignItems: "center", justifyContent: "center" }}>+</button>
 
         {/* SCROLLABLE CONTENT */}
-        <main style={{ flex: 1, overflowY: "auto", padding: "24px 32px" }}>
+        <main style={{ flex: 1, overflowY: "auto", padding: "24px 32px", viewTransitionName: "page-main" }}>
         {/* ── DASHBOARD TAB ── */}
         {tab === "dashboard" && (
           <div style={{ fontSize: 14, color: COLORS.text }}>
@@ -2377,7 +2433,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     <h4 style={{ fontSize: 20, fontWeight: FW.extrabold, color: COLORS.text, marginBottom: 4, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.025em" }}>Spending by Category</h4>
                     <p style={{ fontSize: 13, color: COLORS.subtext }}>Track where your money goes · scroll to see all</p>
                   </div>
-                  <button onClick={() => setTab("transactions")} style={{ background: "rgba(0,120,168,0.10)", border: "1px solid rgba(0,120,168,0.12)", borderRadius: 9999, padding: "8px 18px", fontSize: 13, fontWeight: FW.semibold, color: COLORS.primary, cursor: "pointer" }}>
+                  <button onClick={() => navigateToTab("transactions")} style={{ background: "rgba(0,120,168,0.10)", border: "1px solid rgba(0,120,168,0.12)", borderRadius: 9999, padding: "8px 18px", fontSize: 13, fontWeight: FW.semibold, color: COLORS.primary, cursor: "pointer" }}>
                     View Budget →
                   </button>
                 </div>
@@ -2619,7 +2675,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   {/* ── Unified Budget Status Bar ── */}
                   <div style={{ paddingBottom: 14, marginBottom: 14, borderBottom: "0.5px solid rgba(172,179,181,0.3)" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <button onClick={() => { setAdvisorMsg(`My budget health: ${healthStatus.label}. I've spent ${fmt(totalActual)} of ${fmt(viewTotalIncome)} income (${pctSpent}%). ${isCurrentMonth ? `${daysLeft} days left in the month.` : ""} Please give me specific advice.`); pendingAdvisorSend.current = true; setTab("advisor"); }} style={{ fontSize: 11, fontWeight: FW.bold, color: healthStatus.color, background: healthStatus.bg, border: "none", borderRadius: 9999, padding: "3px 10px", cursor: "pointer" }}>{healthStatus.label}</button>
+                      <button onClick={() => { setAdvisorMsg(`My budget health: ${healthStatus.label}. I've spent ${fmt(totalActual)} of ${fmt(viewTotalIncome)} income (${pctSpent}%). ${isCurrentMonth ? `${daysLeft} days left in the month.` : ""} Please give me specific advice.`); pendingAdvisorSend.current = true; navigateToTab("advisor"); }} style={{ fontSize: 11, fontWeight: FW.bold, color: healthStatus.color, background: healthStatus.bg, border: "none", borderRadius: 9999, padding: "3px 10px", cursor: "pointer" }}>{healthStatus.label}</button>
                     </div>
                     <BudgetBar totalIncome={viewTotalIncome} totalPlanned={totalPlanned} totalSpent={totalActual} hideLabel />
                     {/* 50/30/20 toggle row */}
@@ -2870,7 +2926,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.primary }}>receipt_long</span>
                         <span style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.text }}>Bills</span>
                       </div>
-                      <button onClick={() => setTab("weekly")} style={{ fontSize: 11, fontWeight: FW.bold, color: COLORS.primary, background: "none", border: "none", cursor: "pointer" }}>Manage →</button>
+                      <button onClick={() => navigateToTab("weekly")} style={{ fontSize: 11, fontWeight: FW.bold, color: COLORS.primary, background: "none", border: "none", cursor: "pointer" }}>Manage →</button>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                       <div><p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 2 }}>Total</p><p style={{ fontSize: 15, fontWeight: FW.extrabold, color: COLORS.text }}>{fmt(billsBudgetTotal)}</p></div>
@@ -2886,7 +2942,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     onClick={() => {
                       setAdvisorMsg(`Create a personalized debt payoff plan for our family. We have ${debts.length > 0 ? debts.map(d => `${d.label}: ${fmt(d.balance)} at ${d.interest}% APR (min payment ${fmt(d.minPayment)})`).join(", ") : "no debts tracked yet"}. Our monthly income is ${fmt(viewTotalIncome)} and total expenses are ${fmt(viewTotalExpenses)}. Please give us a specific payoff plan with estimated payoff dates.`);
                       pendingAdvisorSend.current = true;
-                      setTab("advisor");
+                      navigateToTab("advisor");
                     }}
                     style={{ width: "100%", background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, color: "#fff", border: "none", borderRadius: 14, padding: "16px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, boxShadow: `0 6px 18px rgba(0,120,168,0.25)`, textAlign: "left" }}
                   >
@@ -3558,7 +3614,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       )}
                       {totalDebt > 0 && (
                         <button
-                          onClick={() => { setAdvisorMsg(`Can we pay our debt down faster? We have ${debts.map(d => `${d.label}: ${fmt(d.balance)} at ${d.interest}% APR (min payment ${fmt(d.minPayment)})`).join(", ")}. Our monthly income is ${fmt(s.inc)} and total expenses are ${fmt(s.exp)}. Please give us a specific payoff plan with estimated payoff dates.`); pendingAdvisorSend.current = true; setTab("advisor"); }}
+                          onClick={() => { setAdvisorMsg(`Can we pay our debt down faster? We have ${debts.map(d => `${d.label}: ${fmt(d.balance)} at ${d.interest}% APR (min payment ${fmt(d.minPayment)})`).join(", ")}. Our monthly income is ${fmt(s.inc)} and total expenses are ${fmt(s.exp)}. Please give us a specific payoff plan with estimated payoff dates.`); pendingAdvisorSend.current = true; navigateToTab("advisor"); }}
                           style={{ width: "100%", marginTop: 18, background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, color: "#fff", border: "none", borderRadius: 12, padding: "12px 16px", fontSize: 13, fontWeight: FW.bold, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: `0 6px 18px rgba(0,120,168,0.25)` }}
                         >
                           🚀 Get a debt payoff plan
