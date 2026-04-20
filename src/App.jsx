@@ -791,13 +791,25 @@ export default function App() {
       setMorphBillId(null);
     }
   }, []);
+  // Ref mirrors the open bill id so closeBillDetail can read it without taking
+  // activeBillDetail as a useCallback dep (which would TDZ-crash, since the
+  // state is declared below). Mirrored via useEffect further down.
+  const activeBillIdRef = useRef(null);
   const closeBillDetail = useCallback(() => {
     if (typeof document === "undefined" || typeof document.startViewTransition !== "function") {
       setActiveBillDetail(null);
+      setMorphBillId(null);
       return;
     }
     const reduceMotion = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     if (reduceMotion) { setActiveBillDetail(null); setMorphBillId(null); return; }
+    // CRITICAL: re-set morphBillId BEFORE the transition so the NEW snapshot
+    // has a source card (carousel on Overview, row on Bill Calendar) that holds
+    // view-transition-name: bill-active — the modal panel morphs back INTO it.
+    // Without this, the browser has no NEW target and the OLD modal snapshot
+    // hangs on screen as a frozen glass rectangle.
+    const idToMorph = activeBillIdRef.current;
+    if (idToMorph != null) flushSync(() => setMorphBillId(idToMorph));
     try {
       const t = document.startViewTransition(() => { flushSync(() => setActiveBillDetail(null)); });
       t.finished.catch(() => {}).finally(() => setMorphBillId(null));
@@ -874,6 +886,10 @@ export default function App() {
   const [editingIncomeCell, setEditingIncomeCell] = useState(null); // { id, field } for income row editing
   const [payBillConfirm, setPayBillConfirm] = useState(null);      // BUG #3: bill awaiting pay confirmation
   const [activeBillDetail, setActiveBillDetail] = useState(null);  // BUG #10: bill detail popover
+  // Keep ref in sync so closeBillDetail (declared above) can read the open
+  // bill id without a useCallback dep that would reference this state var
+  // before declaration (TDZ).
+  activeBillIdRef.current = activeBillDetail?.id ?? null;
   const [morphBillId, setMorphBillId] = useState(null);            // Tracks the source element that should receive view-transition-name during a bill morph
   const [billCalView, setBillCalView] = useState("month");          // BUG #11: month/list toggle
   const [addingSavingsId, setAddingSavingsId] = useState(null);    // BUG #24: inline savings input
@@ -2895,7 +2911,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     </div>
                     <button onClick={() => setShowPlaceholders(p => !p)} style={{ fontSize: 11, background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 6, padding: "3px 8px", color: COLORS.muted, cursor: "pointer" }}>{showPlaceholders ? "Hide placeholders" : "Show placeholders"}</button>
                   </div>
-                  <div className="sticky-col-header" style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "10px 12px", background: COLORS.containerLow, borderRadius: 10, marginBottom: 16, position: "sticky", top: 0, zIndex: 10 }}>
+                  <div className="sticky-col-header" style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "10px 12px", background: COLORS.containerLow, borderRadius: 10, marginBottom: 16 }}>
                     <span style={colStyle} onClick={() => toggleSort("label")}>Items <SortArrow field="label" /></span>
                     <span style={colStyle} onClick={() => toggleSort("category")}>Type</span>
                     <span style={{ ...colStyle, cursor: "default" }}>Due</span>
