@@ -143,7 +143,7 @@ const INITIAL_GOALS = [
   { id: 2, category: "Entertainment", limit: 100, label: "Fun Money" },
   { id: 3, category: "Personal", limit: 150, label: "Personal Spend" },
 ];
-const CATEGORIES = [
+const BASE_CATEGORIES = [
   { id: "Housing", label: "Housing" },
   { id: "Food", label: "Food & Groceries" },
   { id: "Utilities", label: "Utilities" },
@@ -158,14 +158,13 @@ const CATEGORIES = [
   { id: "Travel", label: "Travel & Experiences" },
   { id: "Other", label: "Other" },
 ];
-const CAT_LABEL = Object.fromEntries(CATEGORIES.map(c => [c.id, c.label]));
-const SPENDING_PLAN_GROUPS = [
+const BASE_SPENDING_PLAN_GROUPS = [
   { catId: "Housing",       label: "Housing",                 icon: "home",               templateItems: ["Rent / Mortgage", "Furnishings / home upgrades"] },
   { catId: "Utilities",     label: "Utilities",               icon: "bolt",               templateItems: ["Electricity", "Water / sewer", "Gas", "Trash / recycling", "Internet", "Mobile phones"] },
   { catId: "Food",          label: "Food",                    icon: "restaurant",         templateItems: ["Groceries", "Dining out / takeout", "Coffee / snacks", "Meal prep / delivery services"] },
   { catId: "Transport",     label: "Transportation",          icon: "directions_car",     templateItems: ["Car payment(s)", "Gas / charging (EV)", "Insurance", "Maintenance & repairs", "Parking / tolls", "Public transportation / rideshare"] },
   { catId: "Health",        label: "Health & Wellness",       icon: "favorite",           templateItems: ["Health insurance", "Doctor visits / copays", "Medications", "Dental / vision", "Gym / fitness", "Mental health / therapy"] },
-  { catId: "Kids",          label: "Kingdom (Kids)",          icon: "child_care",         templateItems: ["Childcare / daycare", "School tuition / fees", "Activities (sports, classes)", "Clothing & shoes", "Toys / entertainment", "Babysitting"] },
+  { catId: "Kids",          label: "Kingdom",                 icon: "child_care",         templateItems: ["Childcare / daycare", "School tuition / fees", "Activities (sports, classes)", "Clothing & shoes", "Toys / entertainment", "Babysitting"] },
   { catId: "Personal",      label: "Personal Spending",       icon: "person",             templateItems: ["Clothing", "Grooming (haircuts, skincare)", "Subscriptions (Netflix, Spotify)", "Hobbies", "Personal care"] },
   { catId: "Entertainment", label: "Relationship / Lifestyle",icon: "celebration",        templateItems: ["Date nights", "Gifts (spouse, family, friends)", "Celebrations / holidays", "Experiences (trips, outings)"] },
   { catId: "Education",     label: "Work / Professional",     icon: "work",               templateItems: ["Courses / certifications", "Work clothes", "Tools / software", "Commuting extras", "Networking"] },
@@ -174,6 +173,12 @@ const SPENDING_PLAN_GROUPS = [
   { catId: "Subscriptions", label: "Subscriptions & Streaming", icon: "subscriptions",    templateItems: ["Netflix", "Spotify", "Amazon Prime", "Disney+", "YouTube Premium", "Apple services", "Google services", "Other streaming"] },
   { catId: "Other",         label: "Other",                   icon: "category",           templateItems: ["Miscellaneous", "Uncategorized"] },
 ];
+// Module-level aliases so module-scope components (e.g. SmartAddModal) still
+// compile against the base set. Inside App, these are shadowed by derived
+// locals that merge customCategories + categoryLabelOverrides.
+const CATEGORIES = BASE_CATEGORIES;
+const SPENDING_PLAN_GROUPS = BASE_SPENDING_PLAN_GROUPS;
+const CAT_LABEL = Object.fromEntries(BASE_CATEGORIES.map(c => [c.id, c.label]));
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const MONTH_FULL  = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const monthKey = (year, month0) => `${year}-${String(month0 + 1).padStart(2,"0")}`;
@@ -893,6 +898,12 @@ export default function App() {
   const [editingPlannedKey, setEditingPlannedKey] = useState(null); // id or template label being edited
   const [editingIncomeCell, setEditingIncomeCell] = useState(null); // { id, field } for income row editing
   const [incomeCollapsed, setIncomeCollapsed] = useState(true);    // Income strip at top of Family Budget table — collapsed by default
+  // User-customisable categories: override labels for built-in categories, and
+  // add wholly new categories. Both persist via Firebase (see effects below).
+  const [categoryLabelOverrides, setCategoryLabelOverrides] = useState({}); // Record<catId, label>
+  const [customCategories, setCustomCategories] = useState([]);             // Array<{ catId, label, icon, templateItems: [] }>
+  const [editingCategoryLabelId, setEditingCategoryLabelId] = useState(null);
+  const [headerScrolled, setHeaderScrolled] = useState(false);
   const [payBillConfirm, setPayBillConfirm] = useState(null);      // BUG #3: bill awaiting pay confirmation
   const [activeBillDetail, setActiveBillDetail] = useState(null);  // BUG #10: bill detail popover
   // Keep ref in sync so closeBillDetail (declared above) can read the open
@@ -996,6 +1007,8 @@ export default function App() {
           if (data.debts) setDebts(data.debts);
           if (data.savingsItems) setSavingsItems(data.savingsItems);
           if (data.itemBudgets) setItemBudgets(data.itemBudgets);
+          if (data.categoryLabelOverrides) setCategoryLabelOverrides(data.categoryLabelOverrides);
+          if (Array.isArray(data.customCategories)) setCustomCategories(data.customCategories);
           if (data.goals) setGoals(data.goals);
           if (data.advisorHistory) setAdvisorHistory(data.advisorHistory);
           if (data.familyName) setFamilyName(data.familyName);
@@ -1020,6 +1033,8 @@ export default function App() {
           if (d.debts) setDebts(d.debts);
           if (d.savingsItems) setSavingsItems(d.savingsItems);
           if (d.itemBudgets) setItemBudgets(d.itemBudgets);
+          if (d.categoryLabelOverrides) setCategoryLabelOverrides(d.categoryLabelOverrides);
+          if (Array.isArray(d.customCategories)) setCustomCategories(d.customCategories);
           if (d.goals) setGoals(d.goals);
           if (d.advisorHistory) setAdvisorHistory(d.advisorHistory);
           if (d.familyName) setFamilyName(d.familyName);
@@ -1049,6 +1064,8 @@ export default function App() {
           savingsItems,
           monthlySnapshots,
           itemBudgets,
+          categoryLabelOverrides,
+          customCategories,
           goals,
           advisorHistory,
           familyName,
@@ -1069,7 +1086,7 @@ export default function App() {
       }
     }, 1000);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [income, expenses, bills, debts, savingsItems, monthlySnapshots, itemBudgets, goals, advisorHistory, familyName, householdId, firebaseLoading]);
+  }, [income, expenses, bills, debts, savingsItems, monthlySnapshots, itemBudgets, categoryLabelOverrides, customCategories, goals, advisorHistory, familyName, householdId, firebaseLoading]);
   // ── withSave helper — wraps any async Firebase operation with status indicator ──
   const withSave = async (operation) => {
     setSaveStatus('saving');
@@ -1151,6 +1168,8 @@ export default function App() {
       if (hData.debts) setDebts(hData.debts);
       if (hData.savingsItems) setSavingsItems(hData.savingsItems);
       if (hData.itemBudgets) setItemBudgets(hData.itemBudgets);
+      if (hData.categoryLabelOverrides) setCategoryLabelOverrides(hData.categoryLabelOverrides);
+      if (Array.isArray(hData.customCategories)) setCustomCategories(hData.customCategories);
       if (hData.goals) setGoals(hData.goals);
       if (hData.advisorHistory) setAdvisorHistory(hData.advisorHistory);
       if (hData.familyName) setFamilyName(hData.familyName);
@@ -1450,9 +1469,41 @@ Return plain text bullet points only, no headers.` }]
   const totalDebtPayments = debts.reduce((s, d) => s + parseFloat(d.minPayment || 0), 0);
   const totalDebtBalance = debts.reduce((s, d) => s + parseFloat(d.balance || 0), 0);
   const spentPct = Math.round(pct(totalExpenses, totalIncome));
-  const CATEGORY_ICONS = { Housing: "home", Food: "restaurant", Transport: "directions_car", Utilities: "bolt", Health: "medication", Entertainment: "movie", Personal: "person", Education: "school", Kids: "child_care", Subscriptions: "subscriptions", Travel: "flight", Other: "category" };
-  const CATEGORY_ICON_BG = { Housing: "rgba(97,205,253,0.2)", Food: "rgba(192,232,255,0.3)", Transport: "rgba(186,191,255,0.3)", Utilities: "rgba(192,232,255,0.3)", Health: "rgba(186,191,255,0.3)", Entertainment: "rgba(186,191,255,0.3)", Personal: "rgba(186,191,255,0.3)", Education: "rgba(97,205,253,0.2)", Kids: "rgba(192,232,255,0.3)", Subscriptions: "rgba(186,191,255,0.3)", Travel: "rgba(186,191,255,0.3)", Other: COLORS.neutral };
-  const CATEGORY_ICON_COLOR = { Housing: COLORS.primary, Food: COLORS.secondary, Transport: COLORS.tertiary, Utilities: COLORS.secondary, Health: COLORS.tertiary, Entertainment: COLORS.tertiary, Personal: COLORS.tertiary, Education: COLORS.primary, Kids: COLORS.secondary, Subscriptions: COLORS.tertiary, Travel: COLORS.tertiary, Other: COLORS.subtext };
+  // ── Runtime-extensible category tables ──
+  // Shadow the module-level SPENDING_PLAN_GROUPS / CATEGORIES / CAT_LABEL with
+  // derived locals that merge user-added customCategories and apply any
+  // categoryLabelOverrides. Every reference below this point resolves to the
+  // local (shadowed) values via normal JS scoping rules.
+  // eslint-disable-next-line no-shadow
+  const SPENDING_PLAN_GROUPS = useMemo(
+    () => [
+      ...BASE_SPENDING_PLAN_GROUPS.map(g => ({ ...g, label: categoryLabelOverrides[g.catId] || g.label })),
+      ...customCategories.map(c => ({ ...c, label: categoryLabelOverrides[c.catId] || c.label, templateItems: c.templateItems || [], custom: true })),
+    ],
+    [categoryLabelOverrides, customCategories]
+  );
+  // eslint-disable-next-line no-shadow
+  const CATEGORIES = useMemo(
+    () => [
+      ...BASE_CATEGORIES.map(c => ({ ...c, label: categoryLabelOverrides[c.id] || c.label })),
+      ...customCategories.map(c => ({ id: c.catId, label: categoryLabelOverrides[c.catId] || c.label })),
+    ],
+    [categoryLabelOverrides, customCategories]
+  );
+  // eslint-disable-next-line no-shadow
+  const CAT_LABEL = useMemo(() => Object.fromEntries(CATEGORIES.map(c => [c.id, c.label])), [CATEGORIES]);
+  const CATEGORY_ICONS = useMemo(() => ({
+    Housing: "home", Food: "restaurant", Transport: "directions_car", Utilities: "bolt", Health: "medication", Entertainment: "movie", Personal: "person", Education: "school", Kids: "child_care", Savings: "savings", Subscriptions: "subscriptions", Travel: "flight", Other: "category",
+    ...Object.fromEntries(customCategories.map(c => [c.catId, c.icon || "category"])),
+  }), [customCategories]);
+  const CATEGORY_ICON_BG = useMemo(() => ({
+    Housing: "rgba(97,205,253,0.2)", Food: "rgba(192,232,255,0.3)", Transport: "rgba(186,191,255,0.3)", Utilities: "rgba(192,232,255,0.3)", Health: "rgba(186,191,255,0.3)", Entertainment: "rgba(186,191,255,0.3)", Personal: "rgba(186,191,255,0.3)", Education: "rgba(97,205,253,0.2)", Kids: "rgba(192,232,255,0.3)", Savings: "rgba(97,205,253,0.2)", Subscriptions: "rgba(186,191,255,0.3)", Travel: "rgba(186,191,255,0.3)", Other: COLORS.neutral,
+    ...Object.fromEntries(customCategories.map(c => [c.catId, "rgba(186,191,255,0.3)"])),
+  }), [customCategories]);
+  const CATEGORY_ICON_COLOR = useMemo(() => ({
+    Housing: COLORS.primary, Food: COLORS.secondary, Transport: COLORS.tertiary, Utilities: COLORS.secondary, Health: COLORS.tertiary, Entertainment: COLORS.tertiary, Personal: COLORS.tertiary, Education: COLORS.primary, Kids: COLORS.secondary, Savings: COLORS.primary, Subscriptions: COLORS.tertiary, Travel: COLORS.tertiary, Other: COLORS.subtext,
+    ...Object.fromEntries(customCategories.map(c => [c.catId, COLORS.tertiary])),
+  }), [customCategories]);
   // ── View-month derived values (income/expenses are now always month-scoped) ──
   const viewExpenses = expenses;
   const viewIncome = income;
@@ -1460,7 +1511,14 @@ Return plain text bullet points only, no headers.` }]
   const viewTotalIncome = viewIncome.reduce((s, i) => s + i.amount, 0);
   const viewSpentPct = Math.round(pct(viewTotalExpenses, viewTotalIncome || 1));
   const viewCatTotals = CATEGORIES.reduce((acc, c) => ({ ...acc, [c.id]: viewExpenses.filter(e => e.category === c.id).reduce((s, e) => s + e.amount, 0) }), {});
-  const viewCatExpenseCards = Object.entries(viewCatTotals).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+  // Show every category on Overview (even with $0 spent / $0 planned) so users
+  // can see the full spending plan at a glance. Sort: planned desc → spent desc.
+  const viewCatExpenseCards = Object.entries(viewCatTotals).sort((a, b) => {
+    const pA = viewExpenseBudgets[a[0]] || 0;
+    const pB = viewExpenseBudgets[b[0]] || 0;
+    if (pB !== pA) return pB - pA;
+    return b[1] - a[1];
+  });
   // ── Budget bar unified totals (must be after viewTotalExpenses/viewTotalIncome) ──
   // Planned total: use item-level budgets when available, else category-level
   const monthItemBudgetsGlobal = itemBudgets[viewMonthKey] || {};
@@ -2089,6 +2147,42 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           100% { opacity: 1; }
         }
 
+        /* ── Category expand/collapse morph ── */
+        /* When a category row toggles, we wrap the state change in a
+           startViewTransition() and add html.vt-cat-expand. Rules below
+           give the row a short, springy cross-fade — no layout leak
+           to other rows because the default ::view-transition-old/new
+           on root is short and eased. */
+        html.vt-cat-expand::view-transition-old(root),
+        html.vt-cat-expand::view-transition-new(root) {
+          animation-duration: 280ms;
+          animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        /* ── Header shadow ramps as user scrolls ── */
+        header.app-header {
+          transition: box-shadow 180ms ease, border-color 180ms ease;
+        }
+        header.app-header[data-scrolled="true"] {
+          box-shadow: 0 1px 0 var(--c-glass-hairline), 0 16px 40px rgba(0,0,0,0.08) !important;
+          border-bottom-color: var(--c-glass-border-strong) !important;
+        }
+
+        /* ── Off-screen category cards skip paint until visible ── */
+        .overview-hscroll .exp-card {
+          content-visibility: auto;
+          contain-intrinsic-size: 240px 200px;
+        }
+
+        /* ── SF Pro Rounded fallback for any bold number that forgot the class ── */
+        .budget-row .num-cell,
+        .kpi-num {
+          font-family: var(--font-num);
+          font-variant-numeric: tabular-nums;
+          font-feature-settings: "tnum", "ss01";
+          letter-spacing: -0.02em;
+        }
+
         /* Scroll */
         .cat-scroll { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; padding-bottom: 8px; }
         .cat-scroll::-webkit-scrollbar { display: none; }
@@ -2099,8 +2193,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         .budget-cat-group .cat-add-btn { opacity: 0; }
         .budget-cat-group:hover .cat-add-btn { opacity: 1; }
         .budget-cat-group .cat-add-btn:hover { border-color: rgba(0,120,168,0.5) !important; color: #0078a8 !important; }
-        .budget-cat-empty:hover { opacity: 1 !important; background: var(--c-glass) !important; }
-        .budget-cat-empty:hover button { background: rgba(0,120,168,0.08) !important; }
+        .budget-cat-group:hover .cat-rename-btn { opacity: 0.8 !important; }
+        .budget-cat-group .cat-rename-btn:hover { opacity: 1 !important; color: var(--c-primary) !important; }
         @media (hover: none) {
           .budget-cat-group .cat-add-btn { opacity: 1; }
         }
@@ -2195,7 +2289,6 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           .budget-table-card .budget-row {
             min-width: 500px;
           }
-          .budget-cat-empty { min-width: 0 !important; }
 
           /* Monthly Insights — single column chart rows */
           .insights-two-col {
@@ -2323,7 +2416,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
       {/* ── MAIN COLUMN ── */}
       <div className="app-main" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
         {/* TOP HEADER */}
-        <header style={{ background: "var(--c-glass-strong)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", borderBottom: "1px solid var(--c-glass-hairline)", padding: "16px 32px 14px", display: "flex", alignItems: "center", gap: 20, flexShrink: 0, boxShadow: "0 1px 0 var(--c-glass-hairline), 0 8px 24px rgba(0,0,0,0.04)", position: "relative", zIndex: 1000 }}>
+        <header className="app-header" data-scrolled={headerScrolled ? "true" : "false"} style={{ background: "var(--c-glass-strong)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", borderBottom: "1px solid var(--c-glass-hairline)", padding: "16px 32px 14px", display: "flex", alignItems: "center", gap: 20, flexShrink: 0, boxShadow: "0 1px 0 var(--c-glass-hairline), 0 8px 24px rgba(0,0,0,0.04)", position: "relative", zIndex: 1000 }}>
           {/* Month picker */}
           <div style={{ position: "relative", zIndex: 300 }}>
             {showMonthPicker && <div onClick={() => setShowMonthPicker(false)} style={{ position: "fixed", inset: 0, zIndex: 999 }} />}
@@ -2411,7 +2504,14 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         <button className="mobile-fab" aria-label="Add entry" onClick={() => setModal("addMenu")} style={{ display: "none", position: "fixed", bottom: "calc(80px + env(safe-area-inset-bottom) + 12px)", right: 20, width: 52, height: 52, borderRadius: "50%", background: `linear-gradient(140deg, ${COLORS.primary}, #0095d2)`, border: "none", color: "#fff", fontSize: 26, cursor: "pointer", zIndex: 101, boxShadow: `0 8px 24px rgba(0,120,168,0.45)`, alignItems: "center", justifyContent: "center" }}>+</button>
 
         {/* SCROLLABLE CONTENT */}
-        <main className="main-scroll" style={{ flex: 1, overflowY: "auto", padding: "24px 32px", viewTransitionName: "page-main" }}>
+        <main
+          className="main-scroll"
+          onScroll={e => {
+            const shouldBeScrolled = e.currentTarget.scrollTop > 8;
+            if (shouldBeScrolled !== headerScrolled) setHeaderScrolled(shouldBeScrolled);
+          }}
+          style={{ flex: 1, overflowY: "auto", padding: "24px 32px", viewTransitionName: "page-main" }}
+        >
         {/* ── DASHBOARD TAB ── */}
         {tab === "dashboard" && (
           <div style={{ fontSize: 14, color: COLORS.text }}>
@@ -2648,24 +2748,15 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     <p style={{ fontSize: 13, color: COLORS.muted }}>Head to Family Budget to start planning.</p>
                   </div>
                 ) : (
-                  <div style={{ display: "flex", gap: 16, overflowX: "auto", scrollSnapType: "x mandatory", scrollBehavior: "smooth", paddingBottom: 8, msOverflowStyle: "none", scrollbarWidth: "none" }}>
-{/* scrollbar hidden via msOverflowStyle + scrollbarWidth above */}
-                    {/* Sort by planned amount desc, then by spent amount */}
-                    {[...viewCatExpenseCards]
-                      .sort((a, b) => {
-                        const plannedA = viewExpenseBudgets[a[0]] || 0;
-                        const plannedB = viewExpenseBudgets[b[0]] || 0;
-                        if (plannedB !== plannedA) return plannedB - plannedA;
-                        return b[1] - a[1];
-                      })
-                      .map(([cat, amt]) => {
+                  <div className="overview-hscroll" style={{ display: "flex", gap: 16, overflowX: "auto", scrollSnapType: "x mandatory", scrollBehavior: "smooth", paddingBottom: 8, msOverflowStyle: "none", scrollbarWidth: "none", overscrollBehaviorX: "contain" }}>
+                    {viewCatExpenseCards.map(([cat, amt]) => {
                         const budget = viewExpenseBudgets[cat] || 0;
-                        const budgetPct = budget > 0 ? Math.round(pct(amt, budget)) : null;
                         const isOver = budget > 0 && amt > budget;
+                        const isInactive = amt === 0 && budget === 0;
                         const barColor = isOver ? "#F87171" : COLORS.primary;
                         const topExpense = [...viewExpenses].filter(e => e.category === cat).sort((a, b) => b.amount - a.amount)[0];
                         return (
-                          <div key={cat} className="exp-card" style={{ flexShrink: 0, width: 200, scrollSnapAlign: "start", background: "var(--c-glass-border)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderRadius: 20, padding: "18px", boxShadow: isOver ? `0 4px 20px rgba(248,113,113,0.20)` : "0 4px 16px var(--c-glass-hairline)", border: isOver ? `1.5px solid rgba(248,113,113,0.35)` : `1px solid var(--c-glass-border-strong)`, cursor: "default" }}>
+                          <div key={cat} className="exp-card" style={{ flexShrink: 0, width: 200, scrollSnapAlign: "start", background: "var(--c-glass-border)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderRadius: 20, padding: "18px", boxShadow: isOver ? `0 4px 20px rgba(248,113,113,0.20)` : "0 4px 16px var(--c-glass-hairline)", border: isOver ? `1.5px solid rgba(248,113,113,0.35)` : `1px solid var(--c-glass-border-strong)`, cursor: "default", opacity: isInactive ? 0.72 : 1, transition: "opacity .2s" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                               <div style={{ width: 40, height: 40, borderRadius: 12, background: CATEGORY_ICON_BG[cat] || COLORS.neutral, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                                 <span className="material-symbols-outlined" style={{ fontSize: 20, color: CATEGORY_ICON_COLOR[cat] || COLORS.subtext }}>{CATEGORY_ICONS[cat] || "category"}</span>
@@ -2675,11 +2766,11 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                                 <p style={{ fontSize: 11, color: COLORS.subtext, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{topExpense ? topExpense.label : "—"}</p>
                               </div>
                             </div>
-                            <p style={{ fontSize: 22, fontWeight: FW.extrabold, color: COLORS.text, letterSpacing: "-0.02em", marginBottom: 8 }}>{fmt(amt)}</p>
+                            <p className="num-ios" style={{ fontSize: 22, fontWeight: FW.extrabold, color: isInactive ? COLORS.muted : COLORS.text, letterSpacing: "-0.02em", marginBottom: 8 }}>{fmt(amt)}</p>
                             {budget > 0 && (
                               <>
                                 <div style={{ height: 6, background: COLORS.containerLow, borderRadius: 9999, overflow: "hidden", marginBottom: 4 }}>
-                                  <div style={{ width: `${Math.min(100, pct(amt, budget))}%`, height: "100%", background: barColor, borderRadius: 9999, transition: "width 0.5s ease" }} />
+                                  <div style={{ width: `${Math.min(100, pct(amt, budget))}%`, height: "100%", background: barColor, borderRadius: 9999, transition: "width 0.6s cubic-bezier(0.22,1,0.36,1)" }} />
                                 </div>
                                 <p style={{ fontSize: 11, color: isOver ? "#F87171" : COLORS.muted }}>
                                   {isOver ? `Over by ${fmt(amt - budget)}` : `${fmt(budget - amt)} left of ${fmt(budget)}`}
@@ -2694,38 +2785,58 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 )}
               </div>
 
-              {/* ── ROW 3, COL 1–6: Shared Goal ── */}
-              {(() => {
-                const goal = savingsItems[0];
-                const goalPct = goal ? pct(goal.actual, goal.expected) : 0;
-                const label = goal ? goal.label.toLowerCase() : "";
-                const goalIcon = label.includes("holiday") || label.includes("travel") || label.includes("trip") || label.includes("vacation") ? "flight" : label.includes("house") || label.includes("home") ? "home" : label.includes("car") || label.includes("vehicle") ? "directions_car" : label.includes("school") || label.includes("college") || label.includes("education") ? "school" : "savings";
-                return (
-                  <div className="savings-goal-card" style={{ gridColumn: "span 6", background: `linear-gradient(145deg, rgba(74,82,168,0.10) 0%, rgba(168,174,255,0.14) 50%, rgba(74,82,168,0.08) 100%)`, backdropFilter: "blur(24px) saturate(150%)", WebkitBackdropFilter: "blur(24px) saturate(150%)", border: "1px solid rgba(168,174,255,0.30)", borderRadius: 24, padding: "32px", position: "relative", overflow: "hidden", boxShadow: "0 8px 32px rgba(74,82,168,0.12), inset 0 1px 0 rgba(255,255,255,0.5)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
-                      <div>
-                        <h4 style={{ fontSize: 22, fontWeight: FW.extrabold, color: COLORS.text, marginBottom: 4, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.025em" }}>
-                          🎯 {goal ? goal.label : "Savings Goal"}
-                        </h4>
-                        <p style={{ fontSize: 13, color: COLORS.subtext }}>Saving for the family's future</p>
-                      </div>
-                      <span className="material-symbols-outlined" style={{ fontSize: 40, color: COLORS.tertiary, opacity: 0.35, fontVariationSettings: "'FILL' 1" }}>{goalIcon}</span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 8 }}>
-                      <span className="kpi-num" style={{ fontSize: 44, fontWeight: FW.black, color: COLORS.tertiary, letterSpacing: "-0.03em", fontFamily: "var(--font-num)" }}>{fmt(goal ? goal.actual : 0)}</span>
-                      <span style={{ fontSize: 14, fontWeight: FW.semibold, color: COLORS.subtext }}>/ {fmt(goal ? goal.expected : 0)}</span>
-                    </div>
-                    <div style={{ width: "100%", height: 10, background: "rgba(74,82,168,0.10)", borderRadius: 9999, overflow: "hidden", marginBottom: 12 }}>
-                      <div style={{ width: `${goalPct}%`, height: "100%", background: `linear-gradient(90deg, ${COLORS.tertiary}, #818cf8)`, borderRadius: 9999, transition: "width 0.5s cubic-bezier(0.4,0,0.2,1)" }} />
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: FW.semibold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                      <span>Just Started</span>
-                      <span style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.tertiary }}>{Math.round(goalPct)}% Saved!</span>
-                      <span>Goal Reached</span>
-                    </div>
+              {/* ── ROW 3, COL 1–6: Savings Goals (one card per goal) ── */}
+              <div className="savings-goal-group" style={{ gridColumn: "span 6", display: "flex", flexDirection: "column", gap: 16 }}>
+                {savingsItems.length === 0 && (
+                  <div className="savings-goal-card" style={{ background: `linear-gradient(145deg, rgba(74,82,168,0.08) 0%, rgba(168,174,255,0.10) 50%, rgba(74,82,168,0.06) 100%)`, backdropFilter: "blur(24px) saturate(150%)", WebkitBackdropFilter: "blur(24px) saturate(150%)", border: "1px solid rgba(168,174,255,0.22)", borderRadius: 24, padding: "32px", textAlign: "center" }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 40, color: COLORS.tertiary, opacity: 0.5, marginBottom: 8 }}>savings</span>
+                    <h4 style={{ fontSize: 18, fontWeight: FW.extrabold, color: COLORS.text, marginBottom: 6, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.02em" }}>No savings goals yet</h4>
+                    <p style={{ fontSize: 13, color: COLORS.subtext, marginBottom: 16 }}>Head to Family Budget to add your first goal.</p>
+                    <button onClick={() => navigateToTab("transactions")} style={{ background: COLORS.primary, color: "#fff", border: "none", borderRadius: 9999, padding: "10px 20px", fontSize: 13, fontWeight: FW.semibold, cursor: "pointer", fontFamily: "inherit" }}>
+                      Set up savings →
+                    </button>
                   </div>
-                );
-              })()}
+                )}
+                {savingsItems.length > 0 && (() => {
+                  const isGrid = savingsItems.length > 1;
+                  return (
+                    <div style={{ display: isGrid ? "grid" : "flex", gridTemplateColumns: isGrid ? "repeat(auto-fill, minmax(220px, 1fr))" : undefined, gap: 14, flexDirection: "column" }}>
+                      {savingsItems.map(goal => {
+                        const goalPct = goal.expected > 0 ? pct(goal.actual, goal.expected) : 0;
+                        const lbl = (goal.label || "").toLowerCase();
+                        const goalIcon = lbl.includes("holiday") || lbl.includes("travel") || lbl.includes("trip") || lbl.includes("vacation") ? "flight" : lbl.includes("house") || lbl.includes("home") ? "home" : lbl.includes("car") || lbl.includes("vehicle") ? "directions_car" : lbl.includes("school") || lbl.includes("college") || lbl.includes("education") ? "school" : lbl.includes("emergency") ? "health_and_safety" : "savings";
+                        const goalReached = goal.expected > 0 && goal.actual >= goal.expected;
+                        const compact = isGrid;
+                        return (
+                          <div key={goal.id} className="savings-goal-card" style={{ background: `linear-gradient(145deg, rgba(74,82,168,0.10) 0%, rgba(168,174,255,0.14) 50%, rgba(74,82,168,0.08) 100%)`, backdropFilter: "blur(24px) saturate(150%)", WebkitBackdropFilter: "blur(24px) saturate(150%)", border: goalReached ? "1px solid rgba(52,211,153,0.4)" : "1px solid rgba(168,174,255,0.30)", borderRadius: compact ? 18 : 24, padding: compact ? "20px" : "32px", position: "relative", overflow: "hidden", boxShadow: "0 8px 32px rgba(74,82,168,0.12), inset 0 1px 0 rgba(255,255,255,0.5)", transition: "transform .2s cubic-bezier(0.22,1,0.36,1), box-shadow .2s" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: compact ? 12 : 20, gap: 8 }}>
+                              <div style={{ minWidth: 0 }}>
+                                <h4 style={{ fontSize: compact ? 15 : 22, fontWeight: FW.extrabold, color: COLORS.text, marginBottom: 2, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.025em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  {goalReached ? "✓ " : "🎯 "}{goal.label}
+                                </h4>
+                                {!compact && <p style={{ fontSize: 13, color: COLORS.subtext }}>{goalReached ? "Goal reached — nice work." : "Saving for the family's future"}</p>}
+                              </div>
+                              <span className="material-symbols-outlined" style={{ fontSize: compact ? 26 : 40, color: goalReached ? COLORS.success : COLORS.tertiary, opacity: 0.4, fontVariationSettings: "'FILL' 1", flexShrink: 0 }}>{goalIcon}</span>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
+                              <span className="kpi-num num-ios" style={{ fontSize: compact ? 26 : 44, fontWeight: FW.black, color: goalReached ? COLORS.success : COLORS.tertiary, letterSpacing: "-0.03em", fontFamily: "var(--font-num)" }}>{fmt(goal.actual)}</span>
+                              <span className="num-ios" style={{ fontSize: compact ? 12 : 14, fontWeight: FW.semibold, color: COLORS.subtext }}>/ {fmt(goal.expected)}</span>
+                            </div>
+                            <div style={{ width: "100%", height: compact ? 8 : 10, background: "rgba(74,82,168,0.10)", borderRadius: 9999, overflow: "hidden", marginBottom: compact ? 8 : 12 }}>
+                              <div style={{ width: `${goalPct}%`, height: "100%", background: goalReached ? `linear-gradient(90deg, ${COLORS.success}, #10b981)` : `linear-gradient(90deg, ${COLORS.tertiary}, #818cf8)`, borderRadius: 9999, transition: "width 0.6s cubic-bezier(0.22,1,0.36,1)" }} />
+                            </div>
+                            <div style={{ display: "flex", justifyContent: compact ? "flex-end" : "space-between", fontSize: 11, fontWeight: FW.semibold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                              {!compact && <span>Just Started</span>}
+                              <span className="num-ios" style={{ fontSize: compact ? 11 : 13, fontWeight: FW.bold, color: goalReached ? COLORS.success : COLORS.tertiary }}>{Math.round(goalPct)}% {goalReached ? "Complete" : "Saved"}</span>
+                              {!compact && <span>Goal Reached</span>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
 
               {/* ── ROW 3, COL 7–12: Savings & Investments ── */}
               <div className="savings-invest-card" style={{ gridColumn: "span 6", background: `linear-gradient(145deg, rgba(0,120,168,0.09) 0%, rgba(0,149,210,0.12) 50%, rgba(13,148,136,0.08) 100%)`, backdropFilter: "blur(24px) saturate(150%)", WebkitBackdropFilter: "blur(24px) saturate(150%)", border: "1px solid rgba(0,149,210,0.20)", borderRadius: 24, padding: "32px", position: "relative", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,120,168,0.10), inset 0 1px 0 var(--c-glass)" }}>
@@ -2805,9 +2916,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           const prevMonthItemBudgets = itemBudgets[prevMonthKey] || {};
           const prevMonthExpBudgets = normaliseExpenseBudgets(monthlySnapshots[prevMonthKey]?.expenseBudgets || {});
           const hasPrevPlanned = Object.keys(prevMonthItemBudgets).length > 0 || Object.values(prevMonthExpBudgets).some(v => v > 0);
-          const currentBudgetsAreDefault = CATEGORIES.every(cat => (viewExpenseBudgets[cat.id] ?? 0) === (DEFAULT_EXPENSE_BUDGETS[cat.id] ?? 0));
           const prevHasCustomBudgets = !CATEGORIES.every(cat => (prevMonthExpBudgets[cat.id] ?? 0) === (DEFAULT_EXPENSE_BUDGETS[cat.id] ?? 0));
-          const showCopyButton = (hasPrevPlanned || prevHasCustomBudgets) && currentBudgetsAreDefault;
+          const showCopyButton = hasPrevPlanned || prevHasCustomBudgets;
 
           const totalPlanned = SPENDING_PLAN_GROUPS.reduce((sum, group) => {
             const grpExp = viewExpenses.filter(e => e.category === group.catId);
@@ -2993,41 +3103,81 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     const accentColor = util === null ? "rgba(0,0,0,0)" : utilColor;
                     const usedLabels = grpExp.map(e => e.label.toLowerCase());
                     const unusedTemplates = group.templateItems.filter(t => !usedLabels.some(l => l.includes(t.split(/[/(]/)[0].trim().toLowerCase())));
-                    // Fix C: empty category (no expenses, no planned) renders as one compact row
-                    const isEmptyCategory = grpExp.length === 0 && grpPlanned === 0;
-
-                    if (isEmptyCategory) {
-                      return (
-                        <div key={group.catId} className="budget-cat-empty" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 12px 6px 10px", borderLeft: `3px solid var(--c-glass-hairline)`, background: "transparent", borderRadius: 4, marginBottom: 2, opacity: 0.72, transition: "opacity .15s, background .15s" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
-                            <div style={{ width: 28, height: 28, borderRadius: 8, background: CATEGORY_ICON_BG[group.catId] || COLORS.neutral, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                              <span className="material-symbols-outlined" style={{ fontSize: 15, color: CATEGORY_ICON_COLOR[group.catId] || COLORS.subtext }}>{CATEGORY_ICONS[group.catId] || "category"}</span>
-                            </div>
-                            <span style={{ fontSize: 13, fontWeight: FW.semibold, color: COLORS.subtext }}>{group.label}</span>
-                            <span style={{ fontSize: 11, color: COLORS.muted }}>—</span>
-                          </div>
-                          <button onClick={() => { setNewExp(p => ({ ...p, label: "", category: group.catId })); setModal("addExpense"); }}
-                            style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.primary, fontSize: 12, fontWeight: FW.semibold, padding: "4px 8px", borderRadius: 6, display: "flex", alignItems: "center", gap: 4 }} title={`Add ${group.label} item`}>
-                            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add</span>Add
-                          </button>
-                        </div>
-                      );
-                    }
+                    const isEditingLabel = editingCategoryLabelId === group.catId;
 
                     return (
                       <div key={group.catId} className="budget-cat-group" style={{ marginBottom: 6, position: "relative" }}>
                         {/* Left accent bar — colored by utilization */}
                         <div aria-hidden="true" style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: accentColor, borderRadius: 2, opacity: util === null ? 0 : 1, transition: "background .2s, opacity .2s" }} />
                         {/* Group header — chevron on LEFT next to larger icon */}
-                        <div className="budget-row" onClick={() => setCollapsedCategories(p => ({ ...p, [group.catId]: !p[group.catId] }))}
+                        <div className="budget-row" onClick={() => {
+                          const toggle = () => setCollapsedCategories(p => ({ ...p, [group.catId]: !p[group.catId] }));
+                          if (typeof document !== "undefined" && typeof document.startViewTransition === "function" &&
+                              !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+                            document.documentElement.classList.add("vt-cat-expand");
+                            const t = document.startViewTransition(() => { flushSync(toggle); });
+                            t.finished.finally(() => document.documentElement.classList.remove("vt-cat-expand"));
+                          } else { toggle(); }
+                        }}
                           style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, alignItems: "center", padding: "10px 12px 10px 14px", background: "var(--c-glass)", borderRadius: 10, cursor: "pointer", marginBottom: isCollapsed ? 0 : 6, border: "1px solid var(--c-glass-border)", transition: "background .15s" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                             <span className="material-symbols-outlined" style={{ fontSize: 18, color: COLORS.muted, transition: "transform .3s cubic-bezier(0.34, 1.35, 0.64, 1)", transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)", flexShrink: 0 }}>expand_more</span>
                             <div style={{ width: 36, height: 36, borderRadius: 10, background: CATEGORY_ICON_BG[group.catId] || COLORS.neutral, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                               <span className="material-symbols-outlined" style={{ fontSize: 19, color: CATEGORY_ICON_COLOR[group.catId] || COLORS.subtext }}>{CATEGORY_ICONS[group.catId] || "category"}</span>
                             </div>
-                            <span style={{ fontSize: 14, fontWeight: FW.bold, color: COLORS.text }}>{group.label}</span>
+                            {isEditingLabel ? (
+                              <input
+                                autoFocus
+                                defaultValue={group.label}
+                                onClick={e => e.stopPropagation()}
+                                onBlur={ev => {
+                                  const v = ev.target.value.trim();
+                                  if (v && v !== group.label) {
+                                    setCategoryLabelOverrides(prev => ({ ...prev, [group.catId]: v }));
+                                    showToast(`Renamed to ${v}`);
+                                  }
+                                  setEditingCategoryLabelId(null);
+                                }}
+                                onKeyDown={ev => {
+                                  if (ev.key === "Enter") ev.target.blur();
+                                  if (ev.key === "Escape") setEditingCategoryLabelId(null);
+                                }}
+                                style={{ fontSize: 14, fontWeight: FW.bold, color: COLORS.text, background: COLORS.containerLow, border: `1px solid ${COLORS.primary}`, borderRadius: 6, padding: "2px 6px", minWidth: 140, outline: "none", fontFamily: "inherit" }}
+                              />
+                            ) : (
+                              <span
+                                onDoubleClick={e => { e.stopPropagation(); setEditingCategoryLabelId(group.catId); }}
+                                title="Double-click to rename"
+                                style={{ fontSize: 14, fontWeight: FW.bold, color: COLORS.text, cursor: "text" }}
+                              >{group.label}</span>
+                            )}
                             {grpExp.length > 0 && <span style={{ fontSize: 11, color: COLORS.muted }}>({grpExp.length})</span>}
+                            {!isEditingLabel && (
+                              <button
+                                onClick={e => { e.stopPropagation(); setEditingCategoryLabelId(group.catId); }}
+                                title="Rename category"
+                                className="cat-rename-btn"
+                                style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: COLORS.muted, opacity: 0, transition: "opacity .15s", display: "inline-flex", alignItems: "center" }}
+                              >
+                                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>edit</span>
+                              </button>
+                            )}
+                            {group.custom && !isEditingLabel && (
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  if (!confirm(`Remove the "${group.label}" category? Expenses in it will become uncategorized.`)) return;
+                                  setCustomCategories(prev => prev.filter(c => c.catId !== group.catId));
+                                  setCategoryLabelOverrides(prev => { const { [group.catId]: _, ...rest } = prev; return rest; });
+                                  showToast(`Removed ${group.label}`, "✕");
+                                }}
+                                title="Remove category"
+                                className="cat-rename-btn"
+                                style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: COLORS.muted, opacity: 0, transition: "opacity .15s", display: "inline-flex", alignItems: "center" }}
+                              >
+                                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
+                              </button>
+                            )}
                           </div>
                           {/* cat column — empty */}
                           <span />
@@ -3120,6 +3270,26 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       </div>
                     );
                   })}
+
+                  {/* + Add category row */}
+                  <button
+                    onClick={() => {
+                      const name = prompt("New category name?");
+                      if (!name) return;
+                      const trimmed = name.trim();
+                      if (!trimmed) return;
+                      const catId = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+                      setCustomCategories(prev => [...prev, { catId, label: trimmed, icon: "label", templateItems: [] }]);
+                      setCollapsedCategories(prev => ({ ...prev, [catId]: false }));
+                      showToast(`Added "${trimmed}"`, "+");
+                    }}
+                    style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", background: "transparent", border: `1px dashed ${COLORS.border}`, borderRadius: 10, padding: "10px 14px", marginTop: 8, marginBottom: 6, cursor: "pointer", color: COLORS.subtext, fontSize: 13, fontWeight: FW.semibold, fontFamily: "inherit", transition: "background .15s, border-color .15s, color .15s" }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = COLORS.primary; e.currentTarget.style.color = COLORS.primary; e.currentTarget.style.background = "rgba(0,120,168,0.04)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = COLORS.border; e.currentTarget.style.color = COLORS.subtext; e.currentTarget.style.background = "transparent"; }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add_circle</span>
+                    Add category
+                  </button>
 
                   {/* Uncategorized / other expenses */}
                   {(() => {
