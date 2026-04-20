@@ -809,7 +809,15 @@ export default function App() {
     // Without this, the browser has no NEW target and the OLD modal snapshot
     // hangs on screen as a frozen glass rectangle.
     const idToMorph = activeBillIdRef.current;
-    if (idToMorph != null) flushSync(() => setMorphBillId(idToMorph));
+    // If we have no source to morph back into, just unmount normally — attempting
+    // a view transition with only an OLD snapshot would leave a frozen glass
+    // rectangle on screen (no NEW target to animate into).
+    if (idToMorph == null) {
+      setActiveBillDetail(null);
+      setMorphBillId(null);
+      return;
+    }
+    flushSync(() => setMorphBillId(idToMorph));
     try {
       const t = document.startViewTransition(() => { flushSync(() => setActiveBillDetail(null)); });
       t.finished.catch(() => {}).finally(() => setMorphBillId(null));
@@ -884,6 +892,7 @@ export default function App() {
   const [itemBudgets, setItemBudgets] = useState({});  // BUG #5: per-item planned amounts keyed by expense id or template label
   const [editingPlannedKey, setEditingPlannedKey] = useState(null); // id or template label being edited
   const [editingIncomeCell, setEditingIncomeCell] = useState(null); // { id, field } for income row editing
+  const [incomeCollapsed, setIncomeCollapsed] = useState(true);    // Income strip at top of Family Budget table — collapsed by default
   const [payBillConfirm, setPayBillConfirm] = useState(null);      // BUG #3: bill awaiting pay confirmation
   const [activeBillDetail, setActiveBillDetail] = useState(null);  // BUG #10: bill detail popover
   // Keep ref in sync so closeBillDetail (declared above) can read the open
@@ -2085,6 +2094,17 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         .cat-scroll::-webkit-scrollbar { display: none; }
         .cat-scroll { -ms-overflow-style: none; scrollbar-width: none; }
 
+        /* Family Budget — group + empty-row + add-btn interactions */
+        .budget-cat-group > .budget-row:hover { background: var(--c-glass-strong) !important; }
+        .budget-cat-group .cat-add-btn { opacity: 0; }
+        .budget-cat-group:hover .cat-add-btn { opacity: 1; }
+        .budget-cat-group .cat-add-btn:hover { border-color: rgba(0,120,168,0.5) !important; color: #0078a8 !important; }
+        .budget-cat-empty:hover { opacity: 1 !important; background: var(--c-glass) !important; }
+        .budget-cat-empty:hover button { background: rgba(0,120,168,0.08) !important; }
+        @media (hover: none) {
+          .budget-cat-group .cat-add-btn { opacity: 1; }
+        }
+
         /* Main scroll container — iOS/macOS-grade smoothness.
            - momentum scrolling on touch (iOS)
            - no rubber-band bleeding to body
@@ -2161,13 +2181,10 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             border-right: none !important;
           }
 
-          /* Family Budget — stack table (span-8) above sidebar (span-4) */
-          .budget-main-grid {
+          /* Family Budget — peer sections stack on mobile */
+          .budget-peer-grid {
             grid-template-columns: 1fr !important;
-            gap: 16px !important;
-          }
-          .budget-table-card, .budget-sidebar {
-            grid-column: span 1 !important;
+            gap: 14px !important;
           }
           .budget-table-card {
             padding: 16px !important;
@@ -2178,6 +2195,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           .budget-table-card .budget-row {
             min-width: 500px;
           }
+          .budget-cat-empty { min-width: 0 !important; }
 
           /* Monthly Insights — single column chart rows */
           .insights-two-col {
@@ -2817,15 +2835,15 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           })();
           return (
             <div style={{ paddingBottom: 48 }}>
-              {/* ── Hero 195 Metric Band ── */}
+              {/* ── Hero: Metrics + Status + Progress ── */}
               {(() => {
                 const remaining = viewTotalIncome - totalActual;
                 const budgetMetrics = [
-                  { label: "Monthly Income",  val: fmt(viewTotalIncome), color: COLORS.success },
-                  { label: "Planned Budget",  val: totalPlanned > 0 ? fmt(totalPlanned) : "—", color: COLORS.primary },
-                  { label: "Spent",           val: fmt(totalActual),     color: COLORS.accentWarm },
-                  { label: "Remaining",       val: remaining >= 0 ? fmt(remaining) : "−" + fmt(Math.abs(remaining)), color: remaining >= 0 ? COLORS.success : COLORS.danger },
-                  { label: "Status",          val: healthStatus.label,   color: healthStatus.color },
+                  { label: "Monthly Income",  val: fmt(viewTotalIncome), color: COLORS.success, isStatus: false },
+                  { label: "Planned Budget",  val: totalPlanned > 0 ? fmt(totalPlanned) : "—", color: COLORS.primary, isStatus: false },
+                  { label: "Spent",           val: fmt(totalActual),     color: COLORS.accentWarm, isStatus: false },
+                  { label: "Remaining",       val: remaining >= 0 ? fmt(remaining) : "−" + fmt(Math.abs(remaining)), color: remaining >= 0 ? COLORS.success : COLORS.danger, isStatus: false },
+                  { label: "Status",          val: healthStatus.label,   color: healthStatus.color, isStatus: true },
                 ];
                 return (
                   <div style={{ background: "var(--c-glass)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 24, padding: "24px 28px", boxShadow: "0 8px 40px rgba(0,0,0,0.07), inset 0 1px 0 var(--c-glass-inset)", marginBottom: 20, position: "relative", overflow: "hidden" }}>
@@ -2836,70 +2854,111 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         return (
                           <div key={m.label} style={{ paddingRight: isLast ? 0 : 20, marginRight: isLast ? 0 : 20, borderRight: isLast ? "none" : "1px solid var(--c-glass-hairline)" }}>
                             <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>{m.label}</p>
-                            <p style={{ fontSize: 22, fontWeight: FW.extrabold, color: m.color, fontFamily: "var(--font-num)", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', lineHeight: 1.1 }}>{m.val}</p>
-                            {i === 4 && isCurrentMonth && daysLeft > 0 && (
+                            {m.isStatus ? (
+                              <button onClick={() => { setAdvisorMsg(`My budget health: ${healthStatus.label}. I've spent ${fmt(totalActual)} of ${fmt(viewTotalIncome)} income (${pctSpent}%). ${isCurrentMonth ? `${daysLeft} days left in the month.` : ""} Please give me specific advice.`); pendingAdvisorSend.current = true; navigateToTab("advisor"); }} title="Ask AI for advice" style={{ fontSize: 14, fontWeight: FW.extrabold, color: healthStatus.color, background: healthStatus.bg, border: "none", borderRadius: 10, padding: "6px 12px", cursor: "pointer", fontFamily: "var(--font-num)", letterSpacing: "-0.01em", lineHeight: 1.1, display: "inline-block" }}>{m.val}</button>
+                            ) : (
+                              <p style={{ fontSize: 22, fontWeight: FW.extrabold, color: m.color, fontFamily: "var(--font-num)", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', lineHeight: 1.1 }}>{m.val}</p>
+                            )}
+                            {m.isStatus && isCurrentMonth && daysLeft > 0 && (
                               <p style={{ fontSize: 11, color: COLORS.muted, marginTop: 5 }}>{daysLeft} {daysLeft === 1 ? "day" : "days"} left</p>
                             )}
                           </div>
                         );
                       })}
                     </div>
-                    {showCopyButton && (
-                      <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--c-glass-hairline)" }}>
-                        <button onClick={() => { if (Object.values(prevMonthExpBudgets).some(v => v > 0)) setViewExpenseBudgets({ ...prevMonthExpBudgets }); if (Object.keys(prevMonthItemBudgets).length > 0) setItemBudgets(p => ({...p, [viewMonthKey]: {...prevMonthItemBudgets}})); }} style={{ background: "rgba(0,103,136,0.08)", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: FW.semibold, color: COLORS.primary, cursor: "pointer" }}>
-                          Copy planned amounts from {MONTH_NAMES[new Date(prevY, prevM0 - 1, 1).getMonth()]}
-                        </button>
+                    {/* Progress bar + preset controls */}
+                    <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--c-glass-hairline)" }}>
+                      <BudgetBar totalIncome={viewTotalIncome} totalPlanned={totalPlanned} totalSpent={totalActual} hideLabel />
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14, gap: 12, flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                          <button onClick={() => {
+                            if (!toggle5020) {
+                              if (viewTotalIncome === 0) { setToast5020("Add income first to use the 50/30/20 rule"); setTimeout(() => setToast5020(""), 3000); return; }
+                              pre5020Budgets.current = { ...viewExpenseBudgets };
+                              pre5020Savings.current = savingsItems.map(s => ({ ...s }));
+                              const inc = viewTotalIncome;
+                              const needsAmt = Math.round(inc * 0.50 / 5);
+                              const wantsAmt = Math.round(inc * 0.30 / 6);
+                              const savesAmt = Math.round(inc * 0.20 / 2);
+                              setViewExpenseBudgets({
+                                Housing: needsAmt, Utilities: needsAmt, Food: needsAmt, Transport: needsAmt, Health: needsAmt,
+                                Entertainment: wantsAmt, Personal: wantsAmt, Kids: wantsAmt, Education: wantsAmt, Subscriptions: wantsAmt, Travel: wantsAmt,
+                                Other: savesAmt, Savings: savesAmt
+                              });
+                              if (savingsItems.length > 0) setSavingsItems(p => [{ ...p[0], expected: Math.round(inc*0.20) }, ...p.slice(1)]);
+                              setToggle5020(true);
+                            } else {
+                              if (pre5020Budgets.current) setViewExpenseBudgets(pre5020Budgets.current);
+                              if (pre5020Savings.current) setSavingsItems(pre5020Savings.current);
+                              pre5020Budgets.current = null; pre5020Savings.current = null;
+                              setToggle5020(false);
+                            }
+                          }} style={{ fontSize: 11, fontWeight: FW.bold, background: toggle5020 ? COLORS.primary : "transparent", color: toggle5020 ? "#fff" : COLORS.primary, border: `1.5px solid ${COLORS.primary}`, borderRadius: 9999, padding: "4px 12px", cursor: "pointer", transition: "all .2s" }}>
+                            50/30/20 Rule {toggle5020 ? "ON" : "OFF"}
+                          </button>
+                          {toggle5020 && viewTotalIncome > 0 && <span style={{ fontSize: 11, color: COLORS.muted }}>Based on {fmt(viewTotalIncome)} income</span>}
+                          {toast5020 && <span style={{ fontSize: 11, color: COLORS.warning, fontWeight: FW.semibold }}>{toast5020}</span>}
+                        </div>
+                        {showCopyButton && (
+                          <button onClick={() => { if (Object.values(prevMonthExpBudgets).some(v => v > 0)) setViewExpenseBudgets({ ...prevMonthExpBudgets }); if (Object.keys(prevMonthItemBudgets).length > 0) setItemBudgets(p => ({...p, [viewMonthKey]: {...prevMonthItemBudgets}})); }} style={{ background: "rgba(0,103,136,0.08)", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: FW.semibold, color: COLORS.primary, cursor: "pointer" }}>
+                            Copy planned amounts from {MONTH_NAMES[new Date(prevY, prevM0 - 1, 1).getMonth()]}
+                          </button>
+                        )}
                       </div>
-                    )}
+                      {!onboardingDismissed && plannedCount < 5 && (
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, background: `rgba(0,103,136,0.07)`, borderRadius: 10, padding: "9px 14px" }}>
+                          <span style={{ fontSize: 12, color: COLORS.primary }}>👋 Set your planned amounts to unlock full budget tracking — click any <strong>—</strong> in the Planned column.</span>
+                          <button onClick={() => setOnboardingDismissed(true)} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 14, padding: "0 4px" }}>×</button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })()}
-              {/* ── Main grid ── */}
-              <div className="budget-main-grid" style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 24 }}>
-                {/* ── Spending Plan Table (col-8) ── */}
-                <div className="budget-table-card" style={{ gridColumn: "span 8", background: "var(--c-glass)", backdropFilter: "blur(28px) saturate(180%)", WebkitBackdropFilter: "blur(28px) saturate(180%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 20, padding: 28, boxShadow: "0 4px 24px var(--c-glass-hairline), inset 0 1px 0 var(--c-glass-inset)" }}>
-                  {/* ── Unified Budget Status Bar ── */}
-                  <div style={{ paddingBottom: 14, marginBottom: 14, borderBottom: "0.5px solid rgba(172,179,181,0.3)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <button onClick={() => { setAdvisorMsg(`My budget health: ${healthStatus.label}. I've spent ${fmt(totalActual)} of ${fmt(viewTotalIncome)} income (${pctSpent}%). ${isCurrentMonth ? `${daysLeft} days left in the month.` : ""} Please give me specific advice.`); pendingAdvisorSend.current = true; navigateToTab("advisor"); }} style={{ fontSize: 11, fontWeight: FW.bold, color: healthStatus.color, background: healthStatus.bg, border: "none", borderRadius: 9999, padding: "3px 10px", cursor: "pointer" }}>{healthStatus.label}</button>
-                    </div>
-                    <BudgetBar totalIncome={viewTotalIncome} totalPlanned={totalPlanned} totalSpent={totalActual} hideLabel />
-                    {/* 50/30/20 toggle row */}
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <button onClick={() => {
-                          if (!toggle5020) {
-                            if (viewTotalIncome === 0) { setToast5020("Add income first to use the 50/30/20 rule"); setTimeout(() => setToast5020(""), 3000); return; }
-                            pre5020Budgets.current = { ...viewExpenseBudgets };
-                            pre5020Savings.current = savingsItems.map(s => ({ ...s }));
-                            const inc = viewTotalIncome;
-                            const needsAmt = Math.round(inc * 0.50 / 5);
-                            const wantsAmt = Math.round(inc * 0.30 / 6);
-                            const savesAmt = Math.round(inc * 0.20 / 2);
-                            setViewExpenseBudgets({
-                              Housing: needsAmt, Utilities: needsAmt, Food: needsAmt, Transport: needsAmt, Health: needsAmt,
-                              Entertainment: wantsAmt, Personal: wantsAmt, Kids: wantsAmt, Education: wantsAmt, Subscriptions: wantsAmt, Travel: wantsAmt,
-                              Other: savesAmt, Savings: savesAmt
-                            });
-                            if (savingsItems.length > 0) setSavingsItems(p => [{ ...p[0], expected: Math.round(inc*0.20) }, ...p.slice(1)]);
-                            setToggle5020(true);
-                          } else {
-                            if (pre5020Budgets.current) setViewExpenseBudgets(pre5020Budgets.current);
-                            if (pre5020Savings.current) setSavingsItems(pre5020Savings.current);
-                            pre5020Budgets.current = null; pre5020Savings.current = null;
-                            setToggle5020(false);
-                          }
-                        }} style={{ fontSize: 11, fontWeight: FW.bold, background: toggle5020 ? COLORS.primary : "none", color: toggle5020 ? "#fff" : COLORS.primary, border: `1.5px solid ${COLORS.primary}`, borderRadius: 9999, padding: "3px 12px", cursor: "pointer", transition: "all .2s" }}>
-                          50/30/20 Rule {toggle5020 ? "ON" : "OFF"}
+              {/* ── Main card (full-width) ── */}
+              <div className="budget-main-grid">
+                <div className="budget-table-card" style={{ background: "var(--c-glass)", backdropFilter: "blur(28px) saturate(180%)", WebkitBackdropFilter: "blur(28px) saturate(180%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 20, padding: 28, boxShadow: "0 4px 24px var(--c-glass-hairline), inset 0 1px 0 var(--c-glass-inset)", marginBottom: 20 }}>
+                  {/* ── Income strip (collapsible) ── */}
+                  <div style={{ marginBottom: 18, padding: "12px 14px", background: "rgba(192,232,255,0.22)", border: "1px solid rgba(0,103,136,0.12)", borderRadius: 12, position: "relative", overflow: "hidden" }}>
+                    <div onClick={() => setIncomeCollapsed(p => !p)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.muted, transition: "transform .24s cubic-bezier(0.34, 1.35, 0.64, 1)", transform: incomeCollapsed ? "rotate(-90deg)" : "rotate(0deg)" }}>expand_more</span>
+                        <div style={{ padding: "4px 6px", background: "rgba(23,102,132,0.12)", borderRadius: 7 }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 14, color: COLORS.secondary }}>trending_up</span>
+                        </div>
+                        <span style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.text }}>Income</span>
+                        <span style={{ fontSize: 11, color: COLORS.muted }}>({viewIncome.length} {viewIncome.length === 1 ? "source" : "sources"})</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span style={{ fontSize: 18, fontWeight: FW.extrabold, color: COLORS.secondary, fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: "-0.02em" }}>{fmt(viewTotalIncome)}</span>
+                        <button onClick={(e) => { e.stopPropagation(); setModal("addIncome"); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex" }} title="Add income source">
+                          <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.primary }}>add_circle</span>
                         </button>
-                        {toggle5020 && viewTotalIncome > 0 && <span style={{ fontSize: 11, color: COLORS.muted }}>Based on {fmt(viewTotalIncome)} income</span>}
-                        {toast5020 && <span style={{ fontSize: 11, color: COLORS.warning, fontWeight: FW.semibold }}>{toast5020}</span>}
                       </div>
                     </div>
-                    {!onboardingDismissed && plannedCount < 5 && (
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, background: `rgba(0,103,136,0.07)`, borderRadius: 8, padding: "8px 12px" }}>
-                        <span style={{ fontSize: 12, color: COLORS.primary }}>👋 Set your planned amounts to unlock full budget tracking — click any <strong>—</strong> in the Planned column.</span>
-                        <button onClick={() => setOnboardingDismissed(true)} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 14, padding: "0 4px" }}>×</button>
+                    {!incomeCollapsed && (
+                      <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(23,102,132,0.12)", display: "flex", flexDirection: "column", gap: 5 }}>
+                        {viewIncome.length === 0 && (
+                          <p style={{ fontSize: 12, color: COLORS.muted, margin: "4px 0" }}>No income sources yet. Tap + to add one.</p>
+                        )}
+                        {viewIncome.map(i => (
+                          <div key={i.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: 14, color: COLORS.subtext, flexShrink: 0 }}>work</span>
+                              {editingIncomeCell?.id === i.id && editingIncomeCell?.field === "label"
+                                ? <input autoFocus value={i.label} onChange={e => updateIncomeField(i.id, "label", e.target.value)} onBlur={() => setEditingIncomeCell(null)} onKeyDown={e => { if (e.key === "Enter") setEditingIncomeCell(null); }} style={{ flex:1, background:COLORS.containerLow, border:"none", borderRadius:6, padding:"2px 6px", fontSize:12, color:COLORS.text, outline:"none" }} />
+                                : <span onClick={() => setEditingIncomeCell({id:i.id, field:"label"})} title="Click to edit" style={{ fontSize: 12, fontWeight: FW.medium, color: COLORS.text, cursor:"text", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{i.label}{i.recurring ? " ↺" : ""}</span>
+                              }
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                              {editingIncomeCell?.id === i.id && editingIncomeCell?.field === "amount"
+                                ? <input autoFocus type="number" defaultValue={i.amount} onBlur={e => { updateIncomeField(i.id, "amount", e.target.value); setEditingIncomeCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }} style={{ width:80, background:COLORS.containerLow, border:"none", borderRadius:6, padding:"2px 6px", fontSize:13, color:COLORS.text, outline:"none" }} />
+                                : <span onClick={() => setEditingIncomeCell({id:i.id, field:"amount"})} title="Click to edit" style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.secondary, cursor:"text", fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: "-0.01em" }}>+{fmt(i.amount)}</span>
+                              }
+                              <button onClick={() => deleteIncomeFromView(i.id)} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -2931,21 +2990,44 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     const isCollapsed = collapsedCategories[group.catId];
                     const util = effectivePlanned > 0 ? Math.round((grpActual / effectivePlanned) * 100) : null;
                     const utilColor = util === null ? COLORS.muted : util > 100 ? COLORS.danger : util >= 80 ? COLORS.warning : COLORS.success;
+                    const accentColor = util === null ? "rgba(0,0,0,0)" : utilColor;
                     const usedLabels = grpExp.map(e => e.label.toLowerCase());
                     const unusedTemplates = group.templateItems.filter(t => !usedLabels.some(l => l.includes(t.split(/[/(]/)[0].trim().toLowerCase())));
+                    // Fix C: empty category (no expenses, no planned) renders as one compact row
+                    const isEmptyCategory = grpExp.length === 0 && grpPlanned === 0;
 
-                    return (
-                      <div key={group.catId} style={{ marginBottom: 6 }}>
-                        {/* Group header — uses same grid as rows */}
-                        <div className="budget-row" onClick={() => setCollapsedCategories(p => ({ ...p, [group.catId]: !p[group.catId] }))}
-                          style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, alignItems: "center", padding: "9px 12px", background: util >= 100 ? COLORS.danger + "12" : util >= 80 ? COLORS.warning + "12" : "var(--c-glass)", borderRadius: 10, cursor: "pointer", marginBottom: isCollapsed ? 0 : 6, border: util >= 100 ? `1px solid ${COLORS.danger}30` : util >= 80 ? `1px solid ${COLORS.warning}30` : "1px solid var(--c-glass-border)" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    if (isEmptyCategory) {
+                      return (
+                        <div key={group.catId} className="budget-cat-empty" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 12px 6px 10px", borderLeft: `3px solid var(--c-glass-hairline)`, background: "transparent", borderRadius: 4, marginBottom: 2, opacity: 0.72, transition: "opacity .15s, background .15s" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
                             <div style={{ width: 28, height: 28, borderRadius: 8, background: CATEGORY_ICON_BG[group.catId] || COLORS.neutral, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                               <span className="material-symbols-outlined" style={{ fontSize: 15, color: CATEGORY_ICON_COLOR[group.catId] || COLORS.subtext }}>{CATEGORY_ICONS[group.catId] || "category"}</span>
                             </div>
-                            <span style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.text }}>{group.label}</span>
+                            <span style={{ fontSize: 13, fontWeight: FW.semibold, color: COLORS.subtext }}>{group.label}</span>
+                            <span style={{ fontSize: 11, color: COLORS.muted }}>—</span>
+                          </div>
+                          <button onClick={() => { setNewExp(p => ({ ...p, label: "", category: group.catId })); setModal("addExpense"); }}
+                            style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.primary, fontSize: 12, fontWeight: FW.semibold, padding: "4px 8px", borderRadius: 6, display: "flex", alignItems: "center", gap: 4 }} title={`Add ${group.label} item`}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add</span>Add
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div key={group.catId} className="budget-cat-group" style={{ marginBottom: 6, position: "relative" }}>
+                        {/* Left accent bar — colored by utilization */}
+                        <div aria-hidden="true" style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: accentColor, borderRadius: 2, opacity: util === null ? 0 : 1, transition: "background .2s, opacity .2s" }} />
+                        {/* Group header — chevron on LEFT next to larger icon */}
+                        <div className="budget-row" onClick={() => setCollapsedCategories(p => ({ ...p, [group.catId]: !p[group.catId] }))}
+                          style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, alignItems: "center", padding: "10px 12px 10px 14px", background: "var(--c-glass)", borderRadius: 10, cursor: "pointer", marginBottom: isCollapsed ? 0 : 6, border: "1px solid var(--c-glass-border)", transition: "background .15s" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 18, color: COLORS.muted, transition: "transform .3s cubic-bezier(0.34, 1.35, 0.64, 1)", transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)", flexShrink: 0 }}>expand_more</span>
+                            <div style={{ width: 36, height: 36, borderRadius: 10, background: CATEGORY_ICON_BG[group.catId] || COLORS.neutral, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: 19, color: CATEGORY_ICON_COLOR[group.catId] || COLORS.subtext }}>{CATEGORY_ICONS[group.catId] || "category"}</span>
+                            </div>
+                            <span style={{ fontSize: 14, fontWeight: FW.bold, color: COLORS.text }}>{group.label}</span>
                             {grpExp.length > 0 && <span style={{ fontSize: 11, color: COLORS.muted }}>({grpExp.length})</span>}
-                            <div style={{ width: 7, height: 7, borderRadius: "50%", background: utilColor, flexShrink: 0 }} title={util === null ? "No budget set" : util > 100 ? "Over budget" : util >= 80 ? "Near limit" : "On track"} />
                           </div>
                           {/* cat column — empty */}
                           <span />
@@ -2953,24 +3035,24 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           <span />
                           {/* planned — editable category budget, auto-sum from items shown when available */}
                           {grpItemsPlannedSum > 0
-                            ? <span title={`Auto-sum of ${grpExp.length} item budgets${grpPlanned > 0 ? ` (category cap: ${fmt(grpPlanned)})` : ""}`} style={{ fontSize: 12, fontWeight: FW.bold, color: COLORS.subtext, display: "flex", alignItems: "center", gap: 4 }}>
+                            ? <span title={`Auto-sum of ${grpExp.length} item budgets${grpPlanned > 0 ? ` (category cap: ${fmt(grpPlanned)})` : ""}`} style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.subtext, fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: "-0.01em", display: "flex", alignItems: "center", gap: 4 }}>
                                 {fmt(grpItemsPlannedSum)}
-                                <span style={{ fontSize: 9, color: COLORS.muted, background: COLORS.containerHigh, borderRadius: 3, padding: "1px 4px" }}>Σ</span>
+                                <span style={{ fontSize: 9, color: COLORS.muted, background: COLORS.containerHigh, borderRadius: 3, padding: "1px 4px", fontFamily: "inherit" }}>Σ</span>
                               </span>
                             : editingPlannedKey === `cat-${group.catId}`
-                              ? <input autoFocus type="number" placeholder="0" defaultValue={grpPlanned || ""} onClick={e => e.stopPropagation()} onBlur={ev => { const v = parseFloat(ev.target.value) || 0; setViewExpenseBudgets(prev => ({ ...prev, [group.catId]: v })); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); if (ev.key === "Escape") setEditingPlannedKey(null); }} style={{ width:"100%", background:COLORS.containerLow, border:`1px solid ${COLORS.primary}`, borderRadius:6, padding:"3px 6px", fontSize:12, color:COLORS.text, outline:"none" }} />
-                              : <span onClick={e => { e.stopPropagation(); setEditingPlannedKey(`cat-${group.catId}`); }} title="Click to edit category budget" style={{ fontSize: 12, fontWeight: FW.bold, color: grpPlanned > 0 ? COLORS.subtext : COLORS.muted, cursor: "text", borderRadius: 4, padding: "2px 4px" }}>{viewExpenseBudgets[group.catId] != null ? fmt(grpPlanned) : <span style={{ display:"flex", alignItems:"center", gap:3 }}>—<span style={{ fontSize:9, opacity:0.5 }}>✏</span></span>}</span>
+                              ? <input autoFocus type="number" placeholder="0" defaultValue={grpPlanned || ""} onClick={e => e.stopPropagation()} onBlur={ev => { const v = parseFloat(ev.target.value) || 0; setViewExpenseBudgets(prev => ({ ...prev, [group.catId]: v })); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); if (ev.key === "Escape") setEditingPlannedKey(null); }} style={{ width:"100%", background:COLORS.containerLow, border:`1px solid ${COLORS.primary}`, borderRadius:6, padding:"3px 6px", fontSize:13, color:COLORS.text, outline:"none" }} />
+                              : <span onClick={e => { e.stopPropagation(); setEditingPlannedKey(`cat-${group.catId}`); }} title="Click to edit category budget" style={{ fontSize: 13, fontWeight: FW.bold, color: grpPlanned > 0 ? COLORS.subtext : COLORS.muted, cursor: "text", borderRadius: 4, padding: "2px 4px", fontFamily: grpPlanned > 0 ? "var(--font-num)" : "inherit", fontVariantNumeric: "tabular-nums", letterSpacing: grpPlanned > 0 ? "-0.01em" : "normal" }}>{viewExpenseBudgets[group.catId] != null ? fmt(grpPlanned) : <span style={{ display:"flex", alignItems:"center", gap:4 }}>—<span className="material-symbols-outlined" style={{ fontSize:13, color: COLORS.primary, opacity: 0.6 }}>edit</span></span>}</span>
                           }
                           {/* actual */}
-                          <span style={{ fontSize: 12, fontWeight: FW.bold, color: utilColor }}>{grpActual > 0 ? fmt(grpActual) : "—"}</span>
+                          <span style={{ fontSize: 13, fontWeight: FW.bold, color: utilColor, fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: "-0.01em" }}>{grpActual > 0 ? fmt(grpActual) : "—"}</span>
                           {/* variance */}
-                          {(() => { const left = effectivePlanned - grpActual; const showDash = effectivePlanned === 0 && grpActual === 0; return <span style={{ fontSize: 12, fontWeight: FW.bold, color: showDash ? COLORS.muted : left >= 0 ? COLORS.success : COLORS.danger }}>{showDash ? "—" : left > 0 ? `+${fmt(left)}` : fmt(left)}</span>; })()}
-                          {/* actions col — chevron */}
-                          <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.muted, transition: "transform .2s", transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)", textAlign: "center" }}>expand_more</span>
+                          {(() => { const left = effectivePlanned - grpActual; const showDash = effectivePlanned === 0 && grpActual === 0; return <span style={{ fontSize: 13, fontWeight: FW.bold, color: showDash ? COLORS.muted : left >= 0 ? COLORS.success : COLORS.danger, fontFamily: showDash ? "inherit" : "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: showDash ? "normal" : "-0.01em" }}>{showDash ? "—" : left > 0 ? `+${fmt(left)}` : fmt(left)}</span>; })()}
+                          {/* actions col — empty (chevron moved left) */}
+                          <span />
                         </div>
 
                         {!isCollapsed && (
-                          <div style={{ marginLeft: 8, paddingLeft: 8, marginBottom: 4 }}>
+                          <div style={{ marginLeft: 44, marginBottom: 4 }}>
                             {/* Existing expense rows */}
                             {grpExp.map(e => {
                               const expPlanned = monthItemBudgets[`exp-${e.id}`] || 0;
@@ -2992,11 +3074,11 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                                 <span style={{ fontSize: 11, fontWeight: FW.semibold, color: e.fixed ? COLORS.subtext : COLORS.muted, background: e.fixed ? COLORS.containerHigh : COLORS.containerLow, borderRadius: 9999, padding: "2px 7px", justifySelf: "start" }}>{e.fixed ? "Fixed" : "Variable"}</span>
                                 <EditableDate id={e.id} field="date" value={displayDate} />
                                 {editingPlannedKey === `exp-${e.id}`
-                                  ? <input autoFocus type="number" placeholder="0" defaultValue={expPlanned || ""} onBlur={ev => { const v = parseFloat(ev.target.value) || 0; if (v) setMonthItemBudget(`exp-${e.id}`, v); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); if (ev.key === "Escape") setEditingPlannedKey(null); }} style={{ width:"100%", background:COLORS.containerLow, border:`1px solid ${COLORS.primary}`, borderRadius:6, padding:"3px 6px", fontSize:12, color:COLORS.text, outline:"none" }} />
-                                  : <span onClick={() => setEditingPlannedKey(`exp-${e.id}`)} title="Click to set planned budget" style={{ fontSize: 12, color: expPlanned ? COLORS.subtext : COLORS.muted, cursor: "text", display:"block", borderRadius:4, padding:"2px 4px" }}>{expPlanned ? fmt(expPlanned) : <span style={{ display:"flex", alignItems:"center", gap:3 }}>—<span style={{ fontSize:9, opacity:0.5 }}>✏</span></span>}</span>
+                                  ? <input autoFocus type="number" placeholder="0" defaultValue={expPlanned || ""} onBlur={ev => { const v = parseFloat(ev.target.value) || 0; if (v) setMonthItemBudget(`exp-${e.id}`, v); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); if (ev.key === "Escape") setEditingPlannedKey(null); }} style={{ width:"100%", background:COLORS.containerLow, border:`1px solid ${COLORS.primary}`, borderRadius:6, padding:"3px 6px", fontSize:13, color:COLORS.text, outline:"none" }} />
+                                  : <span onClick={() => setEditingPlannedKey(`exp-${e.id}`)} title="Click to set planned budget" style={{ fontSize: 13, color: expPlanned ? COLORS.subtext : COLORS.muted, cursor: "text", display: "inline-flex", alignItems: "center", gap: 4, borderRadius:4, padding:"2px 4px", fontFamily: expPlanned ? "var(--font-num)" : "inherit", fontVariantNumeric: "tabular-nums", fontWeight: expPlanned ? FW.semibold : 400, letterSpacing: expPlanned ? "-0.01em" : "normal" }}>{expPlanned ? fmt(expPlanned) : <><span>—</span><span className="material-symbols-outlined" style={{ fontSize:13, color: COLORS.primary, opacity: 0.55 }}>edit</span></>}</span>
                                 }
                                 <EditableNum id={e.id} field="amount" value={e.amount} />
-                                <span style={{ fontSize: 12, fontWeight: FW.bold, color: expVar === null ? COLORS.muted : expVar >= 0 ? COLORS.success : COLORS.danger }}>
+                                <span style={{ fontSize: 13, fontWeight: FW.bold, color: expVar === null ? COLORS.muted : expVar >= 0 ? COLORS.success : COLORS.danger, fontFamily: expVar === null ? "inherit" : "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: expVar === null ? "normal" : "-0.01em" }}>
                                   {expVar === null ? "—" : expVar > 0 ? `+${fmt(expVar)}` : fmt(expVar)}
                                 </span>
                                 <div style={{ display: "flex", gap: 2 }}>
@@ -3016,8 +3098,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                                 <span style={{ fontSize: 11, color: COLORS.muted }}>—</span>
                                 <span style={{ fontSize: 12, color: COLORS.muted }}>—</span>
                                 {editingPlannedKey === tKey
-                                  ? <input autoFocus type="number" placeholder="Budget amt" onBlur={ev => { const v = parseFloat(ev.target.value) || 0; if (v) setMonthItemBudget(tKey, v); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); if (ev.key === "Escape") setEditingPlannedKey(null); }} style={{ width:"100%", background:COLORS.containerLow, border:`1px solid ${COLORS.primary}`, borderRadius:6, padding:"3px 6px", fontSize:12, color:COLORS.text, outline:"none" }} />
-                                  : <span onClick={() => setEditingPlannedKey(tKey)} title="Click to set planned budget" style={{ fontSize: 12, color: monthItemBudgets[tKey] ? COLORS.subtext : COLORS.muted, cursor: "text", display:"block", borderRadius:4, padding:"2px 4px" }}>{monthItemBudgets[tKey] ? fmt(monthItemBudgets[tKey]) : "—"}</span>
+                                  ? <input autoFocus type="number" placeholder="Budget amt" onBlur={ev => { const v = parseFloat(ev.target.value) || 0; if (v) setMonthItemBudget(tKey, v); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); if (ev.key === "Escape") setEditingPlannedKey(null); }} style={{ width:"100%", background:COLORS.containerLow, border:`1px solid ${COLORS.primary}`, borderRadius:6, padding:"3px 6px", fontSize:13, color:COLORS.text, outline:"none" }} />
+                                  : <span onClick={() => setEditingPlannedKey(tKey)} title="Click to set planned budget" style={{ fontSize: 13, color: monthItemBudgets[tKey] ? COLORS.subtext : COLORS.muted, cursor: "text", display:"block", borderRadius:4, padding:"2px 4px", fontFamily: monthItemBudgets[tKey] ? "var(--font-num)" : "inherit", fontVariantNumeric: "tabular-nums", letterSpacing: monthItemBudgets[tKey] ? "-0.01em" : "normal" }}>{monthItemBudgets[tKey] ? fmt(monthItemBudgets[tKey]) : "—"}</span>
                                 }
                                 <span style={{ fontSize: 12, color: COLORS.muted }}>—</span>
                                 <span style={{ fontSize: 12, color: COLORS.muted }}>—</span>
@@ -3028,9 +3110,9 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                               </div>
                               );
                             })}
-                            {/* Add row button */}
-                            <button onClick={() => { setNewExp(p => ({ ...p, label: "", category: group.catId })); setModal("addExpense"); }}
-                              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: `1px dashed ${COLORS.border}`, borderRadius: 8, padding: "5px 12px", cursor: "pointer", color: COLORS.muted, fontSize: 12, marginTop: 4 }}>
+                            {/* Add row button — appears on group hover */}
+                            <button className="cat-add-btn" onClick={() => { setNewExp(p => ({ ...p, label: "", category: group.catId })); setModal("addExpense"); }}
+                              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: `1px dashed ${COLORS.border}`, borderRadius: 8, padding: "5px 12px", cursor: "pointer", color: COLORS.muted, fontSize: 12, marginTop: 4, transition: "opacity .18s, border-color .18s, color .18s" }}>
                               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add</span>Add {group.label} item
                             </button>
                           </div>
@@ -3066,118 +3148,50 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   })()}
                 </div>
 
-                {/* ── Right sidebar (col-4) ── */}
-                <div className="budget-sidebar" style={{ gridColumn: "span 4", display: "flex", flexDirection: "column", gap: 14 }}>
-                  {/* Income card */}
-                  <div style={{ background: "rgba(192,232,255,0.3)", borderRadius: 16, padding: "16px 18px", border: `1px solid rgba(0,103,136,0.12)`, position: "relative", overflow: "hidden" }}>
-                    <BorderBeam size={200} duration={18} colorFrom={COLORS.secondary} colorTo={COLORS.primary} borderWidth={1.2} />
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{ padding: "5px 7px", background: "rgba(23,102,132,0.12)", borderRadius: 8 }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.secondary }}>trending_up</span>
-                        </div>
-                        <span style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.text }}>Income</span>
-                      </div>
-                      <button onClick={() => setModal("addIncome")} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.primary }}>add_circle</span>
-                      </button>
-                    </div>
-                    {viewIncome.map(i => (
-                      <div key={i.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: 14, color: COLORS.subtext, flexShrink: 0 }}>work</span>
-                          {editingIncomeCell?.id === i.id && editingIncomeCell?.field === "label"
-                            ? <input autoFocus value={i.label} onChange={e => updateIncomeField(i.id, "label", e.target.value)} onBlur={() => setEditingIncomeCell(null)} onKeyDown={e => { if (e.key === "Enter") setEditingIncomeCell(null); }} style={{ flex:1, background:COLORS.containerLow, border:"none", borderRadius:6, padding:"2px 6px", fontSize:12, color:COLORS.text, outline:"none" }} />
-                            : <span onClick={() => setEditingIncomeCell({id:i.id, field:"label"})} title="Click to edit" style={{ fontSize: 12, fontWeight: FW.medium, color: COLORS.text, cursor:"text", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{i.label}{i.recurring ? " ↺" : ""}</span>
-                          }
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                          {editingIncomeCell?.id === i.id && editingIncomeCell?.field === "amount"
-                            ? <input autoFocus type="number" defaultValue={i.amount} onBlur={e => { updateIncomeField(i.id, "amount", e.target.value); setEditingIncomeCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }} style={{ width:80, background:COLORS.containerLow, border:"none", borderRadius:6, padding:"2px 6px", fontSize:13, color:COLORS.text, outline:"none" }} />
-                            : <span onClick={() => setEditingIncomeCell({id:i.id, field:"amount"})} title="Click to edit" style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.secondary, cursor:"text" }}>+{fmt(i.amount)}</span>
-                          }
-                          <button onClick={() => deleteIncomeFromView(i.id)} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>
-                        </div>
-                      </div>
-                    ))}
-                    <div style={{ borderTop: `1px solid rgba(23,102,132,0.15)`, marginTop: 8, paddingTop: 10, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-                      <span style={{ fontSize: 11, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>Total Monthly</span>
-                      <span style={{ fontSize: 32, fontWeight: FW.extrabold, color: COLORS.secondary, fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: "-0.04em", lineHeight: 1 }}>{fmt(viewTotalIncome)}</span>
-                    </div>
-                  </div>
-                  {/* Bills summary card — links to Bill Calendar */}
-                  <div style={{ background: "rgba(97,205,253,0.12)", borderRadius: 16, padding: "16px 18px", border: `1px solid rgba(0,103,136,0.12)` }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.primary }}>receipt_long</span>
-                        <span style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.text }}>Bills</span>
-                      </div>
-                      <button onClick={() => navigateToTab("weekly")} style={{ fontSize: 11, fontWeight: FW.bold, color: COLORS.primary, background: "none", border: "none", cursor: "pointer" }}>Manage →</button>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <div><p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 2 }}>Total</p><p style={{ fontSize: 15, fontWeight: FW.extrabold, color: COLORS.text }}>{fmt(billsBudgetTotal)}</p></div>
-                      <div style={{ textAlign: "right" }}><p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 2 }}>Paid</p><p style={{ fontSize: 15, fontWeight: FW.extrabold, color: COLORS.success }}>{fmt(billsActualTotal)}</p></div>
-                      <div style={{ textAlign: "right" }}><p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 2 }}>Remaining</p><p style={{ fontSize: 15, fontWeight: FW.extrabold, color: COLORS.warning }}>{fmt(billsBudgetTotal - billsActualTotal)}</p></div>
-                    </div>
-                    {bills.length === 0 && (
-                      <p style={{ fontSize: 12, color: COLORS.muted, marginTop: 8 }}>No bills added yet. Add your first bill on the Bill Calendar.</p>
-                    )}
-                  </div>
-                  {/* Debt Payoff Plan button — links to AI Advisor */}
-                  <button
-                    onClick={() => {
-                      setAdvisorMsg(`Create a personalized debt payoff plan for our family. We have ${debts.length > 0 ? debts.map(d => `${d.label}: ${fmt(d.balance)} at ${d.interest}% APR (min payment ${fmt(d.minPayment)})`).join(", ") : "no debts tracked yet"}. Our monthly income is ${fmt(viewTotalIncome)} and total expenses are ${fmt(viewTotalExpenses)}. Please give us a specific payoff plan with estimated payoff dates.`);
-                      pendingAdvisorSend.current = true;
-                      navigateToTab("advisor");
-                    }}
-                    style={{ width: "100%", background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, color: "#fff", border: "none", borderRadius: 14, padding: "16px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, boxShadow: `0 6px 18px rgba(0,120,168,0.25)`, textAlign: "left" }}
-                  >
-                    <span style={{ fontSize: 20 }}>🚀</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: FW.bold }}>Debt Payoff Plan</div>
-                      <div style={{ fontSize: 11, opacity: 0.8, fontWeight: FW.medium, marginTop: 2 }}>Get an AI-powered payoff strategy</div>
-                    </div>
-                    <span className="material-symbols-outlined" style={{ fontSize: 20, opacity: 0.8 }}>arrow_forward</span>
-                  </button>
-                  {/* Savings — with inline editing, × , and +/- controls */}
-                  <div style={{ background: "var(--c-glass)", backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 20, padding: 22, boxShadow: "0 4px 24px var(--c-glass-hairline), inset 0 1px 0 var(--c-glass-inset)" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                {/* ── Peer sections: Savings (wide) + Debt CTA (narrow) ── */}
+                <div className="budget-peer-grid" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20 }}>
+                  {/* Savings — full-width peer */}
+                  <div style={{ background: "var(--c-glass)", backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 20, padding: 24, boxShadow: "0 4px 24px var(--c-glass-hairline), inset 0 1px 0 var(--c-glass-inset)" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <div style={{ padding: "6px 8px", background: "rgba(97,205,253,0.15)", borderRadius: 10 }}>
                           <span className="material-symbols-outlined" style={{ fontSize: 17, color: COLORS.primary }}>savings</span>
                         </div>
-                        <h3 style={{ fontSize: 15, fontWeight: FW.bold, color: COLORS.text }}>Savings</h3>
+                        <h3 style={{ fontSize: 15, fontWeight: FW.bold, color: COLORS.text }}>Savings Goals</h3>
+                        {savingsItems.length > 0 && <span style={{ fontSize: 11, color: COLORS.muted }}>({savingsItems.length})</span>}
                       </div>
-                      <button onClick={() => { setSavingsItems(prev => [...prev, { id: Date.now(), label: "New Goal", expected: 100, actual: 0 }]); showToast("Savings goal added"); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.primary }}>add_circle</span>
+                      <button onClick={() => { setSavingsItems(prev => [...prev, { id: Date.now(), label: "New Goal", expected: 100, actual: 0 }]); showToast("Savings goal added"); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", alignItems: "center", gap: 4, color: COLORS.primary, fontSize: 12, fontWeight: FW.semibold }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 20 }}>add_circle</span>
+                        <span>Add goal</span>
                       </button>
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: savingsItems.length > 1 ? "repeat(auto-fill, minmax(260px, 1fr))" : "1fr", gap: 14 }}>
                       {savingsItems.length === 0 && (
-                        <div style={{ textAlign: "center", padding: "16px 0" }}>
+                        <div style={{ textAlign: "center", padding: "24px 0", gridColumn: "1 / -1" }}>
                           <p style={{ fontSize: 13, color: COLORS.muted, marginBottom: 6 }}>No savings goals yet.</p>
-                          <p style={{ fontSize: 12, color: COLORS.muted }}>Tap + to add your first goal — house, vacation, emergency fund.</p>
+                          <p style={{ fontSize: 12, color: COLORS.muted }}>Tap <strong>+ Add goal</strong> to start — house, vacation, emergency fund.</p>
                         </div>
                       )}
                       {savingsItems.map(s => {
                         const goalReached = s.expected > 0 && s.actual >= s.expected;
                         const savPct = pct(s.actual, s.expected || 1);
                         return (
-                        <div key={s.id}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                        <div key={s.id} style={{ padding: 14, background: "var(--c-glass)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 14 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                             <SavText id={s.id} field="label" value={s.label} style={{ fontSize: 13, fontWeight: FW.semibold, color: COLORS.text }} />
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <span style={{ fontSize: 12, color: COLORS.subtext }}>
-                                {fmt(s.actual)} /&nbsp;
-                                <SavText id={s.id} field="expected" value={s.expected} style={{ fontSize: 12, color: COLORS.subtext, display: "inline" }} />
-                              </span>
-                              <button onClick={() => { setSavingsItems(prev => prev.filter(x => x.id !== s.id)); showToast(`${s.label} goal removed`, "✕"); }} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 14, padding: 0 }}>×</button>
-                            </div>
+                            <button onClick={() => { setSavingsItems(prev => prev.filter(x => x.id !== s.id)); showToast(`${s.label} goal removed`, "✕"); }} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 14, padding: 0 }}>×</button>
                           </div>
-                          <div style={{ height: 6, background: COLORS.containerLow, borderRadius: 9999, overflow: "hidden", marginBottom: goalReached ? 4 : 6 }}>
-                            <div style={{ width: `${savPct}%`, height: "100%", background: goalReached ? COLORS.success : COLORS.primary, borderRadius: 9999 }} />
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                            <span style={{ fontSize: 18, fontWeight: FW.extrabold, color: goalReached ? COLORS.success : COLORS.primary, fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: "-0.02em" }}>{fmt(s.actual)}</span>
+                            <span style={{ fontSize: 12, color: COLORS.muted, fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums" }}>
+                              /&nbsp;
+                              <SavText id={s.id} field="expected" value={s.expected} style={{ fontSize: 12, color: COLORS.muted, display: "inline" }} />
+                            </span>
                           </div>
-                          {goalReached && <p style={{ fontSize: 11, color: COLORS.success, fontWeight: FW.bold, marginBottom: 6 }}>🎉 Goal reached!</p>}
+                          <div style={{ height: 6, background: COLORS.containerLow, borderRadius: 9999, overflow: "hidden", marginBottom: goalReached ? 6 : 10 }}>
+                            <div style={{ width: `${savPct}%`, height: "100%", background: goalReached ? COLORS.success : COLORS.primary, borderRadius: 9999, transition: "width 400ms cubic-bezier(0.22, 1, 0.36, 1)" }} />
+                          </div>
+                          {goalReached && <p style={{ fontSize: 11, color: COLORS.success, fontWeight: FW.bold, marginBottom: 8 }}>🎉 Goal reached!</p>}
                           {addingSavingsId === s.id
                             ? <div style={{ display:"flex", gap:6, alignItems:"center" }}>
                                 <input id={`sav-inp-${s.id}`} autoFocus type="number" placeholder={savingsMode === "add" ? "Contribute" : "Withdraw"} style={{ flex:1, background:COLORS.containerLow, border:"none", borderRadius:8, padding:"5px 8px", fontSize:12, color:COLORS.text, outline:"none" }} onKeyDown={e=>{if(e.key==="Escape"){ setAddingSavingsId(null); setSavingsMode(null); }}} />
@@ -3185,8 +3199,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                                 <button onClick={()=>{ setAddingSavingsId(null); setSavingsMode(null); }} style={{background:"none",border:"none",color:COLORS.muted,cursor:"pointer",fontSize:16,padding:"0 4px"}}>×</button>
                               </div>
                             : <div style={{ display: "flex", gap: 6 }}>
-                                <button onClick={() => { setAddingSavingsId(s.id); setSavingsMode("add"); }} style={{ flex:1, background: `rgba(0,103,136,0.09)`, border:"none", borderRadius:8, padding:"5px 0", fontSize:12, fontWeight:FW.bold, color:COLORS.primary, cursor:"pointer" }}>+ Contribute</button>
-                                <button onClick={() => { setAddingSavingsId(s.id); setSavingsMode("remove"); }} style={{ flex:0.6, background: `rgba(172,49,73,0.08)`, border:"none", borderRadius:8, padding:"5px 0", fontSize:12, fontWeight:FW.bold, color:COLORS.danger, cursor:"pointer" }}>− Withdraw</button>
+                                <button onClick={() => { setAddingSavingsId(s.id); setSavingsMode("add"); }} style={{ flex:1, background: `rgba(0,103,136,0.09)`, border:"none", borderRadius:8, padding:"6px 0", fontSize:12, fontWeight:FW.bold, color:COLORS.primary, cursor:"pointer" }}>+ Contribute</button>
+                                <button onClick={() => { setAddingSavingsId(s.id); setSavingsMode("remove"); }} style={{ flex:0.6, background: `rgba(172,49,73,0.08)`, border:"none", borderRadius:8, padding:"6px 0", fontSize:12, fontWeight:FW.bold, color:COLORS.danger, cursor:"pointer" }}>− Withdraw</button>
                               </div>
                           }
                         </div>
@@ -3194,6 +3208,25 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       })}
                     </div>
                   </div>
+                  {/* Debt Payoff CTA — narrow peer */}
+                  <button
+                    onClick={() => {
+                      setAdvisorMsg(`Create a personalized debt payoff plan for our family. We have ${debts.length > 0 ? debts.map(d => `${d.label}: ${fmt(d.balance)} at ${d.interest}% APR (min payment ${fmt(d.minPayment)})`).join(", ") : "no debts tracked yet"}. Our monthly income is ${fmt(viewTotalIncome)} and total expenses are ${fmt(viewTotalExpenses)}. Please give us a specific payoff plan with estimated payoff dates.`);
+                      pendingAdvisorSend.current = true;
+                      navigateToTab("advisor");
+                    }}
+                    style={{ background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, color: "#fff", border: "none", borderRadius: 20, padding: 24, cursor: "pointer", display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 12, boxShadow: `0 6px 18px rgba(0,120,168,0.25)`, textAlign: "left", minHeight: 180 }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 28 }}>🚀</span>
+                      <div style={{ fontSize: 16, fontWeight: FW.bold }}>Debt Payoff Plan</div>
+                    </div>
+                    <div style={{ fontSize: 12, opacity: 0.85, fontWeight: FW.medium, lineHeight: 1.5 }}>Get an AI-powered strategy to become debt-free{debts.length > 0 ? ` across your ${debts.length} ${debts.length === 1 ? "debt" : "debts"}` : ""}.</div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 13, fontWeight: FW.bold }}>Ask the Advisor</span>
+                      <span className="material-symbols-outlined" style={{ fontSize: 22, opacity: 0.9 }}>arrow_forward</span>
+                    </div>
+                  </button>
                 </div>
               </div>
             </div>
