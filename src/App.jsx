@@ -1307,6 +1307,52 @@ export default function App() {
   const twelveMonths = build12Months(startMonthKey);
   // All insight months: only Jan–Dec 2026
   const allInsightMonths = Array.from({ length: 12 }, (_, i) => monthKey(2026, i));
+
+  // ── Runtime-extensible category tables ──
+  // Shadow the module-level SPENDING_PLAN_GROUPS / CATEGORIES / CAT_LABEL with
+  // derived locals that merge user-added customCategories and apply any
+  // categoryLabelOverrides. Placed here — before normaliseExpenseBudgets and
+  // every other synchronous reference — to avoid TDZ errors.
+  // eslint-disable-next-line no-shadow
+  const SPENDING_PLAN_GROUPS = useMemo(
+    () => [
+      ...BASE_SPENDING_PLAN_GROUPS.map(g => ({ ...g, label: categoryLabelOverrides[g.catId] || g.label })),
+      ...customCategories.map(c => ({ ...c, label: categoryLabelOverrides[c.catId] || c.label, templateItems: c.templateItems || [], custom: true })),
+    ],
+    [categoryLabelOverrides, customCategories]
+  );
+  // eslint-disable-next-line no-shadow
+  const CATEGORIES = useMemo(
+    () => [
+      ...BASE_CATEGORIES.map(c => ({ ...c, label: categoryLabelOverrides[c.id] || c.label })),
+      ...customCategories.map(c => ({ id: c.catId, label: categoryLabelOverrides[c.catId] || c.label })),
+    ],
+    [categoryLabelOverrides, customCategories]
+  );
+  // eslint-disable-next-line no-shadow
+  const CAT_LABEL = useMemo(() => Object.fromEntries(CATEGORIES.map(c => [c.id, c.label])), [CATEGORIES]);
+  const CATEGORY_ICONS = useMemo(() => ({
+    Housing: "home", Food: "restaurant", Transport: "directions_car", Utilities: "bolt",
+    Health: "medication", Entertainment: "movie", Personal: "person", Education: "school",
+    Kids: "child_care", Savings: "savings", Subscriptions: "subscriptions", Travel: "flight", Other: "category",
+    ...Object.fromEntries(customCategories.map(c => [c.catId, c.icon || "category"])),
+  }), [customCategories]);
+  const CATEGORY_ICON_BG = useMemo(() => ({
+    Housing: "rgba(97,205,253,0.2)", Food: "rgba(192,232,255,0.3)", Transport: "rgba(186,191,255,0.3)",
+    Utilities: "rgba(192,232,255,0.3)", Health: "rgba(186,191,255,0.3)", Entertainment: "rgba(186,191,255,0.3)",
+    Personal: "rgba(186,191,255,0.3)", Education: "rgba(97,205,253,0.2)", Kids: "rgba(192,232,255,0.3)",
+    Savings: "rgba(97,205,253,0.2)", Subscriptions: "rgba(186,191,255,0.3)", Travel: "rgba(186,191,255,0.3)",
+    Other: COLORS.neutral,
+    ...Object.fromEntries(customCategories.map(c => [c.catId, "rgba(186,191,255,0.3)"])),
+  }), [customCategories]);
+  const CATEGORY_ICON_COLOR = useMemo(() => ({
+    Housing: COLORS.primary, Food: COLORS.secondary, Transport: COLORS.tertiary, Utilities: COLORS.secondary,
+    Health: COLORS.tertiary, Entertainment: COLORS.tertiary, Personal: COLORS.tertiary, Education: COLORS.primary,
+    Kids: COLORS.secondary, Savings: COLORS.primary, Subscriptions: COLORS.tertiary, Travel: COLORS.tertiary,
+    Other: COLORS.subtext,
+    ...Object.fromEntries(customCategories.map(c => [c.catId, COLORS.tertiary])),
+  }), [customCategories]);
+
   // ── Normalise expense budgets (ensure all catIds present) ──
   const normaliseExpenseBudgets = (budgets) => {
     const result = { ...budgets };
@@ -1469,41 +1515,6 @@ Return plain text bullet points only, no headers.` }]
   const totalDebtPayments = debts.reduce((s, d) => s + parseFloat(d.minPayment || 0), 0);
   const totalDebtBalance = debts.reduce((s, d) => s + parseFloat(d.balance || 0), 0);
   const spentPct = Math.round(pct(totalExpenses, totalIncome));
-  // ── Runtime-extensible category tables ──
-  // Shadow the module-level SPENDING_PLAN_GROUPS / CATEGORIES / CAT_LABEL with
-  // derived locals that merge user-added customCategories and apply any
-  // categoryLabelOverrides. Every reference below this point resolves to the
-  // local (shadowed) values via normal JS scoping rules.
-  // eslint-disable-next-line no-shadow
-  const SPENDING_PLAN_GROUPS = useMemo(
-    () => [
-      ...BASE_SPENDING_PLAN_GROUPS.map(g => ({ ...g, label: categoryLabelOverrides[g.catId] || g.label })),
-      ...customCategories.map(c => ({ ...c, label: categoryLabelOverrides[c.catId] || c.label, templateItems: c.templateItems || [], custom: true })),
-    ],
-    [categoryLabelOverrides, customCategories]
-  );
-  // eslint-disable-next-line no-shadow
-  const CATEGORIES = useMemo(
-    () => [
-      ...BASE_CATEGORIES.map(c => ({ ...c, label: categoryLabelOverrides[c.id] || c.label })),
-      ...customCategories.map(c => ({ id: c.catId, label: categoryLabelOverrides[c.catId] || c.label })),
-    ],
-    [categoryLabelOverrides, customCategories]
-  );
-  // eslint-disable-next-line no-shadow
-  const CAT_LABEL = useMemo(() => Object.fromEntries(CATEGORIES.map(c => [c.id, c.label])), [CATEGORIES]);
-  const CATEGORY_ICONS = useMemo(() => ({
-    Housing: "home", Food: "restaurant", Transport: "directions_car", Utilities: "bolt", Health: "medication", Entertainment: "movie", Personal: "person", Education: "school", Kids: "child_care", Savings: "savings", Subscriptions: "subscriptions", Travel: "flight", Other: "category",
-    ...Object.fromEntries(customCategories.map(c => [c.catId, c.icon || "category"])),
-  }), [customCategories]);
-  const CATEGORY_ICON_BG = useMemo(() => ({
-    Housing: "rgba(97,205,253,0.2)", Food: "rgba(192,232,255,0.3)", Transport: "rgba(186,191,255,0.3)", Utilities: "rgba(192,232,255,0.3)", Health: "rgba(186,191,255,0.3)", Entertainment: "rgba(186,191,255,0.3)", Personal: "rgba(186,191,255,0.3)", Education: "rgba(97,205,253,0.2)", Kids: "rgba(192,232,255,0.3)", Savings: "rgba(97,205,253,0.2)", Subscriptions: "rgba(186,191,255,0.3)", Travel: "rgba(186,191,255,0.3)", Other: COLORS.neutral,
-    ...Object.fromEntries(customCategories.map(c => [c.catId, "rgba(186,191,255,0.3)"])),
-  }), [customCategories]);
-  const CATEGORY_ICON_COLOR = useMemo(() => ({
-    Housing: COLORS.primary, Food: COLORS.secondary, Transport: COLORS.tertiary, Utilities: COLORS.secondary, Health: COLORS.tertiary, Entertainment: COLORS.tertiary, Personal: COLORS.tertiary, Education: COLORS.primary, Kids: COLORS.secondary, Savings: COLORS.primary, Subscriptions: COLORS.tertiary, Travel: COLORS.tertiary, Other: COLORS.subtext,
-    ...Object.fromEntries(customCategories.map(c => [c.catId, COLORS.tertiary])),
-  }), [customCategories]);
   // ── View-month derived values (income/expenses are now always month-scoped) ──
   const viewExpenses = expenses;
   const viewIncome = income;
@@ -2159,28 +2170,68 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
         }
 
-        /* ── Header shadow ramps as user scrolls ── */
+        /* ── Header: shadow + intensified blur as user scrolls ── */
         header.app-header {
-          transition: box-shadow 180ms ease, border-color 180ms ease;
+          transition: box-shadow 220ms ease, border-color 220ms ease, backdrop-filter 220ms ease, -webkit-backdrop-filter 220ms ease;
         }
         header.app-header[data-scrolled="true"] {
-          box-shadow: 0 1px 0 var(--c-glass-hairline), 0 16px 40px rgba(0,0,0,0.08) !important;
+          backdrop-filter: blur(48px) saturate(220%) !important;
+          -webkit-backdrop-filter: blur(48px) saturate(220%) !important;
+          box-shadow: 0 1px 0 var(--c-glass-hairline), 0 20px 48px rgba(0,0,0,0.10) !important;
           border-bottom-color: var(--c-glass-border-strong) !important;
         }
 
-        /* ── Off-screen category cards skip paint until visible ── */
-        .overview-hscroll .exp-card {
-          content-visibility: auto;
-          contain-intrinsic-size: 240px 200px;
+        /* ── Category expand: animate chevron smoothly ── */
+        .budget-cat-group .expand-chevron {
+          transition: transform 290ms cubic-bezier(0.22,1,0.36,1);
         }
 
-        /* ── SF Pro Rounded fallback for any bold number that forgot the class ── */
-        .budget-row .num-cell,
-        .kpi-num {
+        /* ── Savings goal cards — slide up when they mount ── */
+        .savings-goal-card {
+          animation: sav-card-in 380ms cubic-bezier(0.22,1,0.36,1) both;
+        }
+        @keyframes sav-card-in {
+          from { opacity: 0; transform: translateY(10px) scale(0.98); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        /* Stagger per position in the grid */
+        .savings-goal-group > div > .savings-goal-card:nth-child(2) { animation-delay: 60ms; }
+        .savings-goal-group > div > .savings-goal-card:nth-child(3) { animation-delay: 120ms; }
+        .savings-goal-group > div > .savings-goal-card:nth-child(4) { animation-delay: 180ms; }
+        .savings-goal-card:hover { transform: translateY(-2px) !important; box-shadow: 0 16px 48px rgba(74,82,168,0.20) !important; }
+
+        /* ── Morph artifact cleanup — stale view-transition-names ── */
+        /* Prevent page-main pseudo from lingering after non-tab transitions */
+        ::view-transition-old(page-main):only-child,
+        ::view-transition-new(page-main):only-child {
+          animation: none !important;
+        }
+        /* Ensure no orphaned transition-name escapes the layout layer */
+        ::view-transition-group(*) { mix-blend-mode: normal; }
+
+        /* ── SF Pro Rounded: all bold numbers ── */
+        .kpi-num, .num-ios {
           font-family: var(--font-num);
           font-variant-numeric: tabular-nums;
-          font-feature-settings: "tnum", "ss01";
-          letter-spacing: -0.02em;
+          font-feature-settings: "tnum", "ss01", "cv11";
+          letter-spacing: -0.025em;
+        }
+
+        /* ── Horizontal scroll containers — iOS-grade momentum + snap ── */
+        .overview-hscroll {
+          -webkit-overflow-scrolling: touch;
+          overscroll-behavior-x: contain;
+          scroll-snap-type: x mandatory;
+          scroll-behavior: smooth;
+        }
+        .overview-hscroll::-webkit-scrollbar { display: none; }
+        .overview-hscroll { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* ── prefers-reduced-motion: disable all animations/transitions ── */
+        @media (prefers-reduced-motion: reduce) {
+          .savings-goal-card { animation: none !important; }
+          .budget-cat-group .expand-chevron { transition: none !important; }
+          header.app-header { transition: none !important; }
         }
 
         /* Scroll */
@@ -3121,7 +3172,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         }}
                           style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, alignItems: "center", padding: "10px 12px 10px 14px", background: "var(--c-glass)", borderRadius: 10, cursor: "pointer", marginBottom: isCollapsed ? 0 : 6, border: "1px solid var(--c-glass-border)", transition: "background .15s" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <span className="material-symbols-outlined" style={{ fontSize: 18, color: COLORS.muted, transition: "transform .3s cubic-bezier(0.34, 1.35, 0.64, 1)", transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)", flexShrink: 0 }}>expand_more</span>
+                            <span className="material-symbols-outlined expand-chevron" style={{ fontSize: 18, color: COLORS.muted, transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)", flexShrink: 0 }}>expand_more</span>
                             <div style={{ width: 36, height: 36, borderRadius: 10, background: CATEGORY_ICON_BG[group.catId] || COLORS.neutral, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                               <span className="material-symbols-outlined" style={{ fontSize: 19, color: CATEGORY_ICON_COLOR[group.catId] || COLORS.subtext }}>{CATEGORY_ICONS[group.catId] || "category"}</span>
                             </div>
@@ -3201,8 +3252,10 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           <span />
                         </div>
 
-                        {!isCollapsed && (
-                          <div style={{ marginLeft: 44, marginBottom: 4 }}>
+                        {/* CSS grid-rows expand — no JS animation, no layout thrash */}
+                        <div style={{ display: "grid", gridTemplateRows: isCollapsed ? "0fr" : "1fr", transition: "grid-template-rows 290ms cubic-bezier(0.22,1,0.36,1)" }}>
+                          <div style={{ overflow: "hidden" }}>
+                          <div style={{ marginLeft: 44, marginBottom: 4, paddingTop: 2 }}>
                             {/* Existing expense rows */}
                             {grpExp.map(e => {
                               const expPlanned = monthItemBudgets[`exp-${e.id}`] || 0;
@@ -3266,7 +3319,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add</span>Add {group.label} item
                             </button>
                           </div>
-                        )}
+                          </div>{/* overflow:hidden wrapper */}
+                        </div>{/* grid-rows wrapper */}
                       </div>
                     );
                   })}
