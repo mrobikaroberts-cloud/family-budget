@@ -396,11 +396,16 @@ function SmartAddModal({ onClose, onManualExpense, onManualIncome, onImportExpen
     return new Promise((res, rej) => {
       const r = new FileReader();
       r.onload = () => {
-        const raw = r.result;
-        res(raw.substring(raw.indexOf(",") + 1).replace(/\s/g, ""));
+        const bytes = new Uint8Array(r.result);
+        let binary = "";
+        const chunk = 8192;
+        for (let i = 0; i < bytes.length; i += chunk) {
+          binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+        }
+        res(btoa(binary));
       };
       r.onerror = () => rej(new Error("Read failed"));
-      r.readAsDataURL(file);
+      r.readAsArrayBuffer(file);
     });
   }
   // ── Natural language → entries ──
@@ -1778,11 +1783,16 @@ If the request doesn't map to a clear category goal, still return JSON with newG
     return new Promise((res, rej) => {
       const r = new FileReader();
       r.onload = () => {
-        const raw = r.result;
-        res(raw.substring(raw.indexOf(",") + 1).replace(/\s/g, ""));
+        const bytes = new Uint8Array(r.result);
+        let binary = "";
+        const chunk = 8192;
+        for (let i = 0; i < bytes.length; i += chunk) {
+          binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+        }
+        res(btoa(binary));
       };
       r.onerror = () => rej(new Error("Read failed"));
-      r.readAsDataURL(file);
+      r.readAsArrayBuffer(file);
     });
   }
   // ── UI ──────────────────────────────────────────────────────────────────────
