@@ -380,7 +380,7 @@ function Toast({ info }) {
   );
 }
 // ── SmartAddModal ─────────────────────────────────────────────────────────────
-function SmartAddModal({ onClose, onManualExpense, onManualIncome, onImportExpenses, onImportIncome }) {
+function SmartAddModal({ onClose, onManualExpense, onManualIncome, onImportExpenses, onImportIncome, existingExpenses = [] }) {
   const [step, setStep] = useState("home"); // home | nl | upload | preview
   const [nlInput, setNlInput] = useState("");
   const [nlLoading, setNlLoading] = useState(false);
@@ -389,6 +389,7 @@ function SmartAddModal({ onClose, onManualExpense, onManualIncome, onImportExpen
   const [uploadError, setUploadError] = useState("");
   const [previewItems, setPreviewItems] = useState([]);
   const [previewType, setPreviewType] = useState("expense"); // expense | income
+  const [skippedCount, setSkippedCount] = useState(0);
   const [uploadedFileName, setUploadedFileName] = useState("");
   const fileRef = useRef();
   function fileToBase64(file) {
@@ -460,6 +461,7 @@ If unsure of category, default to Other. If unsure of fixed, default to false.`
     setUploadedFileName(file.name);
     setUploadLoading(true);
     setUploadError("");
+    setSkippedCount(0);
     try {
       const base64 = await fileToBase64(file);
       const isPDF = file.type === "application/pdf";
@@ -475,31 +477,33 @@ If unsure of category, default to Other. If unsure of fixed, default to false.`
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
-          max_tokens: 1500,
+          max_tokens: 4096,
           messages: [{
             role: "user",
             content: [
               docBlock,
               {
                 type: "text",
-                text: `Today is ${today}. This is a receipt, bill, bank statement, or financial document.
-Extract ALL individual line items or transactions. Return ONLY valid JSON (no markdown):
+                text: `Today is ${today}. This is a bank statement or financial document.
+Extract ALL debit/charge transactions as expenses.
+SKIP completely: transfers between own accounts (e.g. "Transfer to Savings", "Transfer from Checking", "Internal Transfer"), payments to own bank accounts, Zelle/Venmo transfers to self, and credit/deposit entries.
+Return ONLY valid JSON (no markdown):
 {
-  "type": "expense" | "income",
+  "type": "expense",
   "documentDescription": "brief description of the document",
   "items": [
     {
-      "label": "item description",
+      "label": "merchant or payee name (clean, no transaction codes)",
       "amount": 0.00,
-      "category": "Housing|Food|Utilities|Transport|Health|Entertainment|Personal|Education|Savings|Kids|Travel|Subscriptions|Other (Kids=daycare/childcare/diapers/baby/school; Health=doctor/pharmacy/copay/dental; Travel=flights/hotels/vacation)",
+      "category": "Housing|Food|Utilities|Transport|Health|Entertainment|Personal|Education|Savings|Kids|Travel|Subscriptions|Other",
       "date": "YYYY-MM-DD",
       "fixed": false,
       "recurring": false
     }
   ]
 }
-If this looks like income (payslip, bank deposit), set type to "income". Otherwise "expense".
-If date not visible, use today. If unsure of category, use Other.`
+Category hints: daycare/childcare/preschool/school supplies → Kids; doctor/pharmacy/copay/dental/vision/hospital → Health; netflix/spotify/gym/games/movies → Entertainment; mortgage/rent → Housing; flights/hotels/vacation/airbnb → Travel; streaming/subscriptions → Subscriptions; gas/uber/lyft/parking/transit → Transport; groceries/restaurants/coffee/dining → Food; electric/water/internet/phone/cable → Utilities.
+Use positive amounts for all items. If date not visible, use today. If unsure of category, use Other.`
               }
             ]
           }]
@@ -509,8 +513,21 @@ If date not visible, use today. If unsure of category, use Other.`
       const text = data.content?.map(b => b.text || "").join("") || "";
       const clean = text.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(clean);
-      setPreviewItems(parsed.items.map((it, i) => ({ ...it, id: Date.now() + i, amount: parseFloat(it.amount) })));
-      setPreviewType(parsed.type === "income" ? "income" : "expense");
+      const allItems = parsed.items.map((it, i) => ({ ...it, id: Date.now() + i, amount: parseFloat(it.amount) }));
+      // Silently deduplicate against existing expenses
+      const deduped = allItems.filter(it =>
+        !existingExpenses.some(ex =>
+          ex.label.toLowerCase() === it.label.toLowerCase() &&
+          Math.abs(parseFloat(ex.amount) - it.amount) < 0.01 &&
+          ex.date === it.date
+        )
+      );
+      setSkippedCount(allItems.length - deduped.length);
+      // Sort by category order
+      const catOrder = CATEGORIES.map(c => c.id);
+      deduped.sort((a, b) => catOrder.indexOf(a.category) - catOrder.indexOf(b.category));
+      setPreviewItems(deduped);
+      setPreviewType("expense");
       setStep("preview");
     } catch {
       setUploadError("Couldn't read that document. Try a clearer photo or different file.");
@@ -531,7 +548,7 @@ If date not visible, use today. If unsure of category, use Other.`
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "28px 28px 0" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {step !== "home" && (
-              <button onClick={() => { setStep("home"); setNlInput(""); setNlError(""); setUploadError(""); setPreviewItems([]); }}
+              <button onClick={() => { setStep("home"); setNlInput(""); setNlError(""); setUploadError(""); setPreviewItems([]); setSkippedCount(0); }}
                 style={{ background: "var(--c-glass-hairline)", border: "none", color: COLORS.subtext, borderRadius: 10, padding: "4px 10px", cursor: "pointer", fontSize: 14 }}>←</button>
             )}
             <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: FW.extrabold, color: COLORS.text, fontSize: 20, margin: 0, letterSpacing: "-0.025em" }}>
@@ -579,7 +596,7 @@ If date not visible, use today. If unsure of category, use Other.`
                   <div style={{ width: 44, height: 44, borderRadius: 14, background: `rgba(74,82,168,0.12)`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
                     <span className="material-symbols-outlined" style={{ fontSize: 22, color: COLORS.tertiary, fontVariationSettings: "'FILL' 1" }}>receipt_long</span>
                   </div>
-                  <p style={{ fontWeight: FW.semibold, fontSize: 13, color: COLORS.text, marginBottom: 2 }}>Receipt</p>
+                  <p style={{ fontWeight: FW.semibold, fontSize: 13, color: COLORS.text, marginBottom: 2 }}>Document</p>
                   <p style={{ fontSize: 11, color: COLORS.subtext, lineHeight: 1.4 }}>Scan a doc</p>
                 </button>
               </div>
@@ -680,42 +697,67 @@ If date not visible, use today. If unsure of category, use Other.`
             <div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
                 <p style={{ fontSize: 12, color: COLORS.muted }}>
-                  {previewItems.length} item{previewItems.length !== 1 ? "s" : ""} found · Edit before importing
+                  {previewItems.length} item{previewItems.length !== 1 ? "s" : ""} found{skippedCount > 0 ? ` · ${skippedCount} duplicate${skippedCount !== 1 ? "s" : ""} skipped` : ""} · Edit before importing
                 </p>
                 <div style={{ display: "flex", gap: 6 }}>
                   <button onClick={() => setPreviewType("expense")} style={{ fontSize: 11, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontWeight: FW.bold, border: `1px solid ${previewType === "expense" ? COLORS.accentWarm : COLORS.border}`, background: previewType === "expense" ? COLORS.accentWarm + "22" : "none", color: previewType === "expense" ? COLORS.accentWarm : COLORS.muted }}>Expense</button>
                   <button onClick={() => setPreviewType("income")} style={{ fontSize: 11, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontWeight: FW.bold, border: `1px solid ${previewType === "income" ? COLORS.accent : COLORS.border}`, background: previewType === "income" ? COLORS.accent + "22" : "none", color: previewType === "income" ? COLORS.accent : COLORS.muted }}>Income</button>
                 </div>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18, maxHeight: 360, overflowY: "auto", paddingRight: 4 }}>
-                {previewItems.map(item => (
-                  <div key={item.id} style={{ background: "rgba(0,120,168,0.04)", border: "1px solid rgba(0,120,168,0.09)", borderRadius: 14, padding: 14 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                      <input
-                        value={item.label}
-                        onChange={e => updateItem(item.id, "label", e.target.value)}
-                        style={{ ...inputStyle, flex: 1, marginRight: 10, padding: "7px 12px", fontSize: 13, fontWeight: FW.semibold }}
-                      />
-                      <button onClick={() => removeItem(item.id)} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 18, flexShrink: 0, lineHeight: 1 }}>×</button>
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-                      <div>
-                        <p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 4 }}>AMOUNT</p>
-                        <input type="number" value={item.amount} onChange={e => updateItem(item.id, "amount", e.target.value)} style={{ ...inputStyle, padding: "6px 10px", fontSize: 13 }} />
+              <div style={{ display: "flex", flexDirection: "column", gap: 0, marginBottom: 18, maxHeight: 380, overflowY: "auto", paddingRight: 4 }}>
+                {(() => {
+                  const catOrder = CATEGORIES.map(c => c.id);
+                  const grouped = {};
+                  previewItems.forEach(item => {
+                    if (!grouped[item.category]) grouped[item.category] = [];
+                    grouped[item.category].push(item);
+                  });
+                  const sortedCats = Object.keys(grouped).sort((a, b) => catOrder.indexOf(a) - catOrder.indexOf(b));
+                  return sortedCats.map(cat => {
+                    const catMeta = CATEGORIES.find(c => c.id === cat);
+                    return (
+                      <div key={cat} style={{ marginBottom: 14 }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "5px 2px 7px", borderBottom: `1px solid ${COLORS.border}`, marginBottom: 8 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 13, color: COLORS.primary, fontVariationSettings: "'FILL' 1" }}>{catMeta?.icon || "label"}</span>
+                            <span style={{ fontSize: 11, fontWeight: FW.bold, color: COLORS.subtext, textTransform: "uppercase", letterSpacing: "0.07em" }}>{catMeta?.label || cat}</span>
+                          </div>
+                          <span style={{ fontSize: 11, color: COLORS.muted }}>{grouped[cat].length}</span>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                          {grouped[cat].map(item => (
+                            <div key={item.id} style={{ background: "rgba(0,120,168,0.04)", border: "1px solid rgba(0,120,168,0.09)", borderRadius: 14, padding: 14 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                                <input
+                                  value={item.label}
+                                  onChange={e => updateItem(item.id, "label", e.target.value)}
+                                  style={{ ...inputStyle, flex: 1, marginRight: 10, padding: "7px 12px", fontSize: 13, fontWeight: FW.semibold }}
+                                />
+                                <button onClick={() => removeItem(item.id)} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 18, flexShrink: 0, lineHeight: 1 }}>×</button>
+                              </div>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                                <div>
+                                  <p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 4 }}>AMOUNT</p>
+                                  <input type="number" value={item.amount} onChange={e => updateItem(item.id, "amount", e.target.value)} style={{ ...inputStyle, padding: "6px 10px", fontSize: 13 }} />
+                                </div>
+                                <div>
+                                  <p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 4 }}>CATEGORY</p>
+                                  <select value={item.category} onChange={e => updateItem(item.id, "category", e.target.value)} style={{ ...selectStyle, padding: "6px 10px", fontSize: 12 }}>
+                                    {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                                  </select>
+                                </div>
+                                <div>
+                                  <p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 4 }}>DATE</p>
+                                  <input type="date" value={item.date} onChange={e => updateItem(item.id, "date", e.target.value)} style={{ ...inputStyle, padding: "6px 10px", fontSize: 12 }} />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <div>
-                        <p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 4 }}>CATEGORY</p>
-                        <select value={item.category} onChange={e => updateItem(item.id, "category", e.target.value)} style={{ ...selectStyle, padding: "6px 10px", fontSize: 12 }}>
-                          {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <p style={{ fontSize: 10, color: COLORS.muted, marginBottom: 4 }}>DATE</p>
-                        <input type="date" value={item.date} onChange={e => updateItem(item.id, "date", e.target.value)} style={{ ...inputStyle, padding: "6px 10px", fontSize: 12 }} />
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                    );
+                  });
+                })()}
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderTop: `1px solid ${COLORS.border}`, marginBottom: 14 }}>
                 <span style={{ fontSize: 13, color: COLORS.muted }}>Total</span>
@@ -4222,6 +4264,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         onClose={() => setModal(null)}
         onManualExpense={() => setModal("addExpense")}
         onManualIncome={() => setModal("addIncome")}
+        existingExpenses={expenses}
         onImportExpenses={(items) => { setExpenses(prev => [...prev, ...items.map(it => ({ ...it, fixed: it.fixed ?? false }))]); setModal(null); }}
         onImportIncome={(items) => { setIncome(prev => [...prev, ...items.map(it => ({ id: it.id, label: it.label, amount: it.amount, date: it.date, recurring: it.recurring ?? false }))]); setModal(null); }}
       />}
