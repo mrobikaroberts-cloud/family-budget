@@ -379,6 +379,31 @@ function Toast({ info }) {
     </div>
   );
 }
+// ── PDF text extractor (loads pdf.js from CDN on first use) ──────────────────
+let _pdfjs = null;
+async function extractPdfText(file) {
+  if (!_pdfjs) {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    _pdfjs = window.pdfjsLib;
+  }
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await _pdfjs.getDocument({ data: arrayBuffer }).promise;
+  const pages = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    pages.push(content.items.map(it => it.str).join(" "));
+  }
+  return pages.join("\n\n");
+}
 // ── SmartAddModal ─────────────────────────────────────────────────────────────
 function SmartAddModal({ onClose, onManualExpense, onManualIncome, onImportExpenses, onImportIncome, existingExpenses = [] }) {
   const [step, setStep] = useState("home"); // home | nl | upload | preview
@@ -474,27 +499,8 @@ If unsure of category, default to Other. If unsure of fixed, default to false.`
       const isPDF = file.type === "application/pdf";
       const isImage = file.type.startsWith("image/");
       if (!isPDF && !isImage) { setUploadError("Please upload a JPG, PNG, or PDF."); setUploadLoading(false); return; }
-      if (file.size > 4 * 1024 * 1024) { setUploadError("File too large — please use a PDF under 4 MB. Try splitting the statement into pages."); setUploadLoading(false); return; }
-      const base64 = await fileToBase64(file);
       const today = new Date().toISOString().slice(0, 10);
-      const mediaType = isPDF ? "application/pdf" : file.type;
-      const docBlock = isPDF
-        ? { type: "document", source: { type: "base64", media_type: mediaType, data: base64 } }
-        : { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } };
-      const res = await fetch("/.netlify/functions/claude", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 4096,
-          messages: [{
-            role: "user",
-            content: [
-              docBlock,
-              {
-                type: "text",
-                text: `Today is ${today}. This is a bank statement or financial document.
-Extract ALL debit/charge transactions as expenses.
+      const prompt = `Today is ${today}. Extract ALL debit/charge transactions as expenses.
 SKIP completely: transfers between own accounts (e.g. "Transfer to Savings", "Transfer from Checking", "Internal Transfer"), payments to own bank accounts, Zelle/Venmo transfers to self, and credit/deposit entries.
 Return ONLY valid JSON (no markdown):
 {
@@ -512,10 +518,35 @@ Return ONLY valid JSON (no markdown):
   ]
 }
 Category hints: daycare/childcare/preschool/school supplies → Kids; doctor/pharmacy/copay/dental/vision/hospital → Health; netflix/spotify/gym/games/movies → Entertainment; mortgage/rent → Housing; flights/hotels/vacation/airbnb → Travel; streaming/subscriptions → Subscriptions; gas/uber/lyft/parking/transit → Transport; groceries/restaurants/coffee/dining → Food; electric/water/internet/phone/cable → Utilities.
-Use positive amounts for all items. If date not visible, use today. If unsure of category, use Other.`
-              }
-            ]
-          }]
+Use positive amounts. If date not visible, use today. If unsure of category, use Other.`;
+
+      let messageContent;
+      if (isPDF) {
+        // Extract text client-side — avoids sending ~600KB binary over the network
+        const pdfText = await extractPdfText(file);
+        if (pdfText.trim().length < 20) {
+          setUploadError("This PDF appears to be scanned (no selectable text). Please upload a JPG or PNG screenshot instead.");
+          setUploadLoading(false);
+          return;
+        }
+        messageContent = [{ type: "text", text: `BANK STATEMENT TEXT:\n${pdfText}\n\n${prompt}` }];
+      } else {
+        // Image — base64 encode and send as image block
+        if (file.size > 4 * 1024 * 1024) { setUploadError("Image too large — please use a file under 4 MB."); setUploadLoading(false); return; }
+        const base64 = await fileToBase64(file);
+        messageContent = [
+          { type: "image", source: { type: "base64", media_type: file.type, data: base64 } },
+          { type: "text", text: prompt }
+        ];
+      }
+
+      const res = await fetch("/.netlify/functions/claude", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 4096,
+          messages: [{ role: "user", content: messageContent }]
         })
       });
       const rawText = await res.text();
