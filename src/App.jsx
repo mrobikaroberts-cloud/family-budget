@@ -395,7 +395,10 @@ function SmartAddModal({ onClose, onManualExpense, onManualIncome, onImportExpen
   function fileToBase64(file) {
     return new Promise((res, rej) => {
       const r = new FileReader();
-      r.onload = () => res(r.result.split(",")[1]);
+      r.onload = () => {
+        const raw = r.result;
+        res(raw.substring(raw.indexOf(",") + 1).replace(/\s/g, ""));
+      };
       r.onerror = () => rej(new Error("Read failed"));
       r.readAsDataURL(file);
     });
@@ -1774,7 +1777,10 @@ If the request doesn't map to a clear category goal, still return JSON with newG
   function fileToBase64(file) {
     return new Promise((res, rej) => {
       const r = new FileReader();
-      r.onload = () => res(r.result.split(",")[1]);
+      r.onload = () => {
+        const raw = r.result;
+        res(raw.substring(raw.indexOf(",") + 1).replace(/\s/g, ""));
+      };
       r.onerror = () => rej(new Error("Read failed"));
       r.readAsDataURL(file);
     });
