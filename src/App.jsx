@@ -90,7 +90,7 @@ const CASH_FLOW_COLORS = {
   Savings:  "#0d9488",  // teal-grn — growth / positive
 };
 const fmt = (n) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 const pct = (val, total) => (total === 0 ? 0 : Math.min(100, (val / total) * 100));
 const fmtDate = (iso) => { if (!iso) return ""; const [y, m, d] = iso.split("-"); return new Date(+y, +m - 1, +d).toLocaleDateString("en-US", { month: "short", day: "numeric" }); };
 const renderMd = (text) => {
