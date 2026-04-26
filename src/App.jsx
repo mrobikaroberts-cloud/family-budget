@@ -463,10 +463,11 @@ If unsure of category, default to Other. If unsure of fixed, default to false.`
     setUploadError("");
     setSkippedCount(0);
     try {
-      const base64 = await fileToBase64(file);
       const isPDF = file.type === "application/pdf";
       const isImage = file.type.startsWith("image/");
       if (!isPDF && !isImage) { setUploadError("Please upload a JPG, PNG, or PDF."); setUploadLoading(false); return; }
+      if (file.size > 4 * 1024 * 1024) { setUploadError("File too large — please use a PDF under 4 MB. Try splitting the statement into pages."); setUploadLoading(false); return; }
+      const base64 = await fileToBase64(file);
       const today = new Date().toISOString().slice(0, 10);
       const mediaType = isPDF ? "application/pdf" : file.type;
       const docBlock = isPDF
@@ -510,6 +511,10 @@ Use positive amounts for all items. If date not visible, use today. If unsure of
         })
       });
       const data = await res.json();
+      if (!res.ok || data.type === "error") {
+        const msg = data.error?.message || `API error ${res.status}`;
+        throw new Error(msg);
+      }
       const text = data.content?.map(b => b.text || "").join("") || "";
       const clean = text.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(clean);
@@ -529,8 +534,9 @@ Use positive amounts for all items. If date not visible, use today. If unsure of
       setPreviewItems(deduped);
       setPreviewType("expense");
       setStep("preview");
-    } catch {
-      setUploadError("Couldn't read that document. Try a clearer photo or different file.");
+    } catch (err) {
+      console.error("Upload error:", err);
+      setUploadError(err.message || "Couldn't read that document. Try a clearer photo or different file.");
     }
     setUploadLoading(false);
   };
