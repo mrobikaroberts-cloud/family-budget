@@ -46,7 +46,10 @@ exports.handler = async function (event) {
       console.log("Request error:", e.message);
       resolve({ statusCode: 500, body: JSON.stringify({ error: e.message }) });
     });
-    req.write(event.body);
+    const body = event.isBase64Encoded
+      ? Buffer.from(event.body, "base64").toString("utf8")
+      : event.body;
+    req.write(body);
     req.end();
   });
 };
