@@ -518,10 +518,13 @@ Use positive amounts for all items. If date not visible, use today. If unsure of
           }]
         })
       });
-      const data = await res.json();
-      if (!res.ok || data.type === "error") {
-        const msg = data.error?.message || `API error ${res.status}`;
-        throw new Error(msg);
+      const rawText = await res.text();
+      if (!res.ok || rawText.trimStart().startsWith("<")) {
+        throw new Error("Request timed out — try a smaller PDF (1–2 pages work best).");
+      }
+      const data = JSON.parse(rawText);
+      if (data.type === "error") {
+        throw new Error(data.error?.message || `API error ${res.status}`);
       }
       const text = data.content?.map(b => b.text || "").join("") || "";
       const clean = text.replace(/```json|```/g, "").trim();

@@ -3,6 +3,9 @@
   publish = "dist"
   functions = "netlify/functions"
 
+[functions]
+  timeout = 26
+
 # Firebase environment variables — set these in the Netlify dashboard
 # (Site configuration > Environment variables):
 #   VITE_FIREBASE_API_KEY
