@@ -65,19 +65,19 @@ const FW = { normal: 400, medium: 500, semibold: 600, bold: 700, extrabold: 800,
 // ── Chart palettes ────────────────────────────────────────────────────────────
 // Per-category data-viz colors — brand-anchored (teal / indigo / warm axis)
 const CAT_CHART_COLOR = {
-  Housing:       "#0078a8",  // brand primary — teal
-  Food:          "#f59e0b",  // amber        — warm family (accentWarm-light)
-  Utilities:     "#38bdf8",  // sky           — teal family, light
-  Transport:     "#6366f1",  // indigo        — tertiary family, lighter
-  Health:        "#f43f5e",  // rose          — danger family, lighter
-  Entertainment: "#0d9488",  // teal-green    — success + primary mix
-  Personal:      "#a855f7",  // purple        — between tertiary and pink
-  Education:     "#fb923c",  // orange        — warm family, analogous
-  Savings:       "#10b981",  // emerald       — success family
-  Kids:          "#e879f9",  // fuchsia       — complementary arc
-  Subscriptions: "#818cf8",  // periwinkle    — tertiary light
-  Travel:        "#06b6d4",  // cyan          — primary family, light
-  Other:         "#94a3b8",  // slate         — muted family
+  Housing:       "#0078a8",  // brand primary teal
+  Food:          "#d97706",  // amber — warm, brand accentWarm
+  Utilities:     "#0891b2",  // cyan-teal — primary family, lighter
+  Transport:     "#4f7090",  // steel blue — muted, calm
+  Health:        "#c0544f",  // muted coral — brand danger family
+  Entertainment: "#2e8b6e",  // green-teal — success adjacent
+  Personal:      "#7059b5",  // muted purple — tertiary
+  Education:     "#b86e2a",  // warm brown-orange
+  Savings:       "#2d8050",  // brand success green
+  Kids:          "#a8497a",  // muted rose-fuchsia
+  Subscriptions: "#4b7fa8",  // slate blue — primary family, muted
+  Travel:        "#2a7dbf",  // medium blue
+  Other:         "#7a8fa0",  // neutral slate
 };
 // Ordered array for positional use (pie/bar slice index fallback)
 const CHART_COLORS = Object.values(CAT_CHART_COLOR);
@@ -98,7 +98,7 @@ const renderMd = (text) => {
   const out = [];
   let listItems = [];
   const flushList = () => { if (listItems.length) { out.push(<ul key={`ul-${out.length}`} style={{ margin: "4px 0 4px 16px", padding: 0 }}>{listItems}</ul>); listItems = []; } };
-  const inlineHtml = (s) => s.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>").replace(/\*(.*?)\*/g, "<em>$1</em>").replace(/`(.*?)`/g, "<code style='background:var(--c-glass-hairline);borderRadius:3px;padding:1px 4px;fontSize:0.9em'>$1</code>");
+  const inlineHtml = (s) => s.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>").replace(/\*(.*?)\*/g, "<em>$1</em>").replace(/`(.*?)`/g, "<code style='background:var(--c-border);borderRadius:3px;padding:1px 4px;fontSize:0.9em'>$1</code>");
   lines.forEach((line, i) => {
     if (line.startsWith("- ") || line.startsWith("• ")) {
       listItems.push(<li key={i} style={{ fontSize: 14, lineHeight: 1.65, marginBottom: 2 }} dangerouslySetInnerHTML={{ __html: inlineHtml(line.slice(2)) }} />);
@@ -240,9 +240,7 @@ function CategoryCard({ name, spent, goal, color }) {
     COLORS.border;
   return (
     <div style={{
-      background: "var(--c-glass)",
-      backdropFilter: "blur(20px) saturate(160%)",
-      WebkitBackdropFilter: "blur(20px) saturate(160%)",
+      background: "var(--c-surface)",
       border: `1.5px solid ${borderColor}`,
       borderRadius: R["2xl"],
       padding: `${S.lg}px ${S.xl}px`,
@@ -279,17 +277,15 @@ function Modal({ title, onClose, children }) {
       display: "flex", alignItems: "center", justifyContent: "center", padding: S.xl,
     }} onClick={onClose}>
       <div style={{
-        background: "var(--c-glass-border-strong)",
-        backdropFilter: "blur(40px) saturate(200%)",
-        WebkitBackdropFilter: "blur(40px) saturate(200%)",
-        border: "1px solid var(--c-glass-border-strong)",
+        background: "var(--c-surface)",
+        border: "1px solid var(--c-border)",
         borderRadius: R["5xl"], padding: S["5xl"], width: "100%",
         maxWidth: 480, maxHeight: "90vh", overflowY: "auto",
-        boxShadow: "0 32px 64px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,1)",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
       }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: S["3xl"] }}>
-          <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: FW.extrabold, color: COLORS.text, fontSize: FS["3xl"], margin: 0, letterSpacing: "-0.025em" }}>{title}</h2>
-          <button onClick={onClose} aria-label="Close dialog" style={{ background: "var(--c-glass-hairline)", border: "none", color: COLORS.subtext, borderRadius: R.circle, width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: FS["2xl"], lineHeight: 1 }}>×</button>
+          <h2 style={{ fontFamily: "'Manrope', sans-serif", fontWeight: FW.extrabold, color: COLORS.text, fontSize: FS["3xl"], margin: 0, letterSpacing: "-0.025em" }}>{title}</h2>
+          <button onClick={onClose} aria-label="Close dialog" style={{ background: "var(--c-border)", border: "none", color: COLORS.subtext, borderRadius: R.circle, width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: FS["2xl"], lineHeight: 1 }}>×</button>
         </div>
         {children}
       </div>
@@ -591,22 +587,22 @@ Use positive amounts. If date not visible, use today. If unsure of category, use
   // ── Render ──
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.30)", backdropFilter: "blur(12px) saturate(140%)", WebkitBackdropFilter: "blur(12px) saturate(140%)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={step === "home" ? onClose : undefined}>
-      <div style={{ background: "var(--c-glass-border-strong)", backdropFilter: "blur(40px) saturate(200%)", WebkitBackdropFilter: "blur(40px) saturate(200%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 28, width: "100%", maxWidth: 520, maxHeight: "92vh", overflowY: "auto", boxShadow: "0 32px 64px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,1)" }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: "var(--c-surface)", border: "1px solid var(--c-border)", borderRadius: 28, width: "100%", maxWidth: 520, maxHeight: "92vh", overflowY: "auto", boxShadow: "0 8px 32px rgba(0,0,0,0.12)" }} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "28px 28px 0" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {step !== "home" && (
               <button onClick={() => { setStep("home"); setNlInput(""); setNlError(""); setUploadError(""); setPreviewItems([]); setSkippedCount(0); }}
-                style={{ background: "var(--c-glass-hairline)", border: "none", color: COLORS.subtext, borderRadius: 10, padding: "4px 10px", cursor: "pointer", fontSize: 14 }}>←</button>
+                style={{ background: "var(--c-border)", border: "none", color: COLORS.subtext, borderRadius: 10, padding: "4px 10px", cursor: "pointer", fontSize: 14 }}>←</button>
             )}
-            <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: FW.extrabold, color: COLORS.text, fontSize: 20, margin: 0, letterSpacing: "-0.025em" }}>
+            <h2 style={{ fontFamily: "'Manrope', sans-serif", fontWeight: FW.extrabold, color: COLORS.text, fontSize: 20, margin: 0, letterSpacing: "-0.025em" }}>
               {step === "home" && "Add Transaction"}
               {step === "nl" && "Describe It"}
               {step === "upload" && "Upload Document"}
               {step === "preview" && "Review & Import"}
             </h2>
           </div>
-          <button onClick={onClose} aria-label="Close" style={{ background: "var(--c-glass-hairline)", border: "none", color: COLORS.subtext, borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>×</button>
+          <button onClick={onClose} aria-label="Close" style={{ background: "var(--c-border)", border: "none", color: COLORS.subtext, borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>×</button>
         </div>
         <div style={{ padding: "20px 28px 32px" }}>
           {/* ── HOME ── */}
@@ -1536,6 +1532,8 @@ Return plain text bullet points only, no headers.` }]
   // ── Dashboard derived ──
   const billsBudgetTotal = bills.reduce((s, b) => s + b.budget, 0);
   const billsActualTotal = bills.reduce((s, b) => s + (getBillPaid(b, viewMonthKey) ? b.budget : 0), 0);
+  // Fixed expenses not yet paid this month — reserved, don't spend
+  const billsReservedTotal = bills.reduce((s, b) => s + (getBillPaid(b, viewMonthKey) ? 0 : b.budget), 0);
   const savingsExpectedTotal = savingsItems.reduce((s, i) => s + i.expected, 0);
   const savingsActualTotal = savingsItems.reduce((s, i) => s + i.actual, 0);
   const expenseBudgetTotal = Object.values(viewExpenseBudgets).reduce((s, v) => s + v, 0);
@@ -1610,6 +1608,8 @@ Return plain text bullet points only, no headers.` }]
   const viewIncome = income;
   const viewTotalExpenses = viewExpenses.reduce((s, e) => s + e.amount, 0);
   const viewTotalIncome = viewIncome.reduce((s, i) => s + i.amount, 0);
+  // True Available: income minus everything out or committed this month
+  const trueAvailable = viewTotalIncome - viewTotalExpenses - billsActualTotal - billsReservedTotal - savingsExpectedTotal;
   const viewSpentPct = Math.round(pct(viewTotalExpenses, viewTotalIncome || 1));
   const viewCatTotals = CATEGORIES.reduce((acc, c) => ({ ...acc, [c.id]: viewExpenses.filter(e => e.category === c.id).reduce((s, e) => s + e.amount, 0) }), {});
   // Show every category on Overview (even with $0 spent / $0 planned) so users
@@ -1649,6 +1649,16 @@ Return plain text bullet points only, no headers.` }]
     } else {
       setExpenses(prev => [...prev, { ...newExp, id: Date.now(), amount: parseFloat(newExp.amount) }]);
       showToast(`Added ${newExp.label} (${fmt(parseFloat(newExp.amount))})`);
+      if (newExp.fixed) {
+        const dayNum = newExp.date ? (parseInt(newExp.date.split("-")[2]) || 1) : 1;
+        const labelLow = newExp.label.toLowerCase().trim();
+        setBills(prev => {
+          const exists = prev.some(b => b.label.toLowerCase().trim() === labelLow);
+          if (exists) return prev;
+          setTimeout(() => showToast(`"${newExp.label}" added to Fixed Expenses`), 600);
+          return [...prev, { id: Date.now() + 1, label: newExp.label, dayOfMonth: dayNum, budget: parseFloat(newExp.amount) || 0 }];
+        });
+      }
     }
     setNewExp({ label: "", amount: "", category: "Food", date: getDefaultDate(viewMonthKey), fixed: false });
     setModal(null);
@@ -1884,12 +1894,12 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             boxShadow: "0 8px 28px rgba(0,120,168,0.38), inset 0 1px 0 rgba(255,255,255,0.30)",
             position: "relative", overflow: "hidden",
           }}>
-            <span style={{ fontSize: 20, fontWeight: FW.black, color: "#fff", fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em", zIndex: 1 }}>FF</span>
+            <span style={{ fontSize: 20, fontWeight: FW.black, color: "#fff", fontFamily: "'Manrope', sans-serif", letterSpacing: "-0.03em", zIndex: 1 }}>FF</span>
             {/* specular sheen */}
             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "52%", background: "linear-gradient(180deg, rgba(255,255,255,0.22) 0%, transparent 100%)", borderRadius: "18px 18px 0 0" }} />
           </div>
           <div>
-            <div style={{ fontSize: 19, fontWeight: FW.extrabold, color: COLORS.text, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em", lineHeight: 1.1 }}>FamilyFinance</div>
+            <div style={{ fontSize: 19, fontWeight: FW.extrabold, color: COLORS.text, fontFamily: "'Manrope', sans-serif", letterSpacing: "-0.03em", lineHeight: 1.1 }}>FamilyFinance</div>
             <div style={{ fontSize: 11, fontWeight: FW.semibold, color: COLORS.muted, letterSpacing: "0.04em", textTransform: "uppercase" }}>by the Roberts family</div>
           </div>
         </motion.div>
@@ -1902,7 +1912,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           style={{ textAlign: "center", marginBottom: 40, maxWidth: 520 }}
         >
           <h1 style={{
-            fontFamily: "'Bricolage Grotesque', sans-serif",
+            fontFamily: "'Manrope', sans-serif",
             fontSize: "clamp(36px, 7vw, 58px)",
             fontWeight: FW.extrabold,
             color: COLORS.text,
@@ -2078,10 +2088,10 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             boxShadow: `0 14px 40px rgba(0,120,168,0.38)`,
             position: "relative", overflow: "hidden",
           }}>
-            <span style={{ fontSize: 26, fontWeight: FW.black, color: "#fff", fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em", zIndex: 1 }}>FF</span>
+            <span style={{ fontSize: 26, fontWeight: FW.black, color: "#fff", fontFamily: "'Manrope', sans-serif", letterSpacing: "-0.03em", zIndex: 1 }}>FF</span>
             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "50%", background: "linear-gradient(180deg, rgba(255,255,255,0.22) 0%, transparent 100%)", borderRadius: "24px 24px 0 0" }} />
           </div>
-          <h2 style={{ fontSize: 24, fontWeight: FW.extrabold, color: COLORS.text, marginBottom: 24, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em" }}>FamilyFinance</h2>
+          <h2 style={{ fontSize: 24, fontWeight: FW.extrabold, color: COLORS.text, marginBottom: 24, fontFamily: "'Manrope', sans-serif", letterSpacing: "-0.03em" }}>FamilyFinance</h2>
           <div style={{ width: 28, height: 28, border: `2.5px solid rgba(0,120,168,0.15)`, borderTopColor: COLORS.primary, borderRadius: "50%", animation: "spin 0.85s linear infinite", marginBottom: 12 }} />
           <p style={{ fontSize: 14, color: COLORS.muted, fontWeight: FW.medium }}>Loading your budget…</p>
         </motion.div>
@@ -2089,27 +2099,15 @@ If the request doesn't map to a clear category goal, still return JSON with newG
     );
   }
   return (
-    <div className="app-layout" style={{ display: "flex", height: "100vh", overflow: "hidden", background: "transparent", color: COLORS.text, fontFamily: "'Figtree', sans-serif" }}>
+    <div className="app-layout" style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", background: "transparent", color: COLORS.text, fontFamily: "'Manrope', sans-serif" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Figtree:wght@300;400;500;600;700;800;900&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { height: 100%; }
         body {
-          background:
-            radial-gradient(ellipse at 15% 15%, rgba(0,120,168,0.07) 0%, transparent 45%),
-            radial-gradient(ellipse at 85% 80%, rgba(74,82,168,0.05) 0%, transparent 45%),
-            radial-gradient(ellipse at 50% 50%, rgba(16,185,129,0.03) 0%, transparent 60%),
-            var(--c-bg);
-          background-attachment: fixed;
+          background: var(--c-bg);
           color: var(--c-text);
-        }
-        html.dark body {
-          background:
-            radial-gradient(ellipse at 15% 15%, rgba(56,184,232,0.09) 0%, transparent 45%),
-            radial-gradient(ellipse at 85% 80%, rgba(143,150,244,0.07) 0%, transparent 45%),
-            radial-gradient(ellipse at 50% 50%, rgba(60,197,153,0.04) 0%, transparent 60%),
-            var(--c-bg);
-          background-attachment: fixed;
+          font-family: 'Manrope', sans-serif;
         }
         html.dark input::placeholder, html.dark textarea::placeholder { color: #6e7884; }
         ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -2125,7 +2123,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           backdrop-filter: blur(28px) saturate(180%);
           -webkit-backdrop-filter: blur(28px) saturate(180%);
           border: 1px solid var(--c-glass-strong);
-          box-shadow: 0 4px 24px var(--c-glass-hairline), inset 0 1px 0 var(--c-glass-inset);
+          box-shadow: 0 4px 24px var(--c-border), inset 0 1px 0 var(--c-glass-inset);
         }
         .glass-strong {
           background: var(--c-glass-border);
@@ -2163,7 +2161,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         }
         .kpi-num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum", "ss01", "cv11"; letter-spacing: -0.03em; }
         .num-ios { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-feature-settings: "tnum", "ss01"; letter-spacing: -0.02em; }
-        h1, h2, h3, h4 { font-family: 'Bricolage Grotesque', sans-serif; letter-spacing: -0.025em; }
+        h1, h2, h3, h4 { letter-spacing: -0.025em; }
 
         /* Keyframes */
         @keyframes toastSlideUp { from { opacity: 0; transform: translateX(-50%) translateY(16px) scale(0.96); } to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } }
@@ -2275,7 +2273,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         header.app-header[data-scrolled="true"] {
           backdrop-filter: blur(48px) saturate(220%) !important;
           -webkit-backdrop-filter: blur(48px) saturate(220%) !important;
-          box-shadow: 0 1px 0 var(--c-glass-hairline), 0 20px 48px rgba(0,0,0,0.10) !important;
+          box-shadow: 0 1px 0 var(--c-border), 0 20px 48px rgba(0,0,0,0.10) !important;
           border-bottom-color: var(--c-glass-border-strong) !important;
         }
 
@@ -2499,15 +2497,15 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         }
       `}</style>
 
-      {/* ── SIDEBAR — glass, rounded-r-3xl ── */}
-      <aside className="app-sidebar" style={{ width: sidebarCollapsed ? 72 : 280, background: "var(--c-glass)", backdropFilter: "blur(40px) saturate(200%)", WebkitBackdropFilter: "blur(40px) saturate(200%)", borderRight: "1px solid var(--c-glass-border)", display: "flex", flexDirection: "column", flexShrink: 0, height: "100vh", borderRadius: "0 0 28px 0", transition: "width 0.25s cubic-bezier(0.4,0,0.2,1)", overflow: "hidden", boxShadow: "4px 0 24px rgba(0,0,0,0.05)" }}>
+      {/* ── SIDEBAR — hidden, replaced by top-nav ── */}
+      <aside className="app-sidebar" style={{ display: "none" }}>
         {/* Family branding */}
         <div style={{ padding: sidebarCollapsed ? "22px 0 18px" : "28px 20px 32px", display: "flex", justifyContent: sidebarCollapsed ? "center" : "flex-start" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 52, height: 52, borderRadius: 18, background: `linear-gradient(140deg, ${COLORS.primary} 0%, #0095d2 50%, ${COLORS.tertiary} 100%)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, fontWeight: FW.extrabold, color: "#fff", flexShrink: 0, boxShadow: `0 6px 20px rgba(0,120,168,0.35), inset 0 1px 0 rgba(255,255,255,0.25)`, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.01em" }}>
+            <div style={{ width: 52, height: 52, borderRadius: 18, background: `linear-gradient(140deg, ${COLORS.primary} 0%, #0095d2 50%, ${COLORS.tertiary} 100%)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, fontWeight: FW.extrabold, color: "#fff", flexShrink: 0, boxShadow: `0 6px 20px rgba(0,120,168,0.35), inset 0 1px 0 rgba(255,255,255,0.25)`, fontFamily: "'Manrope', sans-serif", letterSpacing: "-0.01em" }}>
               {familyName.split(" ").map(w => w[0]).join("").slice(0, 2)}
             </div>
-            {!sidebarCollapsed && <div className="sidebar-family-name"><h1 style={{ fontSize: 17, fontWeight: FW.extrabold, color: COLORS.text, letterSpacing: "-0.03em", lineHeight: 1.15, whiteSpace: "nowrap", fontFamily: "'Bricolage Grotesque', sans-serif" }}>{familyName}</h1>
+            {!sidebarCollapsed && <div className="sidebar-family-name"><h1 style={{ fontSize: 17, fontWeight: FW.extrabold, color: COLORS.text, letterSpacing: "-0.03em", lineHeight: 1.15, whiteSpace: "nowrap", fontFamily: "'Manrope', sans-serif" }}>{familyName}</h1>
               {saveStatus ? (
                 <span style={{ fontSize: 11, fontWeight: FW.semibold, color: saveStatus === 'saving' ? COLORS.muted : saveStatus === 'saved' ? COLORS.success : COLORS.danger }}>
                   {saveStatus === 'saving' ? '⟳ Saving…' : saveStatus === 'saved' ? '✓ Saved' : '⚠ Not saved'}
@@ -2520,10 +2518,10 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         <nav style={{ flex: 1, padding: sidebarCollapsed ? "0 10px" : "0 10px", display: "flex", flexDirection: "column", gap: 2 }}>
           {[
             { id: "dashboard",    label: "Overview",        icon: "dashboard" },
-            { id: "transactions", label: "Family Budget",   icon: "payments" },
-            { id: "weekly",       label: "Bill Calendar",   icon: "calendar_month" },
+            { id: "transactions", label: "Plan",             icon: "payments" },
+            { id: "weekly",       label: "Fixed",           icon: "calendar_month" },
             { id: "insights",     label: "Monthly Insights",icon: "bar_chart" },
-            { id: "advisor",      label: "AI Assistant",    icon: "smart_toy" },
+            { id: "advisor",      label: "Advisor",         icon: "auto_awesome" },
           ].map(item => (
             <button key={item.id} className={`nav-item${tab === item.id ? " active" : ""}`} onClick={() => navigateToTab(item.id)} title={sidebarCollapsed ? item.label : undefined} style={{
               display: "flex", alignItems: "center", justifyContent: sidebarCollapsed ? "center" : "flex-start", gap: 11, padding: sidebarCollapsed ? "12px 0" : "11px 14px",
@@ -2564,83 +2562,87 @@ If the request doesn't map to a clear category goal, still return JSON with newG
 
       {/* ── MAIN COLUMN ── */}
       <div className="app-main" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
-        {/* TOP HEADER */}
-        <header className="app-header" data-scrolled={headerScrolled ? "true" : "false"} style={{ background: "var(--c-glass-strong)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", borderBottom: "1px solid var(--c-glass-hairline)", padding: "16px 32px 14px", display: "flex", alignItems: "center", gap: 20, flexShrink: 0, boxShadow: "0 1px 0 var(--c-glass-hairline), 0 8px 24px rgba(0,0,0,0.04)", position: "relative", zIndex: 1000 }}>
-          {/* Month picker */}
-          <div style={{ position: "relative", zIndex: 300 }}>
-            {showMonthPicker && <div onClick={() => setShowMonthPicker(false)} style={{ position: "fixed", inset: 0, zIndex: 999 }} />}
-            <button onClick={() => setShowMonthPicker(p => !p)} style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--c-glass)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid var(--c-glass-border)", borderRadius: 12, padding: "9px 16px", fontSize: 14, fontWeight: FW.semibold, color: COLORS.text, cursor: "pointer", boxShadow: "0 2px 12px var(--c-glass-hairline)", flexShrink: 0 }}>
-              {(() => { const { month0, year } = parseKey(viewMonthKey); return `${MONTH_FULL[month0]} ${year}`; })()}
-              <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.subtext }}>expand_more</span>
-            </button>
-            {showMonthPicker && (
-              <div style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, background: "#ffffff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 18, boxShadow: "0 8px 32px rgba(0,0,0,0.14), 0 2px 8px var(--c-glass-hairline)", zIndex: 400, padding: 8, minWidth: 220, maxHeight: 320, overflowY: "auto" }}>
-                {(() => {
-                  const { month0: sm, year: sy } = parseKey(startMonthKey);
-                  const endDate = new Date(); endDate.setMonth(endDate.getMonth() + 3);
-                  const allMonths = [];
-                  let cur = new Date(sy, sm, 1);
-                  while (cur <= endDate) { allMonths.push(monthKey(cur.getFullYear(), cur.getMonth())); cur.setMonth(cur.getMonth() + 1); }
-                  allMonths.reverse();
-                  return allMonths.map(key => {
-                    const { month0, year } = parseKey(key);
-                    const isView = key === viewMonthKey;
-                    const isCurrent = key === todayKey;
-                    const snap = monthlySnapshots[key];
-                    const hasData = snap && (snap.income.length > 0 || snap.expenses.length > 0);
-                    return (
-                      <button key={key} onClick={() => { setViewMonthKey(key); setShowMonthPicker(false); }} style={{
-                        display: "flex", alignItems: "center", justifyContent: "space-between",
-                        width: "100%", padding: "10px 14px", border: "none", borderRadius: 10,
-                        background: isView ? `rgba(0,103,136,0.08)` : "transparent",
-                        color: isView ? COLORS.primary : COLORS.text,
-                        fontWeight: isView ? FW.bold : FW.medium, fontSize: 14, cursor: "pointer",
-                        fontFamily: "'Figtree', sans-serif",
-                      }}>
-                        <span>{MONTH_FULL[month0]} {year}{isCurrent ? " (now)" : ""}</span>
-                        {hasData && <div style={{ width: 6, height: 6, borderRadius: "50%", background: COLORS.primary, flexShrink: 0 }} />}
-                      </button>
-                    );
-                  });
-                })()}
-              </div>
-            )}
-          </div>
-          {/* AI Search bar */}
-          <div className="header-search" style={{ flex: 1, maxWidth: 560, position: "relative" }}>
-            <span className="material-symbols-outlined" style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 18, color: COLORS.primary }}>smart_toy</span>
-            <input
-              ref={headerInputRef}
-              placeholder="Ask your AI financial assistant…"
-              style={{ width: "100%", background: "var(--c-glass)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid var(--c-glass-border)", borderRadius: 9999, padding: "10px 44px 10px 42px", fontSize: 13.5, color: COLORS.text, boxShadow: "0 2px 12px var(--c-glass-hairline), inset 0 1px 0 rgba(255,255,255,0.9)", fontWeight: FW.medium }}
-              onKeyDown={e => { if (e.key === "Enter" && e.target.value.trim()) { setAdvisorMsg(e.target.value.trim()); pendingAdvisorSend.current = true; navigateToTab("advisor"); e.target.value = ""; } }}
-            />
-            <button onClick={() => { const v = headerInputRef.current?.value?.trim(); if (v) { setAdvisorMsg(v); pendingAdvisorSend.current = true; setTab("advisor"); headerInputRef.current.value = ""; } }} aria-label="Ask AI assistant" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: `linear-gradient(135deg, ${COLORS.primary}, #0095d2)`, border: "none", cursor: "pointer", padding: 6, borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,120,168,0.3)" }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 16, color: "#fff" }}>send</span>
-            </button>
-          </div>
-          {/* Icons */}
-          <div style={{ display: "flex", gap: 8, alignItems: "center", marginLeft: "auto" }}>
-            <button onClick={() => setModal("notifications")} aria-label={`Notifications${billsDueIn7Days > 0 ? ` (${billsDueIn7Days} due this week)` : ""}`} style={{ background: "var(--c-glass)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid var(--c-glass-border)", borderRadius: 12, cursor: "pointer", padding: "7px", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.text }}>notifications</span>
-              {billsDueIn7Days > 0 && (
-                <span style={{ position: "absolute", top: 4, right: 4, width: 14, height: 14, borderRadius: "50%", background: COLORS.danger, color: "#fff", fontSize: 8, fontWeight: FW.extrabold, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid white" }}>{billsDueIn7Days}</span>
+        {/* ── STUDIO TOP NAV ── */}
+        <header className="app-header" style={{ background: "var(--s-nav-bg, var(--c-surface))", borderBottom: "1px solid var(--s-nav-border, var(--c-border))", flexShrink: 0, position: "relative", zIndex: 1000 }}>
+          {/* Top bar row */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 28px", height: 52 }}>
+            {/* Wordmark */}
+            <span style={{ fontSize: 15, fontWeight: 600, color: COLORS.text, letterSpacing: "-0.02em" }}>{familyName}</span>
+            {/* Month picker */}
+            <div style={{ position: "relative", zIndex: 300 }}>
+              {showMonthPicker && <div onClick={() => setShowMonthPicker(false)} style={{ position: "fixed", inset: 0, zIndex: 999 }} />}
+              <button onClick={() => setShowMonthPicker(p => !p)} style={{ display: "flex", alignItems: "center", gap: 6, background: "oklch(0% 0 0 / 0.04)", border: "none", borderRadius: 9999, padding: "5px 12px", fontSize: 12, fontWeight: 400, color: COLORS.subtext, cursor: "pointer", fontFamily: "'Manrope', sans-serif" }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>calendar_today</span>
+                {(() => { const { month0, year } = parseKey(viewMonthKey); return `${MONTH_FULL[month0]} ${year}`; })()}
+                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>expand_more</span>
+              </button>
+              {showMonthPicker && (
+                <div style={{ position: "absolute", top: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "var(--c-surface)", border: "1px solid var(--c-border)", borderRadius: 14, boxShadow: "0 8px 32px oklch(0% 0 0 / 0.12)", zIndex: 400, padding: 8, minWidth: 200, maxHeight: 300, overflowY: "auto" }}>
+                  {(() => {
+                    const { month0: sm, year: sy } = parseKey(startMonthKey);
+                    const endDate = new Date(); endDate.setMonth(endDate.getMonth() + 3);
+                    const allMonths = [];
+                    let cur = new Date(sy, sm, 1);
+                    while (cur <= endDate) { allMonths.push(monthKey(cur.getFullYear(), cur.getMonth())); cur.setMonth(cur.getMonth() + 1); }
+                    allMonths.reverse();
+                    return allMonths.map(key => {
+                      const { month0, year } = parseKey(key);
+                      const isView = key === viewMonthKey;
+                      const isCurrent = key === todayKey;
+                      const snap = monthlySnapshots[key];
+                      const hasData = snap && (snap.income.length > 0 || snap.expenses.length > 0);
+                      return (
+                        <button key={key} onClick={() => { setViewMonthKey(key); setShowMonthPicker(false); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "9px 12px", border: "none", borderRadius: 8, background: isView ? "var(--c-primary-fill-bg)" : "transparent", color: isView ? COLORS.primary : COLORS.text, fontWeight: isView ? 500 : 400, fontSize: 13, cursor: "pointer", fontFamily: "'Manrope', sans-serif" }}>
+                          <span>{MONTH_FULL[month0]} {year}{isCurrent ? " ·" : ""}</span>
+                          {hasData && <div style={{ width: 5, height: 5, borderRadius: "50%", background: COLORS.primary, flexShrink: 0 }} />}
+                        </button>
+                      );
+                    });
+                  })()}
+                </div>
               )}
-            </button>
-            <button onClick={() => setModal("settings")} aria-label="Settings" style={{ background: "var(--c-glass)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid var(--c-glass-border)", borderRadius: 12, cursor: "pointer", padding: "7px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.text }}>settings</span>
-            </button>
+            </div>
+            {/* Right icons */}
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              {saveStatus && <span style={{ fontSize: 11, color: saveStatus === 'saving' ? COLORS.muted : saveStatus === 'saved' ? COLORS.success : COLORS.danger, fontWeight: 500 }}>{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved' : 'Not saved'}</span>}
+              <button onClick={() => setModal("notifications")} aria-label="Notifications" style={{ background: "transparent", border: "none", cursor: "pointer", padding: 6, borderRadius: 8, display: "flex", alignItems: "center", position: "relative" }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.subtext, fontVariationSettings: "'FILL' 0, 'wght' 300" }}>notifications</span>
+                {billsDueIn7Days > 0 && <span style={{ position: "absolute", top: 3, right: 3, width: 8, height: 8, borderRadius: "50%", background: COLORS.danger, border: "1.5px solid var(--c-surface)" }} />}
+              </button>
+              <button onClick={() => setModal("addMenu")} aria-label="Add transaction" style={{ background: COLORS.primary, border: "none", cursor: "pointer", padding: "6px 14px", borderRadius: 8, display: "flex", alignItems: "center", gap: 4, color: "#fff", fontSize: 12, fontWeight: 500, fontFamily: "'Manrope', sans-serif" }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
+                Add
+              </button>
+              <button onClick={() => setModal("settings")} aria-label="Settings" style={{ background: "transparent", border: "none", cursor: "pointer", padding: 6, borderRadius: 8, display: "flex", alignItems: "center" }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.subtext, fontVariationSettings: "'FILL' 0, 'wght' 300" }}>settings</span>
+              </button>
+            </div>
           </div>
+          {/* Tab nav row */}
+          <nav style={{ display: "flex", padding: "0 28px", borderTop: "1px solid var(--s-nav-border, var(--c-border))" }}>
+            {[
+              { id: "dashboard",    label: "Home"     },
+              { id: "transactions", label: "Plan"     },
+              { id: "weekly",       label: "Fixed"    },
+              { id: "insights",     label: "Insights" },
+              { id: "advisor",      label: "Advisor"  },
+            ].map(item => (
+              <button key={item.id} onClick={() => navigateToTab(item.id)} style={{ padding: "11px 16px", background: "transparent", border: "none", fontSize: 13, fontWeight: tab === item.id ? 500 : 400, color: tab === item.id ? COLORS.text : "var(--s-tab-idle, var(--c-muted))", cursor: "pointer", position: "relative", fontFamily: "'Manrope', sans-serif", letterSpacing: "0.01em", whiteSpace: "nowrap" }}>
+                {item.label}
+                {tab === item.id && <span style={{ position: "absolute", bottom: 0, left: 16, right: 16, height: 2, background: COLORS.primary, borderRadius: "2px 2px 0 0" }} />}
+              </button>
+            ))}
+          </nav>
         </header>
 
         {/* MOBILE BOTTOM NAV */}
         <nav className="mobile-nav">
           {[
-            { id: "dashboard",    label: "Home",     icon: "dashboard" },
-            { id: "transactions", label: "Budget",   icon: "payments" },
-            { id: "weekly",       label: "Bills",    icon: "calendar_month" },
+            { id: "dashboard",    label: "Home",     icon: "home" },
+            { id: "transactions", label: "Plan",     icon: "payments" },
+            { id: "weekly",       label: "Fixed",    icon: "calendar_month" },
             { id: "insights",     label: "Insights", icon: "bar_chart" },
-            { id: "advisor",      label: "AI",       icon: "smart_toy" },
+            { id: "advisor",      label: "Advisor",  icon: "auto_awesome" },
           ].map(item => (
             <button key={item.id} className={`mobile-nav-item${tab === item.id ? " active" : ""}`} onClick={() => navigateToTab(item.id)} style={{ viewTransitionName: tab === item.id ? "active-mobile-pill" : undefined }}>
               <span className="material-symbols-outlined" style={{ fontVariationSettings: tab === item.id ? "'FILL' 1, 'wght' 500" : "'FILL' 0, 'wght' 300" }}>{item.icon}</span>
@@ -2661,358 +2663,140 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           }}
           style={{ flex: 1, overflowY: "auto", padding: "24px 32px", viewTransitionName: "page-main" }}
         >
-        {/* ── DASHBOARD TAB ── */}
-        {tab === "dashboard" && (
-          <div style={{ fontSize: 14, color: COLORS.text }}>
-            {/* ── Unified Budget Overview ── */}
-            {(() => {
-              const netCashFlow = viewTotalIncome - budgetBarSpent;
-              const now = new Date();
-              const daysInMo = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-              const dayOfMo = now.getDate();
-              const expectedPct = Math.round((dayOfMo / daysInMo) * 100);
-              const actualPct = viewTotalIncome > 0 ? Math.round((budgetBarSpent / viewTotalIncome) * 100) : 0;
-              const diff = actualPct - expectedPct;
-              const paceColor = diff > 25 ? "#F87171" : diff > 10 ? "#FBBF24" : "#34D399";
-              const paceLabel = diff > 25 ? `over pace 🔴` : diff > 10 ? `ahead of pace ⚠️` : `on pace ✓`;
-              const { month0, year } = parseKey(viewMonthKey);
-              return (
-                <div className="glass-card" style={{ background: "var(--c-glass)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 24, padding: "32px 32px 28px", boxShadow: "0 8px 40px rgba(0,0,0,0.07), inset 0 1px 0 var(--c-glass-inset)", marginBottom: 20 }}>
-                  {/* Header: net cash flow hero */}
-                  <div style={{ marginBottom: 24 }}>
-                    <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8, whiteSpace: "nowrap" }}>Net Cash Flow</p>
-                    <AnimatedNumber
-                      value={netCashFlow}
-                      format={(v) => (v >= 0 ? "+" : "−") + fmt(Math.abs(v))}
-                      className="kpi-num"
-                      style={{ fontSize: 80, fontWeight: FW.black, color: netCashFlow >= 0 ? "#10b981" : "#F87171", letterSpacing: "-0.05em", fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', lineHeight: 0.9, display: "block", marginBottom: 6 }}
-                    />
-                    <p style={{ fontSize: 13, color: netCashFlow >= 0 ? "#10b981" : "#F87171", fontWeight: FW.semibold, opacity: 0.85 }}>
-                      {netCashFlow >= 0 ? "net savings this month" : "over budget this month"}
-                    </p>
-                  </div>
-                  {/* Budget bar */}
-                  <BudgetBar totalIncome={viewTotalIncome} totalPlanned={budgetBarPlanned} totalSpent={budgetBarSpent} />
-                  {/* Bottom row: pace + expenses summary */}
-                  <div style={{ display: "flex", justifyContent: "flex-start", alignItems: "center", marginTop: 14, flexWrap: "wrap", gap: 12 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-                      {budgetBarPlanned > 0 && (
-                        <p style={{ fontSize: 12, color: paceColor, fontWeight: FW.semibold, margin: 0 }}>
-                          Day {dayOfMo} of {daysInMo} — {actualPct}% spent ({paceLabel})
-                        </p>
-                      )}
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: FW.bold, color: COLORS.primary, background: "rgba(0,103,136,0.08)", borderRadius: 9999, padding: "4px 12px" }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>receipt_long</span>
-                        {fmt(viewTotalExpenses)} expenses · {fmt(billsActualTotal)} bills paid
-                      </span>
+        {/* ── HOME TAB ── */}
+        {tab === "dashboard" && (() => {
+          const totalFixedPaid = billsActualTotal;
+          const totalFixedReserved = billsReservedTotal;
+          const totalVarSpent = viewTotalExpenses;
+          const spentAndPaid = totalVarSpent + totalFixedPaid + savingsExpectedTotal;
+          const spentPct = viewTotalIncome > 0 ? (spentAndPaid / viewTotalIncome * 100) : 0;
+          const reservedPct = viewTotalIncome > 0 ? Math.min(100 - spentPct, (totalFixedReserved / viewTotalIncome * 100)) : 0;
+          const cardStyle = { background: COLORS.surface, borderRadius: 12, padding: "18px 20px", boxShadow: "var(--c-shadow)", border: "1px solid transparent" };
+          const catRows = CATEGORIES.map(c => ({ ...c, spent: viewCatTotals[c.id] || 0, budget: viewExpenseBudgets[c.id] || 0 })).filter(c => c.spent > 0 || c.budget > 0).sort((a, b) => (b.budget || b.spent) - (a.budget || a.spent));
+          const billRows = [...bills].sort((a, b) => { const aP = getBillPaid(a, viewMonthKey); const bP = getBillPaid(b, viewMonthKey); if (aP !== bP) return aP ? 1 : -1; return a.dayOfMonth - b.dayOfMonth; });
+          return (
+            <div style={{ fontSize: 14, color: COLORS.text, display: "flex", flexDirection: "column", gap: 14 }}>
+
+              {/* ── True Available hero ── */}
+              <div style={{ ...cardStyle, padding: "22px 24px" }}>
+                <p style={{ fontSize: 10, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.1em", color: COLORS.muted, marginBottom: 4 }}>True Available</p>
+                <AnimatedNumber
+                  value={trueAvailable}
+                  format={v => v >= 0 ? fmt(v) : `−${fmt(Math.abs(v))}`}
+                  style={{ fontSize: 46, fontWeight: 300, color: trueAvailable >= 0 ? COLORS.primary : COLORS.danger, letterSpacing: "-0.04em", lineHeight: 1, display: "block", marginBottom: 16, fontVariantNumeric: "tabular-nums" }}
+                />
+                {viewTotalIncome > 0 && (
+                  <>
+                    <div style={{ height: 5, borderRadius: 9999, background: "var(--s-bar-bg,var(--c-container))", overflow: "hidden", display: "flex", marginBottom: 10 }}>
+                      <div style={{ width: `${Math.min(spentPct, 100)}%`, background: "oklch(82% 0.01 250)", transition: "width 0.8s cubic-bezier(0.25,1,0.5,1)" }} />
+                      <div style={{ width: `${Math.min(reservedPct, 100)}%`, background: "oklch(72% 0.015 250)", transition: "width 0.8s cubic-bezier(0.25,1,0.5,1)" }} />
+                      <div style={{ flex: 1, background: COLORS.primary }} />
                     </div>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* ── Hero 195 Metric Band ── */}
-            {(() => {
-              const { year: vy2, month0: vm2 } = parseKey(viewMonthKey);
-              const prevKey2 = monthKey(new Date(vy2, vm2 - 1, 1).getFullYear(), new Date(vy2, vm2 - 1, 1).getMonth());
-              const prevS2 = monthStats(prevKey2);
-              const { month0: pm2 } = parseKey(prevKey2);
-              const netCF = viewTotalIncome - budgetBarSpent;
-              const netWorthVal = savingsActualTotal - totalDebt;
-              const savRate = viewTotalIncome > 0 ? Math.max(0, (netCF / viewTotalIncome) * 100) : null;
-              const dtiVal = totalIncome > 0 ? Math.round((totalDebt / totalIncome) * 100) : null;
-              const metrics = [
-                { label: "Income",        value: viewTotalIncome,   fmtFn: fmt,                                                         color: COLORS.success,    diff: prevS2.hasData ? viewTotalIncome - prevS2.inc : null, higherIsGood: true },
-                { label: "Expenses",      value: viewTotalExpenses, fmtFn: fmt,                                                         color: COLORS.accentWarm,  diff: prevS2.hasData ? viewTotalExpenses - prevS2.exp : null, higherIsGood: false },
-                { label: "Net Cash Flow", value: netCF,             fmtFn: (v) => (v >= 0 ? "+" : "−") + fmt(Math.abs(v)),              color: netCF >= 0 ? COLORS.success : COLORS.danger, diff: prevS2.hasData ? netCF - prevS2.net : null, higherIsGood: true },
-                { label: "Net Worth",     value: netWorthVal,       fmtFn: fmt,                                                         color: netWorthVal >= 0 ? COLORS.success : COLORS.danger, diff: null },
-                { label: "Total Debt",    value: totalDebt,         fmtFn: fmt,                                                         color: totalDebt > 0 ? COLORS.danger : COLORS.success, diff: null },
-                { label: "Savings Rate",  value: savRate,           fmtFn: (v) => v !== null && Number.isFinite(v) ? `${v.toFixed(1)}%` : "—", color: COLORS.primary, diff: null },
-              ];
-              return (
-                <div style={{ background: "var(--c-glass)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 24, padding: "24px 28px", boxShadow: "0 8px 40px rgba(0,0,0,0.07), inset 0 1px 0 var(--c-glass-inset)", marginBottom: 20, position: "relative", overflow: "hidden" }}>
-                  <BorderBeam size={320} duration={14} colorFrom={COLORS.primary} colorTo={COLORS.tertiary} borderWidth={1.5} />
-                  <div className="metric-band-grid" style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 0 }}>
-                    {metrics.map((metric, i) => {
-                      const isLast = i === metrics.length - 1;
-                      const isZero = metric.diff === 0;
-                      const isPositive = metric.diff !== null && !isZero && (metric.higherIsGood ? metric.diff > 0 : metric.diff < 0);
-                      const isNegative = metric.diff !== null && !isZero && !isPositive;
-                      return (
-                        <div key={metric.label} style={{ paddingRight: isLast ? 0 : 20, marginRight: isLast ? 0 : 20, borderRight: isLast ? "none" : "1px solid var(--c-glass-hairline)" }}>
-                          <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>{metric.label}</p>
-                          <AnimatedNumber value={metric.value ?? 0} format={metric.fmtFn} style={{ fontSize: 22, fontWeight: FW.extrabold, color: metric.color, fontFamily: "var(--font-num)", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', lineHeight: 1.1, display: "block" }} />
-                          {metric.diff !== null && (
-                            <p style={{ fontSize: 11, color: isZero ? COLORS.muted : isPositive ? COLORS.success : COLORS.danger, marginTop: 5, display: "flex", alignItems: "center", gap: 3 }}>
-                              {isZero ? (
-                                <span style={{ color: COLORS.muted }}>— same as {MONTH_NAMES[pm2]}</span>
-                              ) : (
-                                <>
-                                  <span>{isPositive ? "▲" : "▼"}</span>
-                                  <span>{fmt(Math.abs(metric.diff))} vs {MONTH_NAMES[pm2]}</span>
-                                </>
-                              )}
-                            </p>
-                          )}
+                    <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+                      {[
+                        { label: "Available", color: COLORS.primary, val: fmt(Math.max(0, trueAvailable)) },
+                        { label: "Fixed Reserved", color: "oklch(64% 0.015 250)", val: fmt(totalFixedReserved) },
+                        { label: "Spent", color: "oklch(75% 0.01 250)", val: fmt(spentAndPaid) },
+                      ].map(l => (
+                        <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: COLORS.muted }}>
+                          <div style={{ width: 7, height: 7, borderRadius: 2, background: l.color, flexShrink: 0 }} />
+                          {l.label} {l.val}
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })()}
-            {/* Bento grid — 12 columns */}
-            <div className="bento-grid" style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 20, paddingBottom: 64 }}>
-              {/* ── ROW 1, COL 1–4: Next Bill Due (cycling carousel) ── */}
-              {(() => {
-                const carouselBills = unpaidSorted;
-                const hasBills = carouselBills.length > 0;
-                const safeBillIdx = hasBills ? billCarouselIdx % carouselBills.length : 0;
-                const carouselBill = hasBills ? carouselBills[safeBillIdx] : null;
-                const carouselDaysUntil = carouselBill ? Math.round((carouselBill._due.getTime() - today0.getTime()) / 86400000) : null;
-                return (
-                  <div
-                    className="bill-due-card"
-                    onClick={carouselBill ? () => openBillDetail(carouselBill) : undefined}
-                    style={{ gridColumn: "span 4", background: `linear-gradient(145deg, rgba(0,120,168,0.12) 0%, rgba(0,149,210,0.09) 50%, rgba(74,82,168,0.08) 100%)`, backdropFilter: "blur(24px) saturate(160%)", WebkitBackdropFilter: "blur(24px) saturate(160%)", border: "1px solid rgba(0,120,168,0.15)", borderRadius: 24, padding: "28px", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 320, position: "relative", boxShadow: "0 8px 32px rgba(0,120,168,0.10), inset 0 1px 0 rgba(255,255,255,0.6)", cursor: carouselBill ? "pointer" : "default", viewTransitionName: carouselBill && morphBillId === carouselBill.id && !activeBillDetail ? "bill-active" : undefined }}
-                  >
-                    {/* Arrow buttons */}
-                    {hasBills && carouselBills.length > 1 && (
-                      <>
-                        <button onClick={(e) => { e.stopPropagation(); setBillCarouselIdx(p => (p - 1 + carouselBills.length) % carouselBills.length); }} aria-label="Previous bill" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,89,117,0.12)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2, color: COLORS.onSecondaryContainer, fontSize: 16 }}>‹</button>
-                        <button onClick={(e) => { e.stopPropagation(); setBillCarouselIdx(p => (p + 1) % carouselBills.length); }} aria-label="Next bill" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,89,117,0.12)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2, color: COLORS.onSecondaryContainer, fontSize: 16 }}>›</button>
-                      </>
-                    )}
-                    <div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
-                        <div style={{ padding: 10, background: `rgba(0,89,117,0.1)`, borderRadius: 16 }}>
-                          <span className="material-symbols-outlined" style={{ color: COLORS.onSecondaryContainer, fontSize: 28 }}>event_upcoming</span>
-                        </div>
-                        {carouselDaysUntil !== null && (
-                          <span style={{ fontSize: 10, fontWeight: FW.extrabold, letterSpacing: "0.1em", textTransform: "uppercase", color: COLORS.onSecondaryContainer, opacity: 0.7 }}>
-                            {carouselDaysUntil < 0 ? `OVERDUE ${Math.abs(carouselDaysUntil)}D` : carouselDaysUntil === 0 ? "DUE TODAY" : `DUE IN ${carouselDaysUntil}D`}
-                          </span>
-                        )}
-                      </div>
-                      {carouselBill ? (
-                        <div style={{ textAlign: "center" }}>
-                          <p style={{ fontSize: 13, fontWeight: FW.medium, color: COLORS.onSecondaryContainer, marginBottom: 4, opacity: 0.7 }}>Upcoming Bill</p>
-                          <h4 style={{ fontSize: 22, fontWeight: FW.bold, color: COLORS.onSecondaryContainer, marginBottom: 4, lineHeight: 1.2 }}>{carouselBill.label}</h4>
-                          <p style={{ fontSize: 12, color: COLORS.onSecondaryContainer, opacity: 0.65 }}>{fmtDate(getBillDueDate(carouselBill, viewMonthKey))}</p>
-                        </div>
-                      ) : (
-                        <div style={{ textAlign: "center", marginTop: 20 }}>
-                          <p style={{ fontSize: 28, marginBottom: 8 }}>🎉</p>
-                          <p style={{ fontSize: 15, fontWeight: FW.bold, color: COLORS.onSecondaryContainer }}>All bills paid this month!</p>
-                          <p style={{ fontSize: 12, color: COLORS.onSecondaryContainer, opacity: 0.65, marginTop: 4 }}>Great job staying on top of your bills.</p>
-                        </div>
-                      )}
+                      ))}
                     </div>
-                    {carouselBill && (
-                      <div style={{ textAlign: "center" }}>
-                        <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.onSecondaryContainer, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Amount Due</p>
-                        <AnimatedNumber value={carouselBill.budget} format={fmt} style={{ fontSize: 34, fontWeight: FW.extrabold, color: COLORS.onSecondaryContainer, marginBottom: 16, letterSpacing: "-0.02em", display: "block" }} />
-                        {payBillConfirm?.id === carouselBill.id ? (
-                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                            <p style={{ fontSize: 12, color: COLORS.onSecondaryContainer, textAlign: "center", opacity: 0.8 }}>Mark {carouselBill.label} as paid?</p>
-                            <div style={{ display: "flex", gap: 8 }}>
-                              <button onClick={(e) => { e.stopPropagation(); markBillPaid(carouselBill.id, viewMonthKey); setPayBillConfirm(null); showToast(`${carouselBill.label} marked as paid`); }} style={{ flex: 1, background: COLORS.onSecondaryContainer, color: "#fff", border: "none", borderRadius: 9999, padding: "11px", fontSize: 13, fontWeight: FW.bold, cursor: "pointer" }}>Confirm</button>
-                              <button onClick={(e) => { e.stopPropagation(); setPayBillConfirm(null); }} style={{ flex: 1, background: "rgba(0,89,117,0.15)", color: COLORS.onSecondaryContainer, border: "none", borderRadius: 9999, padding: "11px", fontSize: 13, fontWeight: FW.bold, cursor: "pointer" }}>Cancel</button>
-                            </div>
-                          </div>
-                        ) : (
-                          <button onClick={(e) => { e.stopPropagation(); setPayBillConfirm(carouselBill); }} style={{ width: "100%", background: COLORS.onSecondaryContainer, color: "#fff", border: "none", borderRadius: 9999, padding: "12px", fontSize: 14, fontWeight: FW.bold, cursor: "pointer", boxShadow: COLORS.shadowSm }}>Pay Now</button>
-                        )}
-                        {/* Dot indicators */}
-                        {carouselBills.length > 1 && (
-                          <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 12 }}>
-                            {carouselBills.map((_, di) => (
-                              <button key={di} onClick={(e) => { e.stopPropagation(); setBillCarouselIdx(di); }} style={{ width: di === safeBillIdx ? 16 : 6, height: 6, borderRadius: 9999, background: di === safeBillIdx ? COLORS.onSecondaryContainer : `${COLORS.onSecondaryContainer}50`, border: "none", cursor: "pointer", padding: 0, transition: "all 0.2s" }} />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-
-              {/* ── ROW 1, COL 5–12: Cash Flow Summary ── */}
-              <div className="cashflow-summary-card" style={{ gridColumn: "span 8", position: "relative", overflow: "hidden", background: "var(--c-hero-gradient)", borderRadius: 24, padding: "36px 40px", color: "#fff", boxShadow: "0 16px 48px rgba(0,120,168,0.35), 0 4px 16px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.2)", minHeight: 320 }}>
-                {/* Decorative glass orbs */}
-                <div style={{ position: "absolute", top: -40, right: -40, width: 200, height: 200, borderRadius: "50%", background: "rgba(255,255,255,0.06)", pointerEvents: "none" }} />
-                <div style={{ position: "absolute", bottom: -20, left: 60, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,0.04)", pointerEvents: "none" }} />
-                <div style={{ position: "relative", zIndex: 1, height: "100%", display: "flex", flexDirection: "column" }}>
-                  <p style={{ fontSize: 11, fontWeight: FW.bold, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.8)", marginBottom: 20 }}>Cash Flow Summary</p>
-                  <div style={{ flex: 1, minHeight: 210, minWidth: 0 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={[
-                          { name: "Income", amount: viewTotalIncome },
-                          { name: "Expenses", amount: viewTotalExpenses },
-                          { name: "Bills", amount: totalBills },
-                          { name: "Debt", amount: totalDebtPayments },
-                          { name: "Savings", amount: savingsActualTotal },
-                        ]}
-                        margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
-                        barCategoryGap="28%"
-                      >
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
-                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: "rgba(255,255,255,0.75)", fontWeight: 600 }} axisLine={false} tickLine={false} />
-                        <YAxis tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)} tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }} axisLine={false} tickLine={false} />
-                        <Tooltip
-                          formatter={(value) => [fmt(value), ""]}
-                          contentStyle={{ background: "rgba(0,30,50,0.95)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, color: "#fff", fontSize: 12 }}
-                          labelStyle={{ color: "rgba(255,255,255,0.75)", fontWeight: 600, marginBottom: 2 }}
-                          cursor={{ fill: "rgba(255,255,255,0.05)" }}
-                        />
-                        <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
-                          <Cell fill="rgba(255,255,255,0.88)" />
-                          <Cell fill="#FBBF24" />
-                          <Cell fill="#93C5FD" />
-                          <Cell fill="#FCA5A5" />
-                          <Cell fill="#6EE7B7" />
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-
-              {/* ── ROW 2: Spending by Category (horizontally scrollable) ── */}
-              <div style={{ gridColumn: "span 12", background: "var(--c-glass)", backdropFilter: "blur(20px) saturate(160%)", WebkitBackdropFilter: "blur(20px) saturate(160%)", border: "1px solid var(--c-glass)", borderRadius: 24, padding: "28px 28px 24px", position: "relative", boxShadow: "0 4px 24px rgba(0,0,0,0.05)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
-                  <div>
-                    <h4 style={{ fontSize: 20, fontWeight: FW.extrabold, color: COLORS.text, marginBottom: 4, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.025em" }}>Spending by Category</h4>
-                    <p style={{ fontSize: 13, color: COLORS.subtext }}>Track where your money goes · scroll to see all</p>
-                  </div>
-                  <button onClick={() => navigateToTab("transactions")} style={{ background: "rgba(0,120,168,0.10)", border: "1px solid rgba(0,120,168,0.12)", borderRadius: 9999, padding: "8px 18px", fontSize: 13, fontWeight: FW.semibold, color: COLORS.primary, cursor: "pointer" }}>
-                    View Budget →
-                  </button>
-                </div>
-                {viewCatExpenseCards.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: "32px 0", color: COLORS.muted }}>
-                    <p style={{ fontSize: 22, marginBottom: 8 }}>📊</p>
-                    <p style={{ fontSize: 14, fontWeight: FW.semibold, color: COLORS.text, marginBottom: 4 }}>No budget categories set up yet</p>
-                    <p style={{ fontSize: 13, color: COLORS.muted }}>Head to Family Budget to start planning.</p>
-                  </div>
-                ) : (
-                  <div className="overview-hscroll" style={{ display: "flex", gap: 16, overflowX: "auto", scrollSnapType: "x mandatory", scrollBehavior: "smooth", paddingBottom: 8, msOverflowStyle: "none", scrollbarWidth: "none", overscrollBehaviorX: "contain" }}>
-                    {viewCatExpenseCards.map(([cat, amt]) => {
-                        const budget = viewExpenseBudgets[cat] || 0;
-                        const isOver = budget > 0 && amt > budget;
-                        const isInactive = amt === 0 && budget === 0;
-                        const barColor = isOver ? "#F87171" : COLORS.primary;
-                        const topExpense = [...viewExpenses].filter(e => e.category === cat).sort((a, b) => b.amount - a.amount)[0];
-                        return (
-                          <div key={cat} className="exp-card" style={{ flexShrink: 0, width: 200, scrollSnapAlign: "start", background: "var(--c-glass-border)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderRadius: 20, padding: "18px", boxShadow: isOver ? `0 4px 20px rgba(248,113,113,0.20)` : "0 4px 16px var(--c-glass-hairline)", border: isOver ? `1.5px solid rgba(248,113,113,0.35)` : `1px solid var(--c-glass-border-strong)`, cursor: "default", opacity: isInactive ? 0.72 : 1, transition: "opacity .2s" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                              <div style={{ width: 40, height: 40, borderRadius: 12, background: CATEGORY_ICON_BG[cat] || COLORS.neutral, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                                <span className="material-symbols-outlined" style={{ fontSize: 20, color: CATEGORY_ICON_COLOR[cat] || COLORS.subtext }}>{CATEGORY_ICONS[cat] || "category"}</span>
-                              </div>
-                              <div style={{ minWidth: 0 }}>
-                                <p style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{CAT_LABEL[cat] || cat}</p>
-                                <p style={{ fontSize: 11, color: COLORS.subtext, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{topExpense ? topExpense.label : "—"}</p>
-                              </div>
-                            </div>
-                            <p className="num-ios" style={{ fontSize: 22, fontWeight: FW.extrabold, color: isInactive ? COLORS.muted : COLORS.text, letterSpacing: "-0.02em", marginBottom: 8 }}>{fmt(amt)}</p>
-                            {budget > 0 && (
-                              <>
-                                <div style={{ height: 6, background: COLORS.containerLow, borderRadius: 9999, overflow: "hidden", marginBottom: 4 }}>
-                                  <div style={{ width: `${Math.min(100, pct(amt, budget))}%`, height: "100%", background: barColor, borderRadius: 9999, transition: "width 0.6s cubic-bezier(0.22,1,0.36,1)" }} />
-                                </div>
-                                <p style={{ fontSize: 11, color: isOver ? "#F87171" : COLORS.muted }}>
-                                  {isOver ? `Over by ${fmt(amt - budget)}` : `${fmt(budget - amt)} left of ${fmt(budget)}`}
-                                </p>
-                              </>
-                            )}
-                            {budget === 0 && <p style={{ fontSize: 11, color: COLORS.muted }}>No budget set</p>}
-                          </div>
-                        );
-                    })}
-                  </div>
+                  </>
                 )}
               </div>
 
-              {/* ── ROW 3, COL 1–6: Savings Goals (one card per goal) ── */}
-              <div className="savings-goal-group" style={{ gridColumn: "span 6", display: "flex", flexDirection: "column", gap: 16 }}>
-                {savingsItems.length === 0 && (
-                  <div className="savings-goal-card" style={{ background: `linear-gradient(145deg, rgba(74,82,168,0.08) 0%, rgba(168,174,255,0.10) 50%, rgba(74,82,168,0.06) 100%)`, backdropFilter: "blur(24px) saturate(150%)", WebkitBackdropFilter: "blur(24px) saturate(150%)", border: "1px solid rgba(168,174,255,0.22)", borderRadius: 24, padding: "32px", textAlign: "center" }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 40, color: COLORS.tertiary, opacity: 0.5, marginBottom: 8 }}>savings</span>
-                    <h4 style={{ fontSize: 18, fontWeight: FW.extrabold, color: COLORS.text, marginBottom: 6, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.02em" }}>No savings goals yet</h4>
-                    <p style={{ fontSize: 13, color: COLORS.subtext, marginBottom: 16 }}>Head to Family Budget to add your first goal.</p>
-                    <button onClick={() => navigateToTab("transactions")} style={{ background: COLORS.primary, color: "#fff", border: "none", borderRadius: 9999, padding: "10px 20px", fontSize: 13, fontWeight: FW.semibold, cursor: "pointer", fontFamily: "inherit" }}>
-                      Set up savings →
-                    </button>
+              {/* ── Stats strip ── */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10 }}>
+                {[
+                  { label: "Income",         value: viewTotalIncome,       color: COLORS.success },
+                  { label: "Fixed Paid",      value: totalFixedPaid,        color: COLORS.text },
+                  { label: "Variable Spent",  value: totalVarSpent,         color: totalVarSpent > 0 ? COLORS.warning : COLORS.muted },
+                  { label: "Savings",         value: savingsExpectedTotal,  color: COLORS.text },
+                ].map(chip => (
+                  <div key={chip.label} style={{ ...cardStyle, padding: "11px 14px" }}>
+                    <p style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em", color: COLORS.muted, marginBottom: 4 }}>{chip.label}</p>
+                    <p style={{ fontSize: 16, fontWeight: 300, color: chip.color, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{fmt(chip.value)}</p>
                   </div>
-                )}
-                {savingsItems.length > 0 && (() => {
-                  const isGrid = savingsItems.length > 1;
-                  return (
-                    <div style={{ display: isGrid ? "grid" : "flex", gridTemplateColumns: isGrid ? "repeat(auto-fill, minmax(220px, 1fr))" : undefined, gap: 14, flexDirection: "column" }}>
-                      {savingsItems.map(goal => {
-                        const goalPct = goal.expected > 0 ? pct(goal.actual, goal.expected) : 0;
-                        const lbl = (goal.label || "").toLowerCase();
-                        const goalIcon = lbl.includes("holiday") || lbl.includes("travel") || lbl.includes("trip") || lbl.includes("vacation") ? "flight" : lbl.includes("house") || lbl.includes("home") ? "home" : lbl.includes("car") || lbl.includes("vehicle") ? "directions_car" : lbl.includes("school") || lbl.includes("college") || lbl.includes("education") ? "school" : lbl.includes("emergency") ? "health_and_safety" : "savings";
-                        const goalReached = goal.expected > 0 && goal.actual >= goal.expected;
-                        const compact = isGrid;
-                        return (
-                          <div key={goal.id} className="savings-goal-card" style={{ background: `linear-gradient(145deg, rgba(74,82,168,0.10) 0%, rgba(168,174,255,0.14) 50%, rgba(74,82,168,0.08) 100%)`, backdropFilter: "blur(24px) saturate(150%)", WebkitBackdropFilter: "blur(24px) saturate(150%)", border: goalReached ? "1px solid rgba(52,211,153,0.4)" : "1px solid rgba(168,174,255,0.30)", borderRadius: compact ? 18 : 24, padding: compact ? "20px" : "32px", position: "relative", overflow: "hidden", boxShadow: "0 8px 32px rgba(74,82,168,0.12), inset 0 1px 0 rgba(255,255,255,0.5)", transition: "transform .2s cubic-bezier(0.22,1,0.36,1), box-shadow .2s" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: compact ? 12 : 20, gap: 8 }}>
-                              <div style={{ minWidth: 0 }}>
-                                <h4 style={{ fontSize: compact ? 15 : 22, fontWeight: FW.extrabold, color: COLORS.text, marginBottom: 2, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.025em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                  {goalReached ? "✓ " : "🎯 "}{goal.label}
-                                </h4>
-                                {!compact && <p style={{ fontSize: 13, color: COLORS.subtext }}>{goalReached ? "Goal reached — nice work." : "Saving for the family's future"}</p>}
-                              </div>
-                              <span className="material-symbols-outlined" style={{ fontSize: compact ? 26 : 40, color: goalReached ? COLORS.success : COLORS.tertiary, opacity: 0.4, fontVariationSettings: "'FILL' 1", flexShrink: 0 }}>{goalIcon}</span>
-                            </div>
-                            <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
-                              <span className="kpi-num num-ios" style={{ fontSize: compact ? 26 : 44, fontWeight: FW.black, color: goalReached ? COLORS.success : COLORS.tertiary, letterSpacing: "-0.03em", fontFamily: "var(--font-num)" }}>{fmt(goal.actual)}</span>
-                              <span className="num-ios" style={{ fontSize: compact ? 12 : 14, fontWeight: FW.semibold, color: COLORS.subtext }}>/ {fmt(goal.expected)}</span>
-                            </div>
-                            <div style={{ width: "100%", height: compact ? 8 : 10, background: "rgba(74,82,168,0.10)", borderRadius: 9999, overflow: "hidden", marginBottom: compact ? 8 : 12 }}>
-                              <div style={{ width: `${goalPct}%`, height: "100%", background: goalReached ? `linear-gradient(90deg, ${COLORS.success}, #10b981)` : `linear-gradient(90deg, ${COLORS.tertiary}, #818cf8)`, borderRadius: 9999, transition: "width 0.6s cubic-bezier(0.22,1,0.36,1)" }} />
-                            </div>
-                            <div style={{ display: "flex", justifyContent: compact ? "flex-end" : "space-between", fontSize: 11, fontWeight: FW.semibold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                              {!compact && <span>Just Started</span>}
-                              <span className="num-ios" style={{ fontSize: compact ? 11 : 13, fontWeight: FW.bold, color: goalReached ? COLORS.success : COLORS.tertiary }}>{Math.round(goalPct)}% {goalReached ? "Complete" : "Saved"}</span>
-                              {!compact && <span>Goal Reached</span>}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
+                ))}
               </div>
 
-              {/* ── ROW 3, COL 7–12: Savings & Investments ── */}
-              <div className="savings-invest-card" style={{ gridColumn: "span 6", background: `linear-gradient(145deg, rgba(0,120,168,0.09) 0%, rgba(0,149,210,0.12) 50%, rgba(13,148,136,0.08) 100%)`, backdropFilter: "blur(24px) saturate(150%)", WebkitBackdropFilter: "blur(24px) saturate(150%)", border: "1px solid rgba(0,149,210,0.20)", borderRadius: 24, padding: "32px", position: "relative", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,120,168,0.10), inset 0 1px 0 var(--c-glass)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
-                  <div>
-                    <h4 style={{ fontSize: 22, fontWeight: FW.extrabold, color: COLORS.text, marginBottom: 4, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.025em" }}>Savings &amp; Investments</h4>
-                    <p style={{ fontSize: 13, color: COLORS.subtext }}>Monthly wealth building target</p>
+              {/* ── Two-column: Fixed Commitments + Variable Spending ── */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+
+                {/* Fixed Commitments */}
+                <div style={cardStyle}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                    <p style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.1em", color: COLORS.muted }}>Fixed Commitments</p>
+                    {billsReservedTotal > 0 && <span style={{ fontSize: 9, fontWeight: 500, padding: "2px 7px", borderRadius: 9999, background: COLORS.primaryFillBg, color: COLORS.primary }}>{billRows.filter(b => !getBillPaid(b, viewMonthKey)).length} due</span>}
                   </div>
-                  <span className="material-symbols-outlined" style={{ fontSize: 40, color: COLORS.primary, opacity: 0.35, fontVariationSettings: "'FILL' 1" }}>show_chart</span>
+                  {billRows.length === 0 && <p style={{ fontSize: 12, color: COLORS.muted, textAlign: "center", padding: "16px 0" }}>No fixed expenses yet</p>}
+                  {billRows.map(b => {
+                    const paid = getBillPaid(b, viewMonthKey);
+                    const dueDate = getBillDueDate(b, viewMonthKey);
+                    const daysLeft = dueDate ? Math.round((new Date(dueDate) - today0) / 86400000) : null;
+                    const soon = !paid && daysLeft !== null && daysLeft <= 2;
+                    return (
+                      <div key={b.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${COLORS.containerLow}` }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={{ width: 17, height: 17, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 600, flexShrink: 0, background: paid ? COLORS.successFillBg : soon ? COLORS.dangerFillBg : COLORS.containerLow, color: paid ? COLORS.success : soon ? COLORS.danger : COLORS.muted }}>
+                            {paid ? "✓" : "!"}
+                          </div>
+                          <div>
+                            <p style={{ fontSize: 12, color: paid ? COLORS.muted : COLORS.text, textDecoration: paid ? "line-through" : "none", textDecorationColor: COLORS.muted }}>{b.label}</p>
+                            {!paid && daysLeft !== null && <p style={{ fontSize: 10, color: soon ? COLORS.danger : COLORS.muted }}>{daysLeft < 0 ? `Overdue ${Math.abs(daysLeft)}d` : daysLeft === 0 ? "Due today" : `due ${fmtDate(dueDate)}`}</p>}
+                          </div>
+                        </div>
+                        <p style={{ fontSize: 12, color: paid ? COLORS.muted : COLORS.text, fontVariantNumeric: "tabular-nums", textDecoration: paid ? "line-through" : "none", textDecorationColor: COLORS.muted }}>{fmt(b.budget)}</p>
+                      </div>
+                    );
+                  })}
+                  {bills.length > 0 && (
+                    <div style={{ paddingTop: 10, display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 10, color: COLORS.muted }}>{billRows.filter(b => getBillPaid(b, viewMonthKey)).length} of {bills.length} paid</span>
+                      <span style={{ fontSize: 10, fontWeight: 500, color: COLORS.text }}>{fmt(billsBudgetTotal)} total</span>
+                    </div>
+                  )}
                 </div>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 8 }}>
-                  <span className="kpi-num" style={{ fontSize: 44, fontWeight: FW.black, color: COLORS.primary, letterSpacing: "-0.03em", fontFamily: "var(--font-num)" }}>{fmt(savingsActualTotal)}</span>
-                  <span style={{ fontSize: 14, fontWeight: FW.semibold, color: COLORS.subtext }}>/ {fmt(savingsExpectedTotal)}</span>
+
+                {/* Variable Spending */}
+                <div style={cardStyle}>
+                  <p style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.1em", color: COLORS.muted, marginBottom: 14 }}>Variable Spending</p>
+                  {catRows.length === 0 && <p style={{ fontSize: 12, color: COLORS.muted, textAlign: "center", padding: "16px 0" }}>No expenses yet</p>}
+                  {catRows.map(c => {
+                    const remaining = c.budget > 0 ? c.budget - c.spent : null;
+                    const pctUsed = c.budget > 0 ? Math.min(100, (c.spent / c.budget) * 100) : 0;
+                    const over = c.budget > 0 && c.spent > c.budget;
+                    const warn = c.budget > 0 && !over && pctUsed >= 85;
+                    const barColor = over ? COLORS.danger : warn ? COLORS.warning : COLORS.primary;
+                    return (
+                      <div key={c.id} style={{ padding: "8px 0", borderBottom: `1px solid ${COLORS.containerLow}` }}>
+                        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 5 }}>
+                          <p style={{ fontSize: 12, color: COLORS.text }}>{c.label}</p>
+                          <div style={{ display: "flex", alignItems: "baseline", gap: 3, fontVariantNumeric: "tabular-nums" }}>
+                            {remaining !== null
+                              ? <p style={{ fontSize: 12, fontWeight: 500, color: barColor }}>{over ? `${fmt(Math.abs(remaining))} over` : `${fmt(remaining)} left`}</p>
+                              : <p style={{ fontSize: 12, color: COLORS.subtext }}>{fmt(c.spent)}</p>}
+                            {c.budget > 0 && <p style={{ fontSize: 10, color: COLORS.muted }}>/ {fmt(c.budget)}</p>}
+                          </div>
+                        </div>
+                        {c.budget > 0 && (
+                          <div style={{ height: 4, borderRadius: 9999, background: "var(--s-bar-bg,var(--c-container))", overflow: "hidden" }}>
+                            <div style={{ width: `${pctUsed}%`, height: "100%", background: barColor, borderRadius: 9999, transition: "width 0.8s cubic-bezier(0.25,1,0.5,1)" }} />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-                <div style={{ width: "100%", height: 10, background: "rgba(0,120,168,0.10)", borderRadius: 9999, overflow: "hidden", marginBottom: 12 }}>
-                  <div style={{ width: `${pct(savingsActualTotal, savingsExpectedTotal || 1)}%`, height: "100%", background: `linear-gradient(90deg, ${COLORS.primary}, #0095d2)`, borderRadius: 9999, transition: "width 0.5s cubic-bezier(0.4,0,0.2,1)" }} />
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: FW.semibold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  <span>Base</span>
-                  <span style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.primary }}>{Math.round(pct(savingsActualTotal, savingsExpectedTotal || 1))}% of Target</span>
-                  <span>Maxed Out</span>
-                </div>
+
               </div>
-            </div>{/* end bento grid */}
-          </div>
-        )}
-        {/* ── FAMILY BUDGET TAB ── */}
+            </div>
+          );
+        })()}
+        {/* ── PLAN TAB ── */}
         {tab === "transactions" && (() => {
           const { month0: vm0, year: vy } = parseKey(viewMonthKey);
           const sortExp = (arr) => {
@@ -3035,8 +2819,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             ? <input autoFocus value={value} onChange={e=>updateExpenseField(id,field,e.target.value)} onBlur={()=>setEditingCell(null)} onKeyDown={e=>{if(e.key==="Enter")setEditingCell(null);}} style={{width:"100%",background:COLORS.containerLow,border:"none",borderRadius:6,padding:"3px 6px",fontSize:13,color:COLORS.text,outline:"none"}} />
             : <span onClick={()=>setEditingCell({id,field})} title="Click to edit" style={{cursor:"text",display:"block",borderRadius:4,padding:"2px 4px",fontSize:13}}>{value||"—"}</span>;
           const EditableNum = ({ id, field, value }) => editingCell?.id===id && editingCell?.field===field
-            ? <input autoFocus type="number" value={value} onChange={e=>updateExpenseField(id,field,e.target.value)} onBlur={()=>setEditingCell(null)} onKeyDown={e=>{if(e.key==="Enter")setEditingCell(null);}} style={{width:"100%",background:COLORS.containerLow,border:"none",borderRadius:6,padding:"3px 6px",fontSize:13,color:COLORS.text,outline:"none"}} />
-            : <span onClick={()=>setEditingCell({id,field})} title="Click to edit" style={{cursor:"text",display:"block",borderRadius:4,padding:"2px 4px",color:COLORS.text,fontWeight:FW.semibold,fontSize:13}}>{fmt(value)}</span>;
+            ? <input autoFocus type="number" value={value} onChange={e=>updateExpenseField(id,field,e.target.value)} onBlur={()=>setEditingCell(null)} onKeyDown={e=>{if(e.key==="Enter")setEditingCell(null);}} style={{width:"100%",background:COLORS.containerLow,border:"none",borderRadius:6,padding:"3px 6px",fontSize:13,color:COLORS.text,outline:"none",textAlign:"right"}} />
+            : <span onClick={()=>setEditingCell({id,field})} title="Click to edit" style={{cursor:"text",display:"block",borderRadius:4,padding:"2px 4px",color:COLORS.text,fontWeight:FW.semibold,fontSize:13,textAlign:"right",fontFamily:"var(--font-num)",fontVariantNumeric:"tabular-nums"}}>{fmt(value)}</span>;
           const EditableDate = ({ id, field, value }) => editingCell?.id===id && editingCell?.field===field
             ? <input autoFocus type="date" value={value} onChange={e=>updateExpenseField(id,field,e.target.value)} onBlur={()=>setEditingCell(null)} style={{width:"100%",background:COLORS.containerLow,border:"none",borderRadius:6,padding:"3px 6px",fontSize:12,color:COLORS.text,outline:"none"}} />
             : <span onClick={()=>setEditingCell({id,field})} title="Click to edit" style={{cursor:"text",display:"block",borderRadius:4,padding:"2px 4px",fontSize:12,color:COLORS.subtext}}>{value ? fmtDate(value) : "—"}</span>;
@@ -3045,11 +2829,6 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 {CATEGORIES.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}
               </select>
             : <span onClick={()=>setEditingCell({id,field})} title="Click to edit" style={{cursor:"pointer",display:"inline-block",fontSize:11,fontWeight:FW.semibold,color:COLORS.subtext,background:COLORS.containerHighest,borderRadius:9999,padding:"2px 8px"}}>{value}</span>;
-
-          // Inline debt cell helpers
-          const DebtText = ({ id, field, value, style={} }) => editingDebtCell?.id===id && editingDebtCell?.field===field
-            ? <input autoFocus value={value} onChange={e=>updateDebtField(id,field,e.target.value)} onBlur={()=>setEditingDebtCell(null)} onKeyDown={e=>{if(e.key==="Enter")setEditingDebtCell(null);}} style={{width:"100%",background:COLORS.containerLow,border:"none",borderRadius:6,padding:"3px 6px",fontSize:13,color:COLORS.text,outline:"none",...style}} />
-            : <span onClick={()=>setEditingDebtCell({id,field})} title="Click to edit" style={{cursor:"text",...style}}>{value}</span>;
 
           // Inline savings cell helpers
           const SavText = ({ id, field, value, style={} }) => editingSavingsCell?.id===id && editingSavingsCell?.field===field
@@ -3094,89 +2873,107 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           })();
           return (
             <div style={{ paddingBottom: 48 }}>
-              {/* ── Hero: Metrics + Status + Progress ── */}
+              {/* ── Hero: Remaining + supporting stats ── */}
               {(() => {
                 const remaining = viewTotalIncome - totalActual;
-                const budgetMetrics = [
-                  { label: "Monthly Income",  val: fmt(viewTotalIncome), color: COLORS.success, isStatus: false },
-                  { label: "Planned Budget",  val: totalPlanned > 0 ? fmt(totalPlanned) : "—", color: COLORS.primary, isStatus: false },
-                  { label: "Spent",           val: fmt(totalActual),     color: COLORS.accentWarm, isStatus: false },
-                  { label: "Remaining",       val: remaining >= 0 ? fmt(remaining) : "−" + fmt(Math.abs(remaining)), color: remaining >= 0 ? COLORS.success : COLORS.danger, isStatus: false },
-                  { label: "Status",          val: healthStatus.label,   color: healthStatus.color, isStatus: true },
-                ];
+                const remainingColor = remaining >= 0 ? COLORS.success : COLORS.danger;
                 return (
-                  <div style={{ background: "var(--c-glass)", backdropFilter: "blur(32px) saturate(180%)", WebkitBackdropFilter: "blur(32px) saturate(180%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 24, padding: "24px 28px", boxShadow: "0 8px 40px rgba(0,0,0,0.07), inset 0 1px 0 var(--c-glass-inset)", marginBottom: 20, position: "relative", overflow: "hidden" }}>
-                    <BorderBeam size={280} duration={16} colorFrom={COLORS.primary} colorTo={COLORS.tertiary} borderWidth={1.5} />
-                    <div className="metric-band-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 0 }}>
-                      {budgetMetrics.map((m, i) => {
-                        const isLast = i === budgetMetrics.length - 1;
-                        return (
-                          <div key={m.label} style={{ paddingRight: isLast ? 0 : 20, marginRight: isLast ? 0 : 20, borderRight: isLast ? "none" : "1px solid var(--c-glass-hairline)" }}>
-                            <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>{m.label}</p>
-                            {m.isStatus ? (
-                              <button onClick={() => { setAdvisorMsg(`My budget health: ${healthStatus.label}. I've spent ${fmt(totalActual)} of ${fmt(viewTotalIncome)} income (${pctSpent}%). ${isCurrentMonth ? `${daysLeft} days left in the month.` : ""} Please give me specific advice.`); pendingAdvisorSend.current = true; navigateToTab("advisor"); }} title="Ask AI for advice" style={{ fontSize: 14, fontWeight: FW.extrabold, color: healthStatus.color, background: healthStatus.bg, border: "none", borderRadius: 10, padding: "6px 12px", cursor: "pointer", fontFamily: "var(--font-num)", letterSpacing: "-0.01em", lineHeight: 1.1, display: "inline-block" }}>{m.val}</button>
-                            ) : (
-                              <p style={{ fontSize: 22, fontWeight: FW.extrabold, color: m.color, fontFamily: "var(--font-num)", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', lineHeight: 1.1 }}>{m.val}</p>
-                            )}
-                            {m.isStatus && isCurrentMonth && daysLeft > 0 && (
-                              <p style={{ fontSize: 11, color: COLORS.muted, marginTop: 5 }}>{daysLeft} {daysLeft === 1 ? "day" : "days"} left</p>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {/* Progress bar + preset controls */}
-                    <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--c-glass-hairline)" }}>
-                      <BudgetBar totalIncome={viewTotalIncome} totalPlanned={totalPlanned} totalSpent={totalActual} hideLabel />
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14, gap: 12, flexWrap: "wrap" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                          <button onClick={() => {
-                            if (!toggle5020) {
-                              if (viewTotalIncome === 0) { setToast5020("Add income first to use the 50/30/20 rule"); setTimeout(() => setToast5020(""), 3000); return; }
-                              pre5020Budgets.current = { ...viewExpenseBudgets };
-                              pre5020Savings.current = savingsItems.map(s => ({ ...s }));
-                              const inc = viewTotalIncome;
-                              const needsAmt = Math.round(inc * 0.50 / 5);
-                              const wantsAmt = Math.round(inc * 0.30 / 6);
-                              const savesAmt = Math.round(inc * 0.20 / 2);
-                              setViewExpenseBudgets({
-                                Housing: needsAmt, Utilities: needsAmt, Food: needsAmt, Transport: needsAmt, Health: needsAmt,
-                                Entertainment: wantsAmt, Personal: wantsAmt, Kids: wantsAmt, Education: wantsAmt, Subscriptions: wantsAmt, Travel: wantsAmt,
-                                Other: savesAmt, Savings: savesAmt
-                              });
-                              if (savingsItems.length > 0) setSavingsItems(p => [{ ...p[0], expected: Math.round(inc*0.20) }, ...p.slice(1)]);
-                              setToggle5020(true);
-                            } else {
-                              if (pre5020Budgets.current) setViewExpenseBudgets(pre5020Budgets.current);
-                              if (pre5020Savings.current) setSavingsItems(pre5020Savings.current);
-                              pre5020Budgets.current = null; pre5020Savings.current = null;
-                              setToggle5020(false);
-                            }
-                          }} style={{ fontSize: 11, fontWeight: FW.bold, background: toggle5020 ? COLORS.primary : "transparent", color: toggle5020 ? "#fff" : COLORS.primary, border: `1.5px solid ${COLORS.primary}`, borderRadius: 9999, padding: "4px 12px", cursor: "pointer", transition: "all .2s" }}>
-                            50/30/20 Rule {toggle5020 ? "ON" : "OFF"}
-                          </button>
-                          {toggle5020 && viewTotalIncome > 0 && <span style={{ fontSize: 11, color: COLORS.muted }}>Based on {fmt(viewTotalIncome)} income</span>}
-                          {toast5020 && <span style={{ fontSize: 11, color: COLORS.warning, fontWeight: FW.semibold }}>{toast5020}</span>}
-                        </div>
-                        {showCopyButton && (
-                          <button onClick={() => { if (Object.values(prevMonthExpBudgets).some(v => v > 0)) setViewExpenseBudgets({ ...prevMonthExpBudgets }); if (Object.keys(prevMonthItemBudgets).length > 0) setItemBudgets(p => ({...p, [viewMonthKey]: {...prevMonthItemBudgets}})); }} style={{ background: "rgba(0,103,136,0.08)", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: FW.semibold, color: COLORS.primary, cursor: "pointer" }}>
-                            Copy planned amounts from {MONTH_NAMES[new Date(prevY, prevM0 - 1, 1).getMonth()]}
-                          </button>
+                  <div style={{ background: "var(--c-surface)", border: "1px solid var(--c-border)", borderRadius: 24, padding: "28px 32px", boxShadow: "0 1px 4px rgba(0,0,0,0.05)", marginBottom: 20 }}>
+                    {/* Month label + status */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+                      <span style={{ fontSize: 13, fontWeight: FW.medium, color: COLORS.muted }}>
+                        {MONTH_FULL[vm0]} {vy} · Monthly Plan
+                      </span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {isCurrentMonth && daysLeft > 0 && (
+                          <span style={{ fontSize: 11, color: COLORS.muted }}>{daysLeft} days left</span>
                         )}
+                        <button
+                          onClick={() => { setAdvisorMsg(`My budget health: ${healthStatus.label}. I've spent ${fmt(totalActual)} of ${fmt(viewTotalIncome)} income (${pctSpent}%). ${isCurrentMonth ? `${daysLeft} days left in the month.` : ""} Please give me specific advice.`); pendingAdvisorSend.current = true; navigateToTab("insights"); }}
+                          title="Ask AI for advice"
+                          style={{ fontSize: 12, fontWeight: FW.semibold, color: healthStatus.color, background: healthStatus.bg, border: "none", borderRadius: 9999, padding: "4px 12px", cursor: "pointer" }}
+                        >
+                          {healthStatus.label}
+                        </button>
                       </div>
-                      {!onboardingDismissed && plannedCount < 5 && (
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, background: `rgba(0,103,136,0.07)`, borderRadius: 10, padding: "9px 14px" }}>
-                          <span style={{ fontSize: 12, color: COLORS.primary }}>👋 Set your planned amounts to unlock full budget tracking — click any <strong>—</strong> in the Planned column.</span>
-                          <button onClick={() => setOnboardingDismissed(true)} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 14, padding: "0 4px" }}>×</button>
+                    </div>
+
+                    {/* Hero remaining number */}
+                    <div style={{ marginBottom: 24 }}>
+                      <p style={{ fontSize: 11, fontWeight: FW.medium, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Remaining this month</p>
+                      <AnimatedNumber
+                        value={Math.abs(remaining)}
+                        format={(v) => (remaining < 0 ? "−" : "") + fmt(v)}
+                        style={{ fontSize: 48, fontWeight: 300, color: remainingColor, fontFamily: "'Manrope', var(--font-num)", letterSpacing: "-0.04em", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}
+                      />
+                    </div>
+
+                    {/* Supporting stats strip */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 0, marginBottom: 20, paddingBottom: 20, borderBottom: "1px solid var(--c-border)" }}>
+                      {[
+                        { label: "Income",  val: fmt(viewTotalIncome), color: COLORS.success },
+                        { label: "Spent",   val: fmt(totalActual),     color: COLORS.accentWarm },
+                        { label: "Planned", val: totalPlanned > 0 ? fmt(totalPlanned) : "—", color: COLORS.primary },
+                      ].map((m, i) => (
+                        <div key={m.label} style={{ paddingRight: i < 2 ? 20 : 0, marginRight: i < 2 ? 20 : 0, borderRight: i < 2 ? "1px solid var(--c-border)" : "none" }}>
+                          <p style={{ fontSize: 10, fontWeight: FW.medium, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>{m.label}</p>
+                          <p style={{ fontSize: 18, fontWeight: 300, color: m.color, fontFamily: "'Manrope', var(--font-num)", letterSpacing: "-0.025em", fontVariantNumeric: "tabular-nums" }}>{m.val}</p>
                         </div>
+                      ))}
+                    </div>
+
+                    {/* Progress bar */}
+                    <BudgetBar totalIncome={viewTotalIncome} totalPlanned={totalPlanned} totalSpent={totalActual} hideLabel />
+
+                    {/* Controls */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14, gap: 12, flexWrap: "wrap" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                        <button onClick={() => {
+                          if (!toggle5020) {
+                            if (viewTotalIncome === 0) { setToast5020("Add income first to use the 50/30/20 rule"); setTimeout(() => setToast5020(""), 3000); return; }
+                            pre5020Budgets.current = { ...viewExpenseBudgets };
+                            pre5020Savings.current = savingsItems.map(s => ({ ...s }));
+                            const inc = viewTotalIncome;
+                            const needsAmt = Math.round(inc * 0.50 / 5);
+                            const wantsAmt = Math.round(inc * 0.30 / 6);
+                            const savesAmt = Math.round(inc * 0.20 / 2);
+                            setViewExpenseBudgets({
+                              Housing: needsAmt, Utilities: needsAmt, Food: needsAmt, Transport: needsAmt, Health: needsAmt,
+                              Entertainment: wantsAmt, Personal: wantsAmt, Kids: wantsAmt, Education: wantsAmt, Subscriptions: wantsAmt, Travel: wantsAmt,
+                              Other: savesAmt, Savings: savesAmt
+                            });
+                            if (savingsItems.length > 0) setSavingsItems(p => [{ ...p[0], expected: Math.round(inc*0.20) }, ...p.slice(1)]);
+                            setToggle5020(true);
+                          } else {
+                            if (pre5020Budgets.current) setViewExpenseBudgets(pre5020Budgets.current);
+                            if (pre5020Savings.current) setSavingsItems(pre5020Savings.current);
+                            pre5020Budgets.current = null; pre5020Savings.current = null;
+                            setToggle5020(false);
+                          }
+                        }} style={{ fontSize: 11, fontWeight: FW.semibold, background: toggle5020 ? COLORS.primary : "transparent", color: toggle5020 ? "#fff" : COLORS.primary, border: `1.5px solid ${COLORS.primary}`, borderRadius: 9999, padding: "4px 12px", cursor: "pointer", transition: "all .2s" }}>
+                          50/30/20 Rule {toggle5020 ? "ON" : "OFF"}
+                        </button>
+                        {toggle5020 && viewTotalIncome > 0 && <span style={{ fontSize: 11, color: COLORS.muted }}>Based on {fmt(viewTotalIncome)} income</span>}
+                        {toast5020 && <span style={{ fontSize: 11, color: COLORS.warning, fontWeight: FW.semibold }}>{toast5020}</span>}
+                      </div>
+                      {showCopyButton && (
+                        <button onClick={() => { if (Object.values(prevMonthExpBudgets).some(v => v > 0)) setViewExpenseBudgets({ ...prevMonthExpBudgets }); if (Object.keys(prevMonthItemBudgets).length > 0) setItemBudgets(p => ({...p, [viewMonthKey]: {...prevMonthItemBudgets}})); }} style={{ background: "rgba(0,103,136,0.08)", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: FW.semibold, color: COLORS.primary, cursor: "pointer" }}>
+                          Copy from {MONTH_NAMES[new Date(prevY, prevM0 - 1, 1).getMonth()]}
+                        </button>
                       )}
                     </div>
+                    {!onboardingDismissed && plannedCount < 5 && (
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, background: `rgba(0,103,136,0.07)`, borderRadius: 10, padding: "9px 14px" }}>
+                        <span style={{ fontSize: 12, color: COLORS.primary }}>👋 Set your planned amounts — click any <strong>—</strong> in the Planned column to get started.</span>
+                        <button onClick={() => setOnboardingDismissed(true)} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 14, padding: "0 4px" }}>×</button>
+                      </div>
+                    )}
                   </div>
                 );
               })()}
               {/* ── Main card (full-width) ── */}
               <div className="budget-main-grid">
-                <div className="budget-table-card" style={{ background: "var(--c-glass)", backdropFilter: "blur(28px) saturate(180%)", WebkitBackdropFilter: "blur(28px) saturate(180%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 20, padding: 28, boxShadow: "0 4px 24px var(--c-glass-hairline), inset 0 1px 0 var(--c-glass-inset)", marginBottom: 20 }}>
+                <div className="budget-table-card" style={{ background: "var(--c-surface)", border: "1px solid var(--c-border)", borderRadius: 20, padding: 28, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", marginBottom: 20 }}>
                   {/* ── Income strip (collapsible) ── */}
                   <div style={{ marginBottom: 18, padding: "12px 14px", background: "rgba(192,232,255,0.22)", border: "1px solid rgba(0,103,136,0.12)", borderRadius: 12, position: "relative", overflow: "hidden" }}>
                     <div onClick={() => setIncomeCollapsed(p => !p)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
@@ -3233,9 +3030,9 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     <span style={colStyle} onClick={() => toggleSort("label")}>Items <SortArrow field="label" /></span>
                     <span style={colStyle} onClick={() => toggleSort("category")}>Type</span>
                     <span style={{ ...colStyle, cursor: "default" }}>Due</span>
-                    <span style={colStyle}>Planned</span>
-                    <span style={colStyle} onClick={() => toggleSort("amount")}>Actual <SortArrow field="amount" /></span>
-                    <span style={{ ...colStyle, cursor: "default" }}>Left</span>
+                    <span style={{ ...colStyle, justifyContent: "flex-end" }}>Planned</span>
+                    <span style={{ ...colStyle, justifyContent: "flex-end" }} onClick={() => toggleSort("amount")}>Actual <SortArrow field="amount" /></span>
+                    <span style={{ ...colStyle, cursor: "default", justifyContent: "flex-end" }}>Left</span>
                     <span style={{ ...colStyle, cursor: "default" }}></span>
                   </div>
 
@@ -3268,7 +3065,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                             t.finished.finally(() => document.documentElement.classList.remove("vt-cat-expand"));
                           } else { toggle(); }
                         }}
-                          style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, alignItems: "center", padding: "10px 12px 10px 14px", background: "var(--c-glass)", borderRadius: 10, cursor: "pointer", marginBottom: isCollapsed ? 0 : 6, border: "1px solid var(--c-glass-border)", transition: "background .15s" }}>
+                          style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, alignItems: "center", padding: "10px 12px 10px 14px", background: "var(--c-surface)", borderRadius: 10, cursor: "pointer", marginBottom: isCollapsed ? 0 : 6, border: "1px solid var(--c-border)", transition: "background .15s" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                             <span className="material-symbols-outlined expand-chevron" style={{ fontSize: 18, color: COLORS.muted, transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)", flexShrink: 0 }}>expand_more</span>
                             <div style={{ width: 36, height: 36, borderRadius: 10, background: CATEGORY_ICON_BG[group.catId] || COLORS.neutral, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -3334,18 +3131,18 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           <span />
                           {/* planned — editable category budget, auto-sum from items shown when available */}
                           {grpItemsPlannedSum > 0
-                            ? <span title={`Auto-sum of ${grpExp.length} item budgets${grpPlanned > 0 ? ` (category cap: ${fmt(grpPlanned)})` : ""}`} style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.subtext, fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: "-0.01em", display: "flex", alignItems: "center", gap: 4 }}>
+                            ? <span title={`Auto-sum of ${grpExp.length} item budgets${grpPlanned > 0 ? ` (category cap: ${fmt(grpPlanned)})` : ""}`} style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.subtext, fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: "-0.01em", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4 }}>
                                 {fmt(grpItemsPlannedSum)}
                                 <span style={{ fontSize: 9, color: COLORS.muted, background: COLORS.containerHigh, borderRadius: 3, padding: "1px 4px", fontFamily: "inherit" }}>Σ</span>
                               </span>
                             : editingPlannedKey === `cat-${group.catId}`
                               ? <input autoFocus type="number" placeholder="0" defaultValue={grpPlanned || ""} onClick={e => e.stopPropagation()} onBlur={ev => { const v = parseFloat(ev.target.value) || 0; setViewExpenseBudgets(prev => ({ ...prev, [group.catId]: v })); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); if (ev.key === "Escape") setEditingPlannedKey(null); }} style={{ width:"100%", background:COLORS.containerLow, border:`1px solid ${COLORS.primary}`, borderRadius:6, padding:"3px 6px", fontSize:13, color:COLORS.text, outline:"none" }} />
-                              : <span onClick={e => { e.stopPropagation(); setEditingPlannedKey(`cat-${group.catId}`); }} title="Click to edit category budget" style={{ fontSize: 13, fontWeight: FW.bold, color: grpPlanned > 0 ? COLORS.subtext : COLORS.muted, cursor: "text", borderRadius: 4, padding: "2px 4px", fontFamily: grpPlanned > 0 ? "var(--font-num)" : "inherit", fontVariantNumeric: "tabular-nums", letterSpacing: grpPlanned > 0 ? "-0.01em" : "normal" }}>{viewExpenseBudgets[group.catId] != null ? fmt(grpPlanned) : <span style={{ display:"flex", alignItems:"center", gap:4 }}>—<span className="material-symbols-outlined" style={{ fontSize:13, color: COLORS.primary, opacity: 0.6 }}>edit</span></span>}</span>
+                              : <span onClick={e => { e.stopPropagation(); setEditingPlannedKey(`cat-${group.catId}`); }} title="Click to edit category budget" style={{ fontSize: 13, fontWeight: FW.bold, color: grpPlanned > 0 ? COLORS.subtext : COLORS.muted, cursor: "text", borderRadius: 4, padding: "2px 4px", fontFamily: grpPlanned > 0 ? "var(--font-num)" : "inherit", fontVariantNumeric: "tabular-nums", letterSpacing: grpPlanned > 0 ? "-0.01em" : "normal", display: "block", textAlign: "right" }}>{viewExpenseBudgets[group.catId] != null ? fmt(grpPlanned) : <span style={{ display:"flex", alignItems:"center", justifyContent: "flex-end", gap:4 }}>—<span className="material-symbols-outlined" style={{ fontSize:13, color: COLORS.primary, opacity: 0.6 }}>edit</span></span>}</span>
                           }
                           {/* actual */}
-                          <span style={{ fontSize: 13, fontWeight: FW.bold, color: utilColor, fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: "-0.01em" }}>{grpActual > 0 ? fmt(grpActual) : "—"}</span>
+                          <span style={{ fontSize: 13, fontWeight: FW.bold, color: utilColor, fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: "-0.01em", textAlign: "right" }}>{grpActual > 0 ? fmt(grpActual) : "—"}</span>
                           {/* variance */}
-                          {(() => { const left = effectivePlanned - grpActual; const showDash = effectivePlanned === 0 && grpActual === 0; return <span style={{ fontSize: 13, fontWeight: FW.bold, color: showDash ? COLORS.muted : left >= 0 ? COLORS.success : COLORS.danger, fontFamily: showDash ? "inherit" : "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: showDash ? "normal" : "-0.01em" }}>{showDash ? "—" : left > 0 ? `+${fmt(left)}` : fmt(left)}</span>; })()}
+                          {(() => { const left = effectivePlanned - grpActual; const showDash = effectivePlanned === 0 && grpActual === 0; return <span style={{ fontSize: 13, fontWeight: FW.bold, color: showDash ? COLORS.muted : left >= 0 ? COLORS.success : COLORS.danger, fontFamily: showDash ? "inherit" : "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: showDash ? "normal" : "-0.01em", textAlign: "right", display: "block" }}>{showDash ? "—" : left > 0 ? `+${fmt(left)}` : fmt(left)}</span>; })()}
                           {/* actions col — empty (chevron moved left) */}
                           <span />
                         </div>
@@ -3370,16 +3167,16 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                                 return e.date;
                               })();
                               return (
-                              <div key={e.id} className="budget-row" style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "7px 10px", alignItems: "center", borderRadius: 8, background: "var(--c-glass)", marginBottom: 2, border: "1px solid var(--c-glass-border-strong)" }}>
+                              <div key={e.id} className="budget-row" style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "7px 10px", alignItems: "center", borderRadius: 8, background: "var(--c-container-low)", marginBottom: 2, border: "1px solid var(--c-border)" }}>
                                 <EditableText id={e.id} field="label" value={e.label} />
                                 <span style={{ fontSize: 11, fontWeight: FW.semibold, color: e.fixed ? COLORS.subtext : COLORS.muted, background: e.fixed ? COLORS.containerHigh : COLORS.containerLow, borderRadius: 9999, padding: "2px 7px", justifySelf: "start" }}>{e.fixed ? "Fixed" : "Variable"}</span>
                                 <EditableDate id={e.id} field="date" value={displayDate} />
                                 {editingPlannedKey === `exp-${e.id}`
                                   ? <input autoFocus type="number" placeholder="0" defaultValue={expPlanned || ""} onBlur={ev => { const v = parseFloat(ev.target.value) || 0; if (v) setMonthItemBudget(`exp-${e.id}`, v); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); if (ev.key === "Escape") setEditingPlannedKey(null); }} style={{ width:"100%", background:COLORS.containerLow, border:`1px solid ${COLORS.primary}`, borderRadius:6, padding:"3px 6px", fontSize:13, color:COLORS.text, outline:"none" }} />
-                                  : <span onClick={() => setEditingPlannedKey(`exp-${e.id}`)} title="Click to set planned budget" style={{ fontSize: 13, color: expPlanned ? COLORS.subtext : COLORS.muted, cursor: "text", display: "inline-flex", alignItems: "center", gap: 4, borderRadius:4, padding:"2px 4px", fontFamily: expPlanned ? "var(--font-num)" : "inherit", fontVariantNumeric: "tabular-nums", fontWeight: expPlanned ? FW.semibold : 400, letterSpacing: expPlanned ? "-0.01em" : "normal" }}>{expPlanned ? fmt(expPlanned) : <><span>—</span><span className="material-symbols-outlined" style={{ fontSize:13, color: COLORS.primary, opacity: 0.55 }}>edit</span></>}</span>
+                                  : <span onClick={() => setEditingPlannedKey(`exp-${e.id}`)} title="Click to set planned budget" style={{ fontSize: 13, color: expPlanned ? COLORS.subtext : COLORS.muted, cursor: "text", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, borderRadius:4, padding:"2px 4px", fontFamily: expPlanned ? "var(--font-num)" : "inherit", fontVariantNumeric: "tabular-nums", fontWeight: expPlanned ? FW.semibold : 400, letterSpacing: expPlanned ? "-0.01em" : "normal" }}>{expPlanned ? fmt(expPlanned) : <><span>—</span><span className="material-symbols-outlined" style={{ fontSize:13, color: COLORS.primary, opacity: 0.55 }}>edit</span></>}</span>
                                 }
                                 <EditableNum id={e.id} field="amount" value={e.amount} />
-                                <span style={{ fontSize: 13, fontWeight: FW.bold, color: expVar === null ? COLORS.muted : expVar >= 0 ? COLORS.success : COLORS.danger, fontFamily: expVar === null ? "inherit" : "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: expVar === null ? "normal" : "-0.01em" }}>
+                                <span style={{ fontSize: 13, fontWeight: FW.bold, color: expVar === null ? COLORS.muted : expVar >= 0 ? COLORS.success : COLORS.danger, fontFamily: expVar === null ? "inherit" : "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: expVar === null ? "normal" : "-0.01em", textAlign: "right", display: "block" }}>
                                   {expVar === null ? "—" : expVar > 0 ? `+${fmt(expVar)}` : fmt(expVar)}
                                 </span>
                                 <div style={{ display: "flex", gap: 2 }}>
@@ -3455,7 +3252,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           <span style={{ fontSize: 11, color: COLORS.muted }}>({others.length})</span>
                         </div>
                         {others.map(e => (
-                          <div key={e.id} className="budget-row" style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "7px 10px", alignItems: "center", borderRadius: 8, background: "var(--c-glass)", marginBottom: 2, border: "1px solid var(--c-glass-border-strong)" }}>
+                          <div key={e.id} className="budget-row" style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "7px 10px", alignItems: "center", borderRadius: 8, background: "var(--c-container-low)", marginBottom: 2, border: "1px solid var(--c-border)" }}>
                             <EditableText id={e.id} field="label" value={e.label} />
                             <EditableCat id={e.id} field="category" value={e.category} />
                             <EditableDate id={e.id} field="date" value={e.date} />
@@ -3470,10 +3267,9 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   })()}
                 </div>
 
-                {/* ── Peer sections: Savings (wide) + Debt CTA (narrow) ── */}
-                <div className="budget-peer-grid" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20 }}>
-                  {/* Savings — full-width peer */}
-                  <div style={{ background: "var(--c-glass)", backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 20, padding: 24, boxShadow: "0 4px 24px var(--c-glass-hairline), inset 0 1px 0 var(--c-glass-inset)" }}>
+                {/* ── Savings section ── */}
+                <div>
+                  <div style={{ background: "var(--c-surface)", border: "1px solid var(--c-border)", borderRadius: 20, padding: 24, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <div style={{ padding: "6px 8px", background: "rgba(97,205,253,0.15)", borderRadius: 10 }}>
@@ -3498,7 +3294,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         const goalReached = s.expected > 0 && s.actual >= s.expected;
                         const savPct = pct(s.actual, s.expected || 1);
                         return (
-                        <div key={s.id} style={{ padding: 14, background: "var(--c-glass)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 14 }}>
+                        <div key={s.id} style={{ padding: 14, background: "var(--c-container-low)", border: "1px solid var(--c-border)", borderRadius: 14 }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                             <SavText id={s.id} field="label" value={s.label} style={{ fontSize: 13, fontWeight: FW.semibold, color: COLORS.text }} />
                             <button onClick={() => { setSavingsItems(prev => prev.filter(x => x.id !== s.id)); showToast(`${s.label} goal removed`, "✕"); }} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 14, padding: 0 }}>×</button>
@@ -3530,31 +3326,12 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       })}
                     </div>
                   </div>
-                  {/* Debt Payoff CTA — narrow peer */}
-                  <button
-                    onClick={() => {
-                      setAdvisorMsg(`Create a personalized debt payoff plan for our family. We have ${debts.length > 0 ? debts.map(d => `${d.label}: ${fmt(d.balance)} at ${d.interest}% APR (min payment ${fmt(d.minPayment)})`).join(", ") : "no debts tracked yet"}. Our monthly income is ${fmt(viewTotalIncome)} and total expenses are ${fmt(viewTotalExpenses)}. Please give us a specific payoff plan with estimated payoff dates.`);
-                      pendingAdvisorSend.current = true;
-                      navigateToTab("advisor");
-                    }}
-                    style={{ background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, color: "#fff", border: "none", borderRadius: 20, padding: 24, cursor: "pointer", display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 12, boxShadow: `0 6px 18px rgba(0,120,168,0.25)`, textAlign: "left", minHeight: 180 }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <span style={{ fontSize: 28 }}>🚀</span>
-                      <div style={{ fontSize: 16, fontWeight: FW.bold }}>Debt Payoff Plan</div>
-                    </div>
-                    <div style={{ fontSize: 12, opacity: 0.85, fontWeight: FW.medium, lineHeight: 1.5 }}>Get an AI-powered strategy to become debt-free{debts.length > 0 ? ` across your ${debts.length} ${debts.length === 1 ? "debt" : "debts"}` : ""}.</div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: 13, fontWeight: FW.bold }}>Ask the Advisor</span>
-                      <span className="material-symbols-outlined" style={{ fontSize: 22, opacity: 0.9 }}>arrow_forward</span>
-                    </div>
-                  </button>
                 </div>
               </div>
             </div>
           );
         })()}
-        {/* ── BILL CALENDAR TAB ── */}
+        {/* ── FIXED TAB ── */}
         {tab === "weekly" && (() => {
           const now = new Date();
           const { year: calYear, month0: calMonth } = parseKey(viewMonthKey);
@@ -3575,15 +3352,15 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               {/* ── Header ── */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
                 <div>
-                  <h2 style={{ fontSize: 24, fontWeight: FW.extrabold, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 4 }}>Bill Calendar</h2>
-                  <p style={{ fontSize: 14, color: COLORS.subtext }}>Upcoming bills and payment schedule</p>
+                  <h2 style={{ fontSize: 24, fontWeight: FW.extrabold, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 4 }}>Fixed Expenses</h2>
+                  <p style={{ fontSize: 14, color: COLORS.subtext }}>Upcoming fixed expenses and payment schedule</p>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <button onClick={() => { navigator.clipboard.writeText(window.location.href); setBillLinkToast(true); setTimeout(() => setBillLinkToast(false), 2000); }} title="Copy link to this month" style={{ background: billLinkToast ? COLORS.success + "18" : COLORS.containerLow, border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 12, fontWeight: FW.semibold, color: billLinkToast ? COLORS.success : COLORS.subtext, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>link</span>{billLinkToast ? "Link copied!" : "Copy link"}
                   </button>
                   <button onClick={() => setModal("addBill")} style={{ display: "flex", alignItems: "center", gap: 6, background: COLORS.primary, color: "#fff", border: "none", borderRadius: 10, padding: "9px 18px", fontSize: 13, fontWeight: FW.bold, cursor: "pointer" }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>Add Bill
+                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>Add Fixed Expense
                   </button>
                 </div>
               </div>
@@ -3598,33 +3375,33 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 const size = 148, stroke = 12, radius = (size - stroke) / 2, circ = 2 * Math.PI * radius;
                 const ringColor = paidPct === 100 ? COLORS.success : paidPct >= 60 ? COLORS.primary : overdueCount > 0 ? COLORS.danger : COLORS.primary;
                 return (
-                  <div className="bill-hero-card" style={{ background: "var(--c-glass)", backdropFilter: "blur(28px) saturate(180%)", WebkitBackdropFilter: "blur(28px) saturate(180%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 24, padding: 28, boxShadow: "0 8px 32px rgba(0,0,0,0.06), inset 0 1px 0 var(--c-glass-inset)", marginBottom: 20, display: "grid", gridTemplateColumns: "auto 1fr", gap: 32, alignItems: "center" }}>
+                  <div className="bill-hero-card" style={{ background: "var(--c-surface)", border: "1px solid var(--c-border)", borderRadius: 24, padding: 28, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", marginBottom: 20, display: "grid", gridTemplateColumns: "auto 1fr", gap: 32, alignItems: "center" }}>
                     {/* Ring */}
                     <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
                       <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-                        <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="var(--c-glass-hairline)" strokeWidth={stroke} />
+                        <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="var(--c-border)" strokeWidth={stroke} />
                         <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke={ringColor} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={circ - (circ * paidPct) / 100} style={{ transition: "stroke-dashoffset 700ms cubic-bezier(0.33, 1, 0.68, 1), stroke 300ms ease" }} />
                       </svg>
                       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                        <AnimatedNumber value={paidPct} format={(v) => `${Math.round(v)}%`} style={{ fontSize: 30, fontWeight: FW.extrabold, color: ringColor, fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: "-0.03em", lineHeight: 1 }} />
+                        <AnimatedNumber value={paidPct} format={(v) => `${Math.round(v)}%`} style={{ fontSize: 30, fontWeight: 300, color: ringColor, fontFamily: "'Manrope', var(--font-num)", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.03em", lineHeight: 1 }} />
                         <span style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 4 }}>Paid</span>
                       </div>
                     </div>
                     {/* Stats */}
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
                       <div>
-                        <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Total Bills</p>
-                        <AnimatedNumber value={totalBillsBudget} format={fmt} style={{ fontSize: 24, fontWeight: FW.extrabold, color: COLORS.text, fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: "-0.025em", display: "block" }} />
-                        <p style={{ fontSize: 11, color: COLORS.muted, marginTop: 4 }}>{bills.length} {bills.length === 1 ? "bill" : "bills"} this month</p>
+                        <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Total Fixed</p>
+                        <AnimatedNumber value={totalBillsBudget} format={fmt} style={{ fontSize: 24, fontWeight: 300, color: COLORS.text, fontFamily: "'Manrope', var(--font-num)", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.03em", display: "block" }} />
+                        <p style={{ fontSize: 11, color: COLORS.muted, marginTop: 4 }}>{bills.length} {bills.length === 1 ? "item" : "items"} this month</p>
                       </div>
                       <div>
                         <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Paid</p>
-                        <AnimatedNumber value={paidAmountTotal} format={fmt} style={{ fontSize: 24, fontWeight: FW.extrabold, color: COLORS.success, fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: "-0.025em", display: "block" }} />
+                        <AnimatedNumber value={paidAmountTotal} format={fmt} style={{ fontSize: 24, fontWeight: 300, color: COLORS.success, fontFamily: "'Manrope', var(--font-num)", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.03em", display: "block" }} />
                         <p style={{ fontSize: 11, color: COLORS.muted, marginTop: 4 }}>{bills.filter(b => getBillPaid(b, calMk)).length} of {bills.length} complete</p>
                       </div>
                       <div>
                         <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Remaining</p>
-                        <AnimatedNumber value={remainingBillsTotal} format={fmt} style={{ fontSize: 24, fontWeight: FW.extrabold, color: remainingBillsTotal > 0 ? (overdueCount > 0 ? COLORS.danger : COLORS.warning) : COLORS.success, fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: "-0.025em", display: "block" }} />
+                        <AnimatedNumber value={remainingBillsTotal} format={fmt} style={{ fontSize: 24, fontWeight: 300, color: remainingBillsTotal > 0 ? (overdueCount > 0 ? COLORS.danger : COLORS.warning) : COLORS.success, fontFamily: "'Manrope', var(--font-num)", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.03em", display: "block" }} />
                         <p style={{ fontSize: 11, color: overdueCount > 0 ? COLORS.danger : dueSoonCount > 0 ? COLORS.warning : COLORS.muted, marginTop: 4, fontWeight: overdueCount > 0 || dueSoonCount > 0 ? FW.semibold : FW.normal }}>
                           {overdueCount > 0 ? `${overdueCount} overdue` : dueSoonCount > 0 ? `${dueSoonCount} due this week` : "All caught up"}
                         </p>
@@ -3635,7 +3412,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               })()}
 
               {/* ── Full-width calendar card ── */}
-              <div className="bill-cal-card" style={{ background: "var(--c-glass)", backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 20, padding: 28, boxShadow: "0 4px 24px var(--c-glass-hairline)", marginBottom: 20 }}>
+              <div className="bill-cal-card" style={{ background: "var(--c-surface)", border: "1px solid var(--c-border)", borderRadius: 20, padding: 28, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", marginBottom: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
                   <h3 style={{ fontSize: 18, fontWeight: FW.bold, color: COLORS.text }}>{MONTH_FULL[calMonth]} {calYear}</h3>
                   <div style={{ display: "flex", gap: 4 }}>
@@ -3662,7 +3439,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       const dayBills = billsOnDay(day);
                       const isToday = day === todayDate;
                       return (
-                        <div key={day} className="cal-day-cell" style={{ background: "var(--c-glass)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderRadius: 10, minHeight: 80, padding: 8, border: "1px solid var(--c-glass-border)" }}>
+                        <div key={day} className="cal-day-cell" style={{ background: "var(--c-surface)", borderRadius: 10, minHeight: 80, padding: 8, border: "1px solid var(--c-border)" }}>
                           <div style={{ width: 24, height: 24, borderRadius: "50%", background: isToday ? COLORS.primary : "transparent", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
                             <span style={{ fontSize: 12, fontWeight: isToday ? FW.extrabold : FW.medium, color: isToday ? "#fff" : COLORS.text }}>{day}</span>
                           </div>
@@ -3717,8 +3494,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         style={{
                           display: "grid", gridTemplateColumns: "auto 1fr auto auto auto", gap: 16, alignItems: "center",
                           padding: "14px 18px", borderRadius: 14, marginBottom: 8, cursor: "pointer",
-                          background: paid ? "rgba(16,185,129,0.06)" : overdue ? "rgba(248,113,113,0.06)" : "var(--c-glass)",
-                          border: `1px solid ${paid ? "rgba(16,185,129,0.18)" : overdue ? "rgba(248,113,113,0.22)" : "var(--c-glass-border)"}`,
+                          background: paid ? "rgba(16,185,129,0.06)" : overdue ? "rgba(248,113,113,0.06)" : "var(--c-surface)",
+                          border: `1px solid ${paid ? "rgba(16,185,129,0.18)" : overdue ? "rgba(248,113,113,0.22)" : "var(--c-border)"}`,
                           boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
                           transition: "transform .2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .2s, background .2s",
                           viewTransitionName: morphBillId === b.id && !activeBillDetail ? "bill-active" : undefined,
@@ -3735,7 +3512,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         </div>
                         <span style={{ fontSize: 16, fontWeight: FW.extrabold, color: COLORS.text, fontFamily: "var(--font-num)", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"' }}>{fmt(b.budget)}</span>
                         {paid
-                          ? <button onClick={(e) => { e.stopPropagation(); markBillPaid(b.id, calMk, false); }} style={{ background: "transparent", border: `1px solid ${COLORS.glassBorder || 'var(--c-glass-border)'}`, borderRadius: 9999, padding: "5px 12px", fontSize: 11, fontWeight: FW.bold, color: COLORS.subtext, cursor: "pointer" }}>Undo</button>
+                          ? <button onClick={(e) => { e.stopPropagation(); markBillPaid(b.id, calMk, false); }} style={{ background: "transparent", border: "1px solid var(--c-border)", borderRadius: 9999, padding: "5px 12px", fontSize: 11, fontWeight: FW.bold, color: COLORS.subtext, cursor: "pointer" }}>Undo</button>
                           : <button onClick={(e) => { e.stopPropagation(); markBillPaid(b.id, calMk); showToast(`${b.label} marked as paid`); }} style={{ background: COLORS.primary, color: "#fff", border: "none", borderRadius: 9999, padding: "6px 14px", fontSize: 11, fontWeight: FW.bold, cursor: "pointer", boxShadow: `0 2px 8px ${COLORS.primary}33` }}>Mark Paid</button>
                         }
                         <button onClick={(e) => { e.stopPropagation(); setBills(p => p.filter(x => x.id !== b.id)); showToast(`${b.label} removed`, "✕"); }} aria-label="Delete bill" style={{ background: "transparent", border: "none", color: COLORS.muted, cursor: "pointer", padding: 6, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8 }}>
@@ -3746,7 +3523,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   };
                   return (
                     <div>
-                      {bills.length === 0 && <p style={{ fontSize: 14, color: COLORS.muted, padding: "40px 0", textAlign: "center" }}>No bills yet. Click "Add Bill" above to get started.</p>}
+                      {bills.length === 0 && <p style={{ fontSize: 14, color: COLORS.muted, padding: "40px 0", textAlign: "center" }}>No fixed expenses yet. Click "Add Fixed Expense" to get started.</p>}
                       {sections.map((sec, i) => (
                         <div key={sec.key} style={{ marginBottom: i === sections.length - 1 ? 0 : 20 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, padding: "0 4px" }}>
@@ -3763,13 +3540,13 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           <input autoFocus placeholder="Bill name" value={newBillInline.label} onChange={e => setNewBillInline(p => ({...p, label: e.target.value}))} style={{ ...inpStyleInline, width: "100%" }} />
                           <input type="number" min="1" max="31" placeholder="Day" value={newBillInline.dayOfMonth} onChange={e => setNewBillInline(p => ({...p, dayOfMonth: e.target.value}))} style={{ ...inpStyleInline, width: "100%" }} />
                           <input type="number" placeholder="Amount" value={newBillInline.budget} onChange={e => setNewBillInline(p => ({...p, budget: e.target.value}))} style={{ ...inpStyleInline, width: "100%" }} />
-                          <button onClick={() => { if(!newBillInline.label || !newBillInline.budget) return; setBills(p => [...p, { id: Date.now(), label: newBillInline.label, budget: parseFloat(newBillInline.budget)||0, dayOfMonth: parseInt(newBillInline.dayOfMonth)||1 }]); showToast(`Bill "${newBillInline.label}" added`); setNewBillInline(null); }} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:9999, padding:"7px 14px", fontSize:12, fontWeight:FW.bold, cursor:"pointer" }}>Save</button>
+                          <button onClick={() => { if(!newBillInline.label || !newBillInline.budget) return; setBills(p => [...p, { id: Date.now(), label: newBillInline.label, budget: parseFloat(newBillInline.budget)||0, dayOfMonth: parseInt(newBillInline.dayOfMonth)||1 }]); showToast(`Fixed expense "${newBillInline.label}" added`); setNewBillInline(null); }} style={{ background: COLORS.primary, color:"#fff", border:"none", borderRadius:9999, padding:"7px 14px", fontSize:12, fontWeight:FW.bold, cursor:"pointer" }}>Save</button>
                           <button onClick={() => setNewBillInline(null)} aria-label="Cancel" style={{ background:"none", border:"none", color:COLORS.muted, cursor:"pointer", display: "flex", alignItems: "center", padding: 4 }}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span></button>
                         </div>
                       )}
                       {newBillInline === null && bills.length > 0 && (
-                        <button onClick={() => setNewBillInline({ label: "", budget: "", dayOfMonth: "" })} style={{ marginTop: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", background: "transparent", border: `1px dashed var(--c-glass-border-strong)`, borderRadius: 14, padding: "12px", fontSize: 12, fontWeight: FW.semibold, color: COLORS.subtext, cursor: "pointer", transition: "background .2s, color .2s" }} onMouseEnter={e => { e.currentTarget.style.background = `${COLORS.primary}0D`; e.currentTarget.style.color = COLORS.primary; }} onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = COLORS.subtext; }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>Add a bill
+                        <button onClick={() => setNewBillInline({ label: "", budget: "", dayOfMonth: "" })} style={{ marginTop: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", background: "transparent", border: "1px dashed var(--c-border)", borderRadius: 14, padding: "12px", fontSize: 12, fontWeight: FW.semibold, color: COLORS.subtext, cursor: "pointer", transition: "background .2s, color .2s" }} onMouseEnter={e => { e.currentTarget.style.background = `${COLORS.primary}0D`; e.currentTarget.style.color = COLORS.primary; }} onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = COLORS.subtext; }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>Add a fixed expense
                         </button>
                       )}
                     </div>
@@ -3788,9 +3565,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           const prevKey = monthKey(year, month0 - 1);
           const prevS = monthStats(prevKey);
           const isCurrent = key === todayKey;
-          const netWorth = savingsActualTotal - totalDebt;
-          const dtiNum = s.inc > 0 ? Math.round((totalDebt / s.inc) * 100) : null;
           const savingsRate = s.inc > 0 ? Math.max(0, (s.net / s.inc) * 100) : null;
+          const fixedPct = s.inc > 0 ? Math.round((s.cats["Housing"] || 0) + (s.cats["Utilities"] || 0) + (s.cats["Transport"] || 0) + (s.cats["Health"] || 0)) / s.inc * 100 : null;
 
           // ── Year trend data for AreaChart ──────────────────────────────
           const yearChartData = allInsightMonths.map(mk => {
@@ -3810,13 +3586,24 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             .map(c => ({ name: c.label, value: s.cats[c.id] || 0, color: CAT_CHART_COLOR[c.id] || COLORS.muted }));
 
           // ── 50/30/20 ──────────────────────────────────────────────────
-          const debtMinsTotal = debts.reduce((acc, d) => acc + d.minPayment, 0);
-          const needsAmt = snap.expenses.filter(e => ["Housing","Utilities","Food","Transport","Health"].includes(e.category)).reduce((acc,e)=>acc+e.amount,0) + debtMinsTotal;
+          const needsAmt = snap.expenses.filter(e => ["Housing","Utilities","Food","Transport","Health"].includes(e.category)).reduce((acc,e)=>acc+e.amount,0);
           const wantsAmt = snap.expenses.filter(e => ["Entertainment","Personal","Kids","Education","Subscriptions","Travel"].includes(e.category)).reduce((acc,e)=>acc+e.amount,0);
           const savingsAmt = snap.expenses.filter(e => ["Other","Savings"].includes(e.category)).reduce((acc,e)=>acc+e.amount,0);
 
+          // ── 3-bar spending mix trend ───────────────────────────────────
+          const spendingMixData = allInsightMonths.map(mk => {
+            const ms = monthStats(mk);
+            const mSnap = getSnap(mk);
+            const { month0: m0 } = parseKey(mk);
+            if (!ms.hasData) return { month: MONTH_NAMES[m0], Fixed: null, Variable: null, Savings: null };
+            const fixedAmt = mSnap.expenses.filter(e => ["Housing","Utilities","Transport","Health"].includes(e.category)).reduce((s,e)=>s+e.amount,0);
+            const variableAmt = mSnap.expenses.filter(e => ["Food","Entertainment","Personal","Kids","Education","Subscriptions","Travel","Other"].includes(e.category)).reduce((s,e)=>s+e.amount,0);
+            const savAmt = mSnap.expenses.filter(e => e.category === "Savings").reduce((s,e)=>s+e.amount,0);
+            return { month: MONTH_NAMES[m0], Fixed: fixedAmt || null, Variable: variableAmt || null, Savings: savAmt || null };
+          }).filter(d => d.Fixed !== null || d.Variable !== null || d.Savings !== null);
+
           // ── Shared glass card style ────────────────────────────────────
-          const glassCard = { background: "var(--c-glass)", backdropFilter: "blur(28px) saturate(180%)", WebkitBackdropFilter: "blur(28px) saturate(180%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 20, boxShadow: "0 4px 24px var(--c-glass-hairline), inset 0 1px 0 var(--c-glass-inset)" };
+          const glassCard = { background: "var(--c-surface)", border: "1px solid var(--c-border)", borderRadius: 20, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" };
 
           return (
             <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
@@ -3824,7 +3611,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               {/* ── Header ──────────────────────────────────────────────── */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
                 <div>
-                  <h2 style={{ fontWeight: FW.extrabold, fontSize: 24, color: COLORS.sidebarText, letterSpacing: "-0.03em", marginBottom: 3, fontFamily: "'Bricolage Grotesque', sans-serif" }}>Monthly Insights</h2>
+                  <h2 style={{ fontWeight: FW.extrabold, fontSize: 24, color: COLORS.sidebarText, letterSpacing: "-0.03em", marginBottom: 3 }}>Monthly Insights</h2>
                   <p style={{ color: COLORS.subtext, fontSize: 13 }}>2026 · tap a month to explore</p>
                 </div>
                 <button
@@ -3852,28 +3639,20 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       onClick={() => setActiveInsightKey(mk)}
                       style={{
                         flexShrink: 0,
-                        padding: "8px 14px",
+                        padding: "7px 16px",
                         borderRadius: 999,
                         border: isActive ? `1.5px solid ${COLORS.primary}` : `1.5px solid ${isToday ? COLORS.primary + "55" : "rgba(0,0,0,0.08)"}`,
-                        background: isActive ? COLORS.primary : "var(--c-glass)",
-                        backdropFilter: "blur(12px)",
-                        WebkitBackdropFilter: "blur(12px)",
+                        background: isActive ? COLORS.primary : "var(--c-surface)",
                         cursor: "pointer",
                         transition: "all 0.18s cubic-bezier(0.16, 1, 0.3, 1)",
                         textAlign: "center",
-                        minWidth: 64,
                       }}
                     >
-                      <div style={{ fontSize: 11, fontWeight: FW.extrabold, color: isActive ? "#fff" : isToday ? COLORS.primary : COLORS.subtext, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                      <span style={{ fontSize: 12, fontWeight: isActive ? FW.bold : FW.medium, color: isActive ? "#fff" : isToday ? COLORS.primary : COLORS.subtext, letterSpacing: "0.03em" }}>
                         {MONTH_NAMES[m0]}
-                      </div>
-                      {ms.hasData && (
-                        <div style={{ fontSize: 10, color: isActive ? "var(--c-glass-border)" : COLORS.muted, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
-                          {fmt(ms.exp)}
-                        </div>
-                      )}
-                      {!ms.hasData && !isFuture && (
-                        <div style={{ fontSize: 10, color: isActive ? "var(--c-glass)" : "rgba(0,0,0,0.2)", marginTop: 2 }}>—</div>
+                      </span>
+                      {ms.hasData && !isActive && (
+                        <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: COLORS.primary, marginLeft: 5, verticalAlign: "middle", opacity: 0.5 }} />
                       )}
                     </button>
                   );
@@ -3892,49 +3671,36 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               {!s.hasData ? (
                 <div style={{ ...glassCard, padding: 48, textAlign: "center" }}>
                   <p style={{ fontSize: 36, marginBottom: 12 }}>📭</p>
-                  <p style={{ fontWeight: FW.bold, fontSize: 16, color: COLORS.text, marginBottom: 6, fontFamily: "'Bricolage Grotesque', sans-serif" }}>No data for {MONTH_FULL[month0]}</p>
+                  <p style={{ fontWeight: FW.bold, fontSize: 16, color: COLORS.text, marginBottom: 6, fontFamily: "'Manrope', sans-serif" }}>No data for {MONTH_FULL[month0]}</p>
                   <p style={{ color: COLORS.muted, fontSize: 13, lineHeight: 1.6 }}>Switch to this month and add income or expenses<br />using the + button — they'll appear here automatically.</p>
                 </div>
               ) : (
                 <>
                   {/* ── Hero metrics band ────────────────────────────────── */}
-                  <div style={{ ...glassCard, padding: "24px 28px", borderRadius: 24, position: "relative", overflow: "hidden" }}>
-                    <BorderBeam size={320} duration={12} colorFrom={COLORS.primary} colorTo={COLORS.tertiary} borderWidth={1.5} />
-                    {/* Month label */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
-                      <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: FW.extrabold, fontSize: 17, color: COLORS.text, letterSpacing: "-0.02em" }}>{MONTH_FULL[month0]} {year}</span>
-                      {isCurrent && <span style={{ fontSize: 10, fontWeight: FW.bold, background: COLORS.primary + "18", color: COLORS.primary, border: `1px solid ${COLORS.primary}33`, borderRadius: 999, padding: "2px 9px", letterSpacing: "0.04em", textTransform: "uppercase" }}>Current</span>}
+                  <div style={{ ...glassCard, padding: "22px 28px", borderRadius: 24 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+                      <span style={{ fontFamily: "'Manrope', sans-serif", fontWeight: FW.medium, fontSize: 15, color: COLORS.text, letterSpacing: "-0.01em" }}>{MONTH_FULL[month0]} {year}</span>
+                      {isCurrent && <span style={{ fontSize: 11, fontWeight: FW.medium, color: COLORS.primary }}>Current month</span>}
                     </div>
-                    {/* 6-metric grid */}
-                    <div className="metric-band-grid" style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 0 }}>
+                    <div className="metric-band-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0 }}>
                       {[
-                        { label: "Income",        value: s.inc,         fmtFn: fmt,                                                           color: COLORS.success,      prevVal: prevS.hasData ? prevS.inc : null,  higherIsGood: true },
-                        { label: "Expenses",      value: s.exp,         fmtFn: fmt,                                                           color: COLORS.accentWarm,   prevVal: prevS.hasData ? prevS.exp : null,  higherIsGood: false },
-                        { label: "Net",           value: s.net,         fmtFn: fmt,                                                           color: s.net >= 0 ? COLORS.success : COLORS.danger, prevVal: prevS.hasData ? prevS.net : null, higherIsGood: true },
-                        { label: "Savings Rate",  value: savingsRate,   fmtFn: (v) => v !== null && Number.isFinite(v) ? `${v.toFixed(1)}%` : "—", color: COLORS.accentPurple, prevVal: null },
-                        { label: "Net Worth",     value: netWorth,      fmtFn: fmt,                                                           color: netWorth >= 0 ? COLORS.success : COLORS.danger, prevVal: null },
-                        { label: "Debt-to-Income",value: dtiNum,        fmtFn: (v) => v !== null && Number.isFinite(v) ? `${Math.round(v)}%` : "—", color: dtiNum !== null && dtiNum > 200 ? COLORS.danger : dtiNum !== null && dtiNum > 100 ? COLORS.warning : COLORS.success, prevVal: null },
+                        { label: "Income",       value: s.inc,       fmtFn: fmt,                                                                color: COLORS.success },
+                        { label: "Expenses",     value: s.exp,       fmtFn: fmt,                                                                color: COLORS.accentWarm },
+                        { label: "Net",          value: s.net,       fmtFn: fmt,                                                                color: s.net >= 0 ? COLORS.success : COLORS.danger },
+                        { label: "Savings Rate", value: savingsRate, fmtFn: (v) => v !== null && Number.isFinite(v) ? `${v.toFixed(1)}%` : "—", color: COLORS.accentPurple, netDiff: prevS.hasData ? s.net - prevS.net : null },
                       ].map((metric, i) => {
-                        const isLast = i === 5;
-                        const diff = metric.prevVal !== null ? (
-                          metric.label === "Expenses" ? s.exp - prevS.exp : metric.label === "Income" ? s.inc - prevS.inc : s.net - prevS.net
-                        ) : null;
-                        const isZeroDiff = diff === 0;
-                        const isPositive = diff !== null && !isZeroDiff && (metric.higherIsGood ? diff > 0 : diff < 0);
+                        const isLast = i === 3;
+                        const prevVal = i < 3 && prevS.hasData ? [prevS.inc, prevS.exp, prevS.net][i] : null;
+                        const diff = metric.netDiff !== undefined ? metric.netDiff : (prevVal !== null ? metric.value - prevVal : null);
+                        const higherIsGood = metric.label !== "Expenses";
+                        const isPos = diff !== null && diff !== 0 && (higherIsGood ? diff > 0 : diff < 0);
                         return (
-                          <div key={metric.label} style={{ paddingRight: isLast ? 0 : 20, marginRight: isLast ? 0 : 20, borderRight: isLast ? "none" : "1px solid var(--c-glass-hairline)" }}>
-                            <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>{metric.label}</p>
-                            <AnimatedNumber value={metric.value ?? 0} format={metric.fmtFn} style={{ fontSize: 22, fontWeight: FW.extrabold, color: metric.color, fontFamily: "var(--font-num)", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', lineHeight: 1.1, display: "block" }} />
-                            {diff !== null && (
-                              <p style={{ fontSize: 11, color: isZeroDiff ? COLORS.muted : isPositive ? COLORS.success : COLORS.danger, marginTop: 5, display: "flex", alignItems: "center", gap: 3 }}>
-                                {isZeroDiff ? (
-                                  <span style={{ color: COLORS.muted }}>— same as {MONTH_NAMES[parseKey(prevKey).month0]}</span>
-                                ) : (
-                                  <>
-                                    <span>{isPositive ? "▲" : "▼"}</span>
-                                    <span>{fmt(Math.abs(diff))} vs {MONTH_NAMES[parseKey(prevKey).month0]}</span>
-                                  </>
-                                )}
+                          <div key={metric.label} style={{ paddingRight: isLast ? 0 : 20, marginRight: isLast ? 0 : 20, borderRight: isLast ? "none" : "1px solid var(--c-border)" }}>
+                            <p style={{ fontSize: 10, fontWeight: FW.medium, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>{metric.label}</p>
+                            <AnimatedNumber value={metric.value ?? 0} format={metric.fmtFn} style={{ fontSize: 24, fontWeight: 300, color: metric.color, fontFamily: "'Manrope', var(--font-num)", letterSpacing: "-0.035em", fontVariantNumeric: "tabular-nums", lineHeight: 1, display: "block" }} />
+                            {diff !== null && diff !== 0 && (
+                              <p style={{ fontSize: 10, color: isPos ? COLORS.success : COLORS.danger, marginTop: 6, fontWeight: FW.medium }}>
+                                {isPos ? "▲" : "▼"} {fmt(Math.abs(diff))} vs {MONTH_NAMES[parseKey(prevKey).month0]}
                               </p>
                             )}
                           </div>
@@ -3989,7 +3755,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                               <Pie data={catPieData} cx="50%" cy="50%" innerRadius={44} outerRadius={70} paddingAngle={2} dataKey="value" strokeWidth={0}>
                                 {catPieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                               </Pie>
-                              <Tooltip formatter={(v) => fmt(v)} contentStyle={{ background: "var(--c-glass-border-strong)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, fontSize: 12 }} />
+                              <Tooltip formatter={(v) => fmt(v)} contentStyle={{ background: "var(--c-surface)", border: "1px solid var(--c-border)", borderRadius: 10, fontSize: 12, boxShadow: "0 4px 16px rgba(0,0,0,0.08)" }} />
                             </PieChart>
                           </ResponsiveContainer>
                           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
@@ -4015,41 +3781,60 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     {/* 50/30/20 */}
                     <div style={{ ...glassCard, padding: "20px 22px" }}>
                       <h4 style={{ fontWeight: FW.bold, fontSize: 13, color: COLORS.text, marginBottom: 4, letterSpacing: "-0.01em" }}>50 / 30 / 20 Rule</h4>
-                      <p style={{ fontSize: 11, color: COLORS.muted, marginBottom: 18 }}>Based on {fmt(s.inc)} income</p>
+                      <p style={{ fontSize: 11, color: COLORS.muted, marginBottom: 14 }}>Based on {fmt(s.inc)} income</p>
                       {s.inc === 0 ? (
                         <p style={{ color: COLORS.muted, fontSize: 13 }}>Add income to see your breakdown.</p>
-                      ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                          {[
-                            { label: "Needs", target: 50, val: needsAmt, targetAmt: s.inc * 0.5, color: COLORS.accentBlue, note: debtMinsTotal > 0 ? `incl. ${fmt(debtMinsTotal)} debt mins` : null },
-                            { label: "Wants", target: 30, val: wantsAmt, targetAmt: s.inc * 0.3, color: COLORS.accentPurple },
-                            { label: "Savings", target: 20, val: savingsAmt, targetAmt: s.inc * 0.2, color: COLORS.success },
-                          ].map(b => {
-                            const actualPct = b.targetAmt > 0 ? Math.min(100, (b.val / b.targetAmt) * 100) : 0;
-                            const overBudget = b.val > b.targetAmt && b.targetAmt > 0;
-                            return (
-                              <div key={b.label}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-                                  <div>
-                                    <span style={{ fontSize: 13, fontWeight: FW.semibold, color: COLORS.text }}>{b.label}</span>
-                                    <span style={{ fontSize: 10, color: COLORS.muted, marginLeft: 6 }}>({b.target}% target)</span>
-                                    {b.note && <span style={{ fontSize: 10, color: COLORS.muted, marginLeft: 6 }}>· {b.note}</span>}
-                                  </div>
-                                  <div style={{ textAlign: "right" }}>
-                                    <span style={{ fontSize: 13, fontWeight: FW.bold, color: overBudget ? COLORS.danger : COLORS.text }}>{fmt(b.val)}</span>
-                                    <span style={{ fontSize: 10, color: COLORS.muted }}> / {fmt(b.targetAmt)}</span>
-                                  </div>
-                                </div>
-                                <div style={{ height: 7, background: "var(--c-glass-hairline)", borderRadius: 999, overflow: "hidden" }}>
-                                  <div style={{ width: `${actualPct}%`, height: "100%", background: overBudget ? COLORS.danger : b.color, borderRadius: 999, transition: "width 0.5s cubic-bezier(0.4,0,0.2,1)" }} />
-                                </div>
+                      ) : (() => {
+                        const needsP   = s.inc > 0 ? Math.round(needsAmt / s.inc * 100) : 0;
+                        const wantsP   = s.inc > 0 ? Math.round(wantsAmt / s.inc * 100) : 0;
+                        const savingsP = s.inc > 0 ? Math.round(savingsAmt / s.inc * 100) : 0;
+                        return (
+                          <>
+                            {/* ── At-a-glance comparison ── */}
+                            <div style={{ background: "var(--c-container-low)", borderRadius: 12, padding: "12px 14px", marginBottom: 18 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                                <span style={{ fontSize: 10, fontWeight: FW.medium, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>Your split this month</span>
                               </div>
-                            );
-                          })}
-                        </div>
-                      )}
+                              <p style={{ fontSize: 13, fontWeight: FW.medium, color: COLORS.text, marginBottom: 6 }}>
+                                <span style={{ color: COLORS.accentBlue }}>Needs {needsP}%</span>
+                                <span style={{ color: COLORS.muted, margin: "0 6px" }}>·</span>
+                                <span style={{ color: COLORS.accentPurple }}>Wants {wantsP}%</span>
+                                <span style={{ color: COLORS.muted, margin: "0 6px" }}>·</span>
+                                <span style={{ color: COLORS.success }}>Savings {savingsP}%</span>
+                              </p>
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                              {[
+                                { label: "Needs", target: 50, val: needsAmt, targetAmt: s.inc * 0.5, color: COLORS.accentBlue },
+                                { label: "Wants", target: 30, val: wantsAmt, targetAmt: s.inc * 0.3, color: COLORS.accentPurple },
+                                { label: "Savings", target: 20, val: savingsAmt, targetAmt: s.inc * 0.2, color: COLORS.success },
+                              ].map(b => {
+                                const actualPct = b.targetAmt > 0 ? Math.min(100, (b.val / b.targetAmt) * 100) : 0;
+                                const overBudget = b.val > b.targetAmt && b.targetAmt > 0;
+                                return (
+                                  <div key={b.label}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                                      <div>
+                                        <span style={{ fontSize: 13, fontWeight: FW.semibold, color: COLORS.text }}>{b.label}</span>
+                                        <span style={{ fontSize: 10, color: COLORS.muted, marginLeft: 6 }}>({b.target}% target)</span>
+                                      </div>
+                                      <div style={{ textAlign: "right" }}>
+                                        <span style={{ fontSize: 13, fontWeight: FW.bold, color: overBudget ? COLORS.danger : COLORS.text }}>{fmt(b.val)}</span>
+                                        <span style={{ fontSize: 10, color: COLORS.muted }}> / {fmt(b.targetAmt)}</span>
+                                      </div>
+                                    </div>
+                                    <div style={{ height: 7, background: "var(--c-border)", borderRadius: 999, overflow: "hidden" }}>
+                                      <div style={{ width: `${actualPct}%`, height: "100%", background: overBudget ? COLORS.danger : b.color, borderRadius: 999, transition: "width 0.5s cubic-bezier(0.4,0,0.2,1)" }} />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </>
+                        );
+                      })()}
                       {/* Notes */}
-                      <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--c-glass-hairline)" }}>
+                      <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--c-border)" }}>
                         <p style={{ fontSize: 11, fontWeight: FW.semibold, color: COLORS.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>Month Notes</p>
                         <textarea
                           value={snap.notes || ""}
@@ -4061,44 +3846,38 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       </div>
                     </div>
 
-                    {/* Debt snapshot */}
+                    {/* ── Spending Mix BarChart ── */}
                     <div style={{ ...glassCard, padding: "20px 22px" }}>
-                      <h4 style={{ fontWeight: FW.bold, fontSize: 13, color: COLORS.text, marginBottom: 4, letterSpacing: "-0.01em" }}>Debt Snapshot</h4>
-                      <p style={{ fontSize: 11, color: COLORS.muted, marginBottom: 18 }}>{fmt(totalDebt)} outstanding · {dtiNum !== null ? `${dtiNum}% DTI` : "—"}</p>
-                      {debts.length === 0 ? (
-                        <div style={{ textAlign: "center", padding: "24px 0", color: COLORS.muted, fontSize: 13 }}>🎉 No debts recorded</div>
+                      <h4 style={{ fontWeight: FW.bold, fontSize: 13, color: COLORS.text, marginBottom: 3, letterSpacing: "-0.01em" }}>Spending Mix · {year}</h4>
+                      <p style={{ fontSize: 11, color: COLORS.muted, marginBottom: 16 }}>Fixed · Variable · Savings — watch fixed shrink over time</p>
+                      {spendingMixData.length === 0 ? (
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 160, color: COLORS.muted, fontSize: 13 }}>No data yet — add some expenses to get started</div>
                       ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                          {debts.map(d => {
-                            const paidOff = d.balance <= 0;
-                            // estimate original balance as balance + what's been paid (we don't track that, so use balance as proxy)
-                            // Show as % of totalDebt for the bar
-                            const barPct = totalDebt > 0 ? Math.min(100, (d.balance / totalDebt) * 100) : 0;
-                            const barColor = paidOff ? COLORS.success : d.interest > 15 ? COLORS.danger : d.interest > 7 ? COLORS.warning : COLORS.accentBlue;
-                            return (
-                              <div key={d.id}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 5 }}>
-                                  <div>
-                                    <span style={{ fontSize: 13, fontWeight: FW.semibold, color: COLORS.text }}>{d.label}</span>
-                                    <span style={{ fontSize: 10, color: COLORS.muted, marginLeft: 7 }}>{d.interest}% APR · min {fmt(d.minPayment)}/mo</span>
-                                  </div>
-                                  <span style={{ fontSize: 13, fontWeight: FW.bold, color: paidOff ? COLORS.success : COLORS.text, fontVariantNumeric: "tabular-nums" }}>{paidOff ? "Paid off ✓" : fmt(d.balance)}</span>
-                                </div>
-                                <div style={{ height: 6, background: "var(--c-glass-hairline)", borderRadius: 999, overflow: "hidden" }}>
-                                  <div style={{ width: `${barPct}%`, height: "100%", background: barColor, borderRadius: 999, transition: "width 0.5s cubic-bezier(0.4,0,0.2,1)" }} />
-                                </div>
+                        <>
+                          <ResponsiveContainer width="100%" height={160}>
+                            <BarChart data={spendingMixData} barSize={10} barGap={3} barCategoryGap="35%">
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
+                              <XAxis dataKey="month" tick={{ fontSize: 10, fill: COLORS.muted, fontWeight: 300 }} axisLine={false} tickLine={false} />
+                              <YAxis tickFormatter={v => `$${(v/1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: COLORS.muted }} axisLine={false} tickLine={false} width={36} />
+                              <Tooltip formatter={(v, name) => [fmt(v), name]} contentStyle={{ background: "var(--c-surface)", border: "1px solid var(--c-border)", borderRadius: 10, fontSize: 12, boxShadow: "0 4px 16px rgba(0,0,0,0.08)" }} />
+                              <Bar dataKey="Fixed" fill="oklch(60% 0.04 200)" radius={[3,3,0,0]} />
+                              <Bar dataKey="Variable" fill={COLORS.accentWarm} radius={[3,3,0,0]} />
+                              <Bar dataKey="Savings" fill={COLORS.success} radius={[3,3,0,0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                          <div style={{ display: "flex", gap: 16, marginTop: 10 }}>
+                            {[
+                              { label: "Fixed",    color: "oklch(60% 0.04 200)" },
+                              { label: "Variable", color: COLORS.accentWarm },
+                              { label: "Savings",  color: COLORS.success },
+                            ].map(l => (
+                              <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                                <div style={{ width: 8, height: 8, borderRadius: 2, background: l.color }} />
+                                <span style={{ fontSize: 11, color: COLORS.muted, fontWeight: 300 }}>{l.label}</span>
                               </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                      {totalDebt > 0 && (
-                        <button
-                          onClick={() => { setAdvisorMsg(`Can we pay our debt down faster? We have ${debts.map(d => `${d.label}: ${fmt(d.balance)} at ${d.interest}% APR (min payment ${fmt(d.minPayment)})`).join(", ")}. Our monthly income is ${fmt(s.inc)} and total expenses are ${fmt(s.exp)}. Please give us a specific payoff plan with estimated payoff dates.`); pendingAdvisorSend.current = true; navigateToTab("advisor"); }}
-                          style={{ width: "100%", marginTop: 18, background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, color: "#fff", border: "none", borderRadius: 12, padding: "12px 16px", fontSize: 13, fontWeight: FW.bold, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: `0 6px 18px rgba(0,120,168,0.25)` }}
-                        >
-                          🚀 Get a debt payoff plan
-                        </button>
+                            ))}
+                          </div>
+                        </>
                       )}
                     </div>
                   </div>
@@ -4121,9 +3900,9 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                             { label: "Net Saved",       val: fmt(netSaved),    color: netSaved >= 0 ? COLORS.success : COLORS.danger },
                             { label: "Avg / Month",     val: fmt(avgMonthlyExp), color: COLORS.accentPurple },
                           ].map((stat, i) => (
-                            <div key={stat.label} style={{ paddingRight: i < 3 ? 20 : 0, marginRight: i < 3 ? 20 : 0, borderRight: i < 3 ? "1px solid var(--c-glass-hairline)" : "none" }}>
+                            <div key={stat.label} style={{ paddingRight: i < 3 ? 20 : 0, marginRight: i < 3 ? 20 : 0, borderRight: i < 3 ? "1px solid var(--c-border)" : "none" }}>
                               <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>{stat.label}</p>
-                              <p style={{ fontSize: 20, fontWeight: FW.extrabold, color: stat.color, fontFamily: "var(--font-num)", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"' }}>{stat.val}</p>
+                              <p style={{ fontSize: 22, fontWeight: 300, color: stat.color, fontFamily: "'Manrope', var(--font-num)", letterSpacing: "-0.035em", fontVariantNumeric: "tabular-nums" }}>{stat.val}</p>
                               {monthsWithData > 0 && <p style={{ fontSize: 10, color: COLORS.muted, marginTop: 3 }}>{monthsWithData} months tracked</p>}
                             </div>
                           ))}
@@ -4133,137 +3912,123 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   })()}
                 </>
               )}
+
             </div>
           );
         })()}
-        {/* ── AI ASSISTANT TAB ── */}
-        {tab === "advisor" && (
-          <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 140px)", position: "relative" }}>
-            {/* Header */}
-            <div style={{ marginBottom: 24, flexShrink: 0 }}>
-              <h2 style={{ fontSize: 24, fontWeight: FW.extrabold, color: COLORS.sidebarText, letterSpacing: "-0.02em", marginBottom: 4 }}>How can I help you today?</h2>
-              <p style={{ fontSize: 14, color: COLORS.subtext }}>Your family financial co-pilot is ready.</p>
-            </div>
-            {/* Chat history */}
-            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 24, paddingBottom: 160, paddingRight: 4 }}>
-              {advisorHistory.length === 0 && (
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 20, padding: "24px 0" }}>
-                  <div style={{ width: 64, height: 64, borderRadius: 20, background: `linear-gradient(140deg, ${COLORS.primary}, #0095d2)`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 12px 32px rgba(0,120,168,0.35)" }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 32, color: "#fff", fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
-                  </div>
-                  <div>
-                    <h3 style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: FW.extrabold, color: COLORS.text, fontSize: 26, margin: 0, letterSpacing: "-0.025em" }}>Ask about your money.</h3>
-                    <p style={{ fontSize: 14, color: COLORS.subtext, marginTop: 8, marginBottom: 0, lineHeight: 1.55, maxWidth: 460 }}>I have context on every dollar you've tracked — budgets, bills, debts, goals. Try one of these, or type your own question.</p>
-                  </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 4 }}>
-                    {[
-                      { icon: "shopping_cart", label: "How's our grocery spending?" },
-                      { icon: "trending_down", label: "Where can we cut back this month?" },
-                      { icon: "flag", label: "Am I on track for my goals?" },
-                      { icon: "credit_card", label: "What's the fastest way to pay off debt?" },
-                      { icon: "insights", label: "Summarize this month" },
-                    ].map(chip => (
-                      <button key={chip.label} onClick={() => { setAdvisorMsg(chip.label); handleAdvisor(chip.label); }} style={{
-                        display: "flex", alignItems: "center", gap: 8, padding: "10px 16px",
-                        background: "var(--c-glass-strong)", backdropFilter: "blur(12px) saturate(160%)", WebkitBackdropFilter: "blur(12px) saturate(160%)",
-                        border: "1px solid var(--c-glass-border-strong)", borderRadius: 9999, cursor: "pointer",
-                        fontSize: 13, fontWeight: FW.semibold, color: COLORS.text, fontFamily: "'Figtree', sans-serif",
-                        boxShadow: "var(--c-shadow-sm)", transition: "transform .2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .2s, background .2s",
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "var(--c-shadow)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "var(--c-shadow-sm)"; }}
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 16, color: COLORS.primary }}>{chip.icon}</span>
-                        {chip.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {advisorHistory.map((msg, i) => (
-                <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", gap: 12, alignItems: "flex-start" }}>
-                  {msg.role === "assistant" && (
-                    <div style={{ width: 40, height: 40, borderRadius: "50%", background: COLORS.primary, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 20, color: "#fff", fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
-                    </div>
-                  )}
-                  <div style={{
-                    background: msg.role === "user" ? COLORS.containerHighest : "var(--c-glass-border)",
-                    backdropFilter: msg.role === "assistant" ? "blur(20px)" : "none",
-                    borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "4px 16px 16px 16px",
-                    padding: "16px 20px", maxWidth: "70%",
-                    color: COLORS.text,
-                    boxShadow: msg.role === "assistant" ? COLORS.shadowSm : "none",
-                  }}>
-                    {msg.role === "assistant" ? renderMd(msg.content) : <p style={{ fontSize: 14, lineHeight: 1.7, margin: 0 }}>{msg.content}</p>}
-                    {msg.role === "user" && <p style={{ fontSize: 10, color: COLORS.muted, marginTop: 6, textAlign: "right" }}>
-                      {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    </p>}
-                  </div>
-                </div>
-              ))}
-              {advisorLoading && (
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: "50%", background: COLORS.primary, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+
+        {/* ── ADVISOR TAB ── */}
+        {tab === "advisor" && (() => {
+          return (
+            <div style={{ maxWidth: 760, margin: "0 auto", display: "flex", flexDirection: "column", gap: 0, height: "100%" }}>
+              {/* Page header */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 12, background: `linear-gradient(140deg, ${COLORS.primary}, #0095d2)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <span className="material-symbols-outlined" style={{ fontSize: 20, color: "#fff", fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
                   </div>
-                  <div style={{ background: "var(--c-glass-border)", backdropFilter: "blur(20px)", borderRadius: "4px 16px 16px 16px", padding: "16px 20px", boxShadow: COLORS.shadowSm }}>
-                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                      {[0,1,2].map(j => <div key={j} style={{ width: 8, height: 8, background: COLORS.primary, borderRadius: "50%", animation: `typing-dot 1.2s ${j*0.18}s cubic-bezier(0.4, 0, 0.2, 1) infinite` }} />)}
-                    </div>
-{/* @keyframes bounce defined in global style block */}
+                  <div>
+                    <h2 style={{ fontSize: 20, fontWeight: 300, color: COLORS.text, letterSpacing: "-0.03em", margin: 0 }}>AI Advisor</h2>
+                    <p style={{ fontSize: 12, color: COLORS.muted, margin: 0 }}>Ask anything about your budget, spending, or goals</p>
                   </div>
+                  {advisorHistory.length > 0 && (
+                    <button onClick={() => setAdvisorHistory([])} style={{ marginLeft: "auto", fontSize: 11, background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "4px 12px", color: COLORS.muted, cursor: "pointer" }}>Clear chat</button>
+                  )}
                 </div>
-              )}
-              <div ref={chatEndRef} />
-              {/* Chips after AI response */}
-              {advisorHistory.length > 0 && !advisorLoading && advisorHistory[advisorHistory.length - 1]?.role === "assistant" && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                  {[
-                    { icon: "shopping_cart", label: "How's our grocery spending?" },
-                    { icon: "trending_up", label: "Investment update" },
-                    { icon: "savings", label: "Vacation goal progress" },
-                  ].map(chip => (
-                    <button key={chip.label} onClick={() => { setAdvisorMsg(chip.label); handleAdvisor(chip.label); }} style={{
-                      display: "flex", alignItems: "center", gap: 8, padding: "8px 14px",
-                      background: COLORS.containerHighest, border: "none", borderRadius: 9999, cursor: "pointer",
-                      fontSize: 12, fontWeight: FW.semibold, color: COLORS.text, fontFamily: "'Figtree', sans-serif",
-                    }}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{chip.icon}</span>
-                      {chip.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            {/* Fixed bottom input */}
-            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "var(--c-glass-strong)", backdropFilter: "blur(20px) saturate(180%)", WebkitBackdropFilter: "blur(20px) saturate(180%)", borderTop: "1px solid var(--c-glass-border)", padding: "16px 0 8px" }}>
-              {advisorFile && (
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, padding: "6px 12px", background: `rgba(0,103,136,0.1)`, borderRadius: 8, width: "fit-content" }}>
-                  <span style={{ fontSize: 13, color: COLORS.primary }}>📎 {advisorFile.name}</span>
-                  <button onClick={() => setAdvisorFile(null)} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer" }}>×</button>
-                </div>
-              )}
-              <div style={{ display: "flex", alignItems: "center", gap: 4, background: COLORS.containerLow, borderRadius: 9999, padding: "8px 8px 8px 20px", border: `1px solid rgba(172,179,181,0.1)` }}>
-                <input
-                  value={advisorMsg}
-                  onChange={e => setAdvisorMsg(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAdvisor(); } }}
-                  placeholder="Ask about your finances, goals, or spending..."
-                  style={{ flex: 1, background: "transparent", border: "none", fontSize: 14, color: COLORS.text, outline: "none", fontFamily: "'Figtree', sans-serif" }}
-                />
-                <input ref={advisorFileRef} type="file" accept="image/*,.pdf" style={{ display: "none" }} onChange={e => setAdvisorFile(e.target.files[0])} />
-                <button onClick={() => advisorFileRef.current?.click()} style={{ width: 40, height: 40, borderRadius: "50%", background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.subtext }}>attach_file</span>
-                </button>
-                <button onClick={handleAdvisor} disabled={advisorLoading} style={{ width: 48, height: 48, background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDim})`, border: "none", borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: COLORS.shadowSm }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 22, color: "#fff" }}>arrow_upward</span>
-                </button>
               </div>
-              <p style={{ fontSize: 10, textAlign: "center", marginTop: 8, color: COLORS.muted }}>AI can make mistakes. Check important financial info.</p>
+
+              {/* Chat area */}
+              <div style={{ background: "var(--c-surface)", border: "1px solid var(--c-border)", borderRadius: 20, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", overflow: "hidden", display: "flex", flexDirection: "column", flex: 1, minHeight: 480 }}>
+                <div style={{ flex: 1, padding: "20px 24px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 18, minHeight: 0 }}>
+                  {advisorHistory.length === 0 && (
+                    <div>
+                      <p style={{ fontSize: 12, color: COLORS.muted, marginBottom: 12 }}>Try asking:</p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        {[
+                          { icon: "shopping_cart", label: "How's our grocery spending?" },
+                          { icon: "trending_down", label: "Where can we cut back?" },
+                          { icon: "flag", label: "Am I on track for my goals?" },
+                          { icon: "savings", label: "How are our savings goals?" },
+                          { icon: "insights", label: "Summarize this month" },
+                          { icon: "account_balance", label: "How do we compare to 50/30/20?" },
+                        ].map(chip => (
+                          <button key={chip.label} onClick={() => { setAdvisorMsg(chip.label); handleAdvisor(chip.label); }} style={{
+                            display: "flex", alignItems: "center", gap: 6, padding: "8px 16px",
+                            background: "var(--c-container-low)", border: "1px solid var(--c-border)", borderRadius: 9999, cursor: "pointer",
+                            fontSize: 12, fontWeight: FW.semibold, color: COLORS.text,
+                            transition: "border-color .15s, color .15s",
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = COLORS.primary; e.currentTarget.style.color = COLORS.primary; }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--c-border)"; e.currentTarget.style.color = COLORS.text; }}
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: 14, color: "inherit" }}>{chip.icon}</span>
+                            {chip.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {advisorHistory.map((msg, i) => (
+                    <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", gap: 10, alignItems: "flex-start" }}>
+                      {msg.role === "assistant" && (
+                        <div style={{ width: 30, height: 30, borderRadius: "50%", background: COLORS.primary, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 16, color: "#fff", fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
+                        </div>
+                      )}
+                      <div style={{
+                        background: msg.role === "user" ? COLORS.containerHighest : "var(--c-container-low)",
+                        borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "4px 14px 14px 14px",
+                        padding: "12px 16px", maxWidth: "75%", color: COLORS.text,
+                      }}>
+                        {msg.role === "assistant" ? renderMd(msg.content) : <p style={{ fontSize: 13, lineHeight: 1.65, margin: 0 }}>{msg.content}</p>}
+                      </div>
+                    </div>
+                  ))}
+                  {advisorLoading && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ width: 30, height: 30, borderRadius: "50%", background: COLORS.primary, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 16, color: "#fff", fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
+                      </div>
+                      <div style={{ background: "var(--c-container-low)", borderRadius: "4px 14px 14px 14px", padding: "12px 16px" }}>
+                        <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                          {[0,1,2].map(j => <div key={j} style={{ width: 7, height: 7, background: COLORS.primary, borderRadius: "50%", animation: `typing-dot 1.2s ${j*0.18}s cubic-bezier(0.4, 0, 0.2, 1) infinite` }} />)}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+
+                {/* Input bar */}
+                <div style={{ padding: "12px 16px", borderTop: "1px solid var(--c-border)", background: "var(--c-container-low)", flexShrink: 0 }}>
+                  {advisorFile && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, padding: "4px 10px", background: `rgba(0,103,136,0.1)`, borderRadius: 8, width: "fit-content" }}>
+                      <span style={{ fontSize: 12, color: COLORS.primary }}>📎 {advisorFile.name}</span>
+                      <button onClick={() => setAdvisorFile(null)} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer" }}>×</button>
+                    </div>
+                  )}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--c-surface)", borderRadius: 12, padding: "8px 8px 8px 16px", border: `1px solid var(--c-border)` }}>
+                    <input
+                      value={advisorMsg}
+                      onChange={e => setAdvisorMsg(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAdvisor(); } }}
+                      placeholder="Ask about your finances, goals, or spending..."
+                      style={{ flex: 1, background: "transparent", border: "none", fontSize: 13, color: COLORS.text, outline: "none" }}
+                    />
+                    <input ref={advisorFileRef} type="file" accept="image/*,.pdf" style={{ display: "none" }} onChange={e => setAdvisorFile(e.target.files[0])} />
+                    <button onClick={() => advisorFileRef.current?.click()} style={{ width: 34, height: 34, borderRadius: "50%", background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 18, color: COLORS.subtext }}>attach_file</span>
+                    </button>
+                    <button onClick={handleAdvisor} disabled={advisorLoading} style={{ width: 40, height: 40, background: COLORS.primary, border: "none", borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 20, color: "#fff" }}>arrow_upward</span>
+                    </button>
+                  </div>
+                  <p style={{ fontSize: 10, textAlign: "center", marginTop: 6, color: COLORS.muted }}>AI can make mistakes. Verify important financial decisions.</p>
+                </div>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </main>
       {/* ── Bill detail popover ── rendered at top level so it's available from any tab (dashboard carousel, bills list, etc.) */}
       {activeBillDetail && (() => {
@@ -4279,14 +4044,14 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         const isEDate = editingBillCell?.id === b.id && editingBillCell?.field === "dueDate";
         return (
           <div onClick={() => { closeBillDetail(); setEditingBillCell(null); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.30)", backdropFilter: "blur(12px) saturate(140%)", WebkitBackdropFilter: "blur(12px) saturate(140%)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <div onClick={e => e.stopPropagation()} style={{ background: "var(--c-glass-border-strong)", backdropFilter: "blur(40px) saturate(200%)", WebkitBackdropFilter: "blur(40px) saturate(200%)", border: "1px solid var(--c-glass-border-strong)", borderRadius: 24, padding: 32, minWidth: 320, boxShadow: "0 32px 64px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,1)", viewTransitionName: "bill-active" }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "var(--c-surface)", border: "1px solid var(--c-border)", borderRadius: 24, padding: 32, minWidth: 320, boxShadow: "0 8px 32px rgba(0,0,0,0.12)", viewTransitionName: "bill-active" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, alignItems: "flex-start" }}>
                 {isELabel
                   ? <input autoFocus defaultValue={b.label} style={{ ...popInpStyle, textAlign: "left", fontSize: 18, fontWeight: FW.extrabold, flex: 1, marginRight: 8 }} onBlur={e => { setBills(p => p.map(x => x.id === b.id ? {...x, label: e.target.value || x.label} : x)); setEditingBillCell(null); }} onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingBillCell(null); }} />
                   : <h3 onClick={() => setEditingBillCell({id: b.id, field: "label"})} title="Click to edit" style={{ fontSize: 18, fontWeight: FW.extrabold, color: COLORS.text, cursor: "text", flex: 1 }}>{b.label}</h3>
                 }
                 <div style={{ display: "flex", gap: 6 }}>
-                  <button onClick={() => { setBills(p => p.filter(x => x.id !== b.id)); closeBillDetail(); setEditingBillCell(null); }} title="Delete bill" style={{ background: COLORS.danger + "18", border: "none", color: COLORS.danger, borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>🗑</button>
+                  <button onClick={() => { setBills(p => p.filter(x => x.id !== b.id)); closeBillDetail(); setEditingBillCell(null); }} title="Delete" style={{ background: COLORS.danger + "18", border: "none", color: COLORS.danger, borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>🗑</button>
                   <button onClick={() => { closeBillDetail(); setEditingBillCell(null); }} style={{ background: COLORS.containerHigh, border: "none", fontSize: 20, cursor: "pointer", color: COLORS.muted, borderRadius: 8, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
                 </div>
               </div>
@@ -4359,15 +4124,6 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           <button onClick={addIncome} style={btnPrimary}>Add Income</button>
         </Modal>
       )}
-      {modal === "addDebt" && (
-        <Modal title="Add Debt" onClose={() => setModal(null)}>
-          <Field label="Debt Name"><input style={inputStyle} value={newDebt.label} onChange={e => setNewDebt(p => ({ ...p, label: e.target.value }))} placeholder="e.g. Credit Card" /></Field>
-          <Field label="Balance ($)"><input style={inputStyle} type="number" value={newDebt.balance} onChange={e => setNewDebt(p => ({ ...p, balance: e.target.value }))} placeholder="0.00" /></Field>
-          <Field label="Min. Payment ($/mo)"><input style={inputStyle} type="number" value={newDebt.minPayment} onChange={e => setNewDebt(p => ({ ...p, minPayment: e.target.value }))} placeholder="0.00" /></Field>
-          <Field label="Interest Rate (%)"><input style={inputStyle} type="number" value={newDebt.interest} onChange={e => setNewDebt(p => ({ ...p, interest: e.target.value }))} placeholder="e.g. 19.9" /></Field>
-          <button onClick={addDebt} style={{ ...btnPrimary, background: COLORS.danger, color: "#fff" }}>Add Debt</button>
-        </Modal>
-      )}
       {modal === "goal" && (
         <Modal title="🎯 Set a Budget Goal" onClose={() => { setModal(null); setGoalResponse(""); }}>
           <p style={{ color: COLORS.muted, fontSize: 13, marginBottom: 18 }}>
@@ -4434,15 +4190,15 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         </Modal>
       )}
       {modal === "addBill" && (
-        <Modal title="Add Bill" onClose={() => { setModal(null); setNewBill({ label: "", budget: "", dayOfMonth: "" }); }}>
-          <Field label="Bill Name"><input style={inputStyle} value={newBill.label} onChange={e => setNewBill(p=>({...p,label:e.target.value}))} placeholder="e.g. Electric Bill" /></Field>
+        <Modal title="Add Fixed Expense" onClose={() => { setModal(null); setNewBill({ label: "", budget: "", dayOfMonth: "" }); }}>
+          <Field label="Name"><input style={inputStyle} value={newBill.label} onChange={e => setNewBill(p=>({...p,label:e.target.value}))} placeholder="e.g. Electric" /></Field>
           <Field label="Amount"><input style={inputStyle} type="number" value={newBill.budget} onChange={e => setNewBill(p=>({...p,budget:e.target.value}))} placeholder="0" /></Field>
           <Field label="Day of Month"><input style={inputStyle} type="number" min="1" max="31" value={newBill.dayOfMonth} onChange={e => setNewBill(p=>({...p,dayOfMonth:e.target.value}))} placeholder="e.g. 15" /></Field>
           <button disabled={!newBill.label || !newBill.budget || !newBill.dayOfMonth} onClick={() => {
             setBills(p => [...p, { id: Date.now(), label: newBill.label, dayOfMonth: parseInt(newBill.dayOfMonth)||1, budget: parseFloat(newBill.budget)||0 }]);
-            showToast(`Bill "${newBill.label}" added`);
+            showToast(`Fixed expense "${newBill.label}" added`);
             setNewBill({ label: "", budget: "", dayOfMonth: "" }); setModal(null);
-          }} style={{ ...btnPrimary, opacity: (!newBill.label || !newBill.budget || !newBill.dayOfMonth) ? 0.5 : 1 }}>Add Bill</button>
+          }} style={{ ...btnPrimary, opacity: (!newBill.label || !newBill.budget || !newBill.dayOfMonth) ? 0.5 : 1 }}>Add Fixed Expense</button>
         </Modal>
       )}
       {modal === "settings" && (

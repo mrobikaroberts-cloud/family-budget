@@ -2,61 +2,127 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── App theme tokens ── feed COLORS.* in App.jsx and glass/shadow surfaces. */
+/* ── App theme tokens — Studio palette ── */
 /* Light (default) */
 :root {
-  --c-bg: #f7f9fb;
-  --c-surface: #f7f9fb;
-  --c-card: #ffffff;
-  --c-container-low: #eef2f5;
-  --c-container: #e5eaee;
-  --c-container-high: #dce2e7;
-  --c-container-highest: #d3dbe0;
-  --c-neutral: #eaeef0;
-  --c-primary: #0078a8;
-  --c-primary-dim: #006a96;
-  --c-primary-container: #4dc8f7;
-  --c-primary-fixed: #38b8e8;
-  --c-secondary: #0d7ea6;
-  --c-secondary-container: #b0e4ff;
-  --c-on-secondary-container: #005f80;
-  --c-tertiary: #4a52a8;
-  --c-tertiary-container: #a8aeff;
-  --c-on-tertiary-container: #2e347a;
-  --c-sidebar-bg: #f7f9fb;
-  --c-sidebar-active: #3d5068;
-  --c-sidebar-text: #3d5068;
-  --c-accent: #0078a8;
-  --c-accent-warm: #e8930a;
-  --c-accent-blue: #0078a8;
-  --c-accent-purple: #4a52a8;
-  --c-danger: #c5283d;
-  --c-warning: #f06810;
-  --c-success: #0a8a6a;
-  --c-success-fill: #34D399;
-  --c-danger-fill: #F87171;
-  --c-warning-fill: #FBBF24;
-  --c-success-fill-bg: rgba(52,211,153,0.15);
-  --c-danger-fill-bg: rgba(248,113,113,0.15);
-  --c-primary-fill-bg: rgba(0,120,168,0.12);
-  --c-text: #1e2d2f;
-  --c-subtext: #4a5658;
-  --c-muted: #6b7578;
-  --c-input-bg: #eef2f5;
-  --c-border: rgba(160,172,178,0.18);
-  --c-shadow: 0 12px 28px rgba(60,80,104,0.08);
-  --c-shadow-sm: 0 4px 14px rgba(60,80,104,0.05);
-  --c-shadow-lg: 0 24px 48px rgba(0,0,0,0.12);
-  /* Glass surfaces (inline-rgba clusters) — tuned per theme */
-  --c-glass: rgba(255,255,255,0.72);
-  --c-glass-strong: rgba(255,255,255,0.88);
-  --c-glass-border: rgba(255,255,255,0.80);
-  --c-glass-border-strong: rgba(255,255,255,0.95);
-  --c-glass-hairline: rgba(0,0,0,0.06);
-  --c-glass-inset: rgba(255,255,255,0.95);
-  /* Dashboard hero gradient (Cash Flow Summary card) */
-  --c-hero-gradient: linear-gradient(145deg, #0078a8 0%, #0095d2 40%, #0069a0 75%, #2e347a 100%);
+  /* Studio: clean off-white canvas, white cards, sage green primary */
+  --c-bg:               oklch(97.5% 0.005 145);
+  --c-surface:          oklch(100% 0 0);
+  --c-card:             oklch(100% 0 0);
+  --c-container-low:    oklch(95% 0.006 145);
+  --c-container:        oklch(93% 0.006 145);
+  --c-container-high:   oklch(91% 0.007 145);
+  --c-container-highest:oklch(89% 0.008 145);
+  --c-neutral:          oklch(94% 0.004 145);
+  --c-primary:          oklch(49% 0.165 145);
+  --c-primary-dim:      oklch(44% 0.15 145);
+  --c-primary-container:oklch(88% 0.08 145);
+  --c-primary-fixed:    oklch(80% 0.1 145);
+  --c-secondary:        oklch(52% 0.13 162);
+  --c-secondary-container: oklch(91% 0.05 162);
+  --c-on-secondary-container: oklch(35% 0.12 162);
+  --c-tertiary:         oklch(48% 0.02 250);
+  --c-tertiary-container: oklch(90% 0.01 250);
+  --c-on-tertiary-container: oklch(28% 0.02 250);
+  --c-sidebar-bg:       oklch(97.5% 0.005 145);
+  --c-sidebar-active:   oklch(49% 0.165 145);
+  --c-sidebar-text:     oklch(30% 0.01 250);
+  --c-accent:           oklch(49% 0.165 145);
+  --c-accent-warm:      oklch(62% 0.16 75);
+  --c-accent-blue:      oklch(52% 0.14 230);
+  --c-accent-purple:    oklch(52% 0.14 290);
+  --c-danger:           oklch(52% 0.22 27);
+  --c-warning:          oklch(62% 0.16 75);
+  --c-success:          oklch(49% 0.165 145);
+  --c-success-fill:     oklch(70% 0.15 145);
+  --c-danger-fill:      oklch(65% 0.18 27);
+  --c-warning-fill:     oklch(78% 0.16 75);
+  --c-success-fill-bg:  oklch(96% 0.04 145);
+  --c-danger-fill-bg:   oklch(97% 0.04 27);
+  --c-primary-fill-bg:  oklch(96% 0.04 145);
+  --c-text:             oklch(14% 0.01 250);
+  --c-subtext:          oklch(45% 0.01 250);
+  --c-muted:            oklch(65% 0.01 250);
+  --c-input-bg:         oklch(97% 0.004 145);
+  --c-border:           oklch(92% 0.005 145 / 1);
+  --c-shadow:           0 1px 3px oklch(0% 0 0 / 0.06), 0 1px 2px oklch(0% 0 0 / 0.04);
+  --c-shadow-sm:        0 1px 3px oklch(0% 0 0 / 0.05);
+  --c-shadow-lg:        0 4px 16px oklch(0% 0 0 / 0.09);
+  /* Glass aliases — now just clean surfaces for backward compat */
+  --c-glass:            oklch(100% 0 0);
+  --c-glass-strong:     oklch(100% 0 0);
+  --c-glass-border:     oklch(92% 0.005 145);
+  --c-glass-border-strong: oklch(90% 0.006 145);
+  --c-glass-hairline:   oklch(92% 0.005 145);
+  --c-glass-inset:      oklch(98% 0.003 145);
+  --c-hero-gradient:    oklch(49% 0.165 145);
+  /* Studio nav tokens */
+  --s-nav-bg:           oklch(100% 0 0);
+  --s-nav-border:       oklch(92% 0.005 145);
+  --s-tab-idle:         oklch(64% 0.01 250);
+  --s-tab-active:       oklch(14% 0.01 250);
+  --s-radius:           12px;
+  --s-bar-bg:           oklch(93% 0.006 145);
   color-scheme: light;
+}
+
+/* Dark mode — keeps basic functionality, Studio stays light-first */
+html.dark {
+  --c-bg:               oklch(14% 0.01 250);
+  --c-surface:          oklch(18% 0.01 250);
+  --c-card:             oklch(20% 0.012 250);
+  --c-container-low:    oklch(22% 0.012 250);
+  --c-container:        oklch(24% 0.013 250);
+  --c-container-high:   oklch(26% 0.013 250);
+  --c-container-highest:oklch(28% 0.014 250);
+  --c-neutral:          oklch(22% 0.01 250);
+  --c-primary:          oklch(72% 0.14 145);
+  --c-primary-dim:      oklch(65% 0.13 145);
+  --c-primary-container:oklch(30% 0.08 145);
+  --c-primary-fixed:    oklch(58% 0.12 145);
+  --c-secondary:        oklch(70% 0.12 162);
+  --c-secondary-container: oklch(25% 0.06 162);
+  --c-on-secondary-container: oklch(80% 0.08 162);
+  --c-tertiary:         oklch(68% 0.08 250);
+  --c-tertiary-container: oklch(25% 0.04 250);
+  --c-on-tertiary-container: oklch(82% 0.05 250);
+  --c-sidebar-bg:       oklch(17% 0.015 255);
+  --c-sidebar-active:   oklch(72% 0.14 145);
+  --c-sidebar-text:     oklch(82% 0.01 250);
+  --c-accent:           oklch(72% 0.14 145);
+  --c-accent-warm:      oklch(75% 0.14 75);
+  --c-accent-blue:      oklch(70% 0.14 230);
+  --c-accent-purple:    oklch(70% 0.14 290);
+  --c-danger:           oklch(66% 0.18 27);
+  --c-warning:          oklch(74% 0.14 75);
+  --c-success:          oklch(72% 0.14 145);
+  --c-success-fill:     oklch(72% 0.14 145);
+  --c-danger-fill:      oklch(66% 0.18 27);
+  --c-warning-fill:     oklch(74% 0.14 75);
+  --c-success-fill-bg:  oklch(72% 0.14 145 / 0.15);
+  --c-danger-fill-bg:   oklch(66% 0.18 27 / 0.15);
+  --c-primary-fill-bg:  oklch(72% 0.14 145 / 0.15);
+  --c-text:             oklch(92% 0.01 250);
+  --c-subtext:          oklch(72% 0.01 250);
+  --c-muted:            oklch(56% 0.01 250);
+  --c-input-bg:         oklch(22% 0.01 250);
+  --c-border:           oklch(30% 0.012 250 / 1);
+  --c-shadow:           0 1px 3px oklch(0% 0 0 / 0.3);
+  --c-shadow-sm:        0 1px 3px oklch(0% 0 0 / 0.25);
+  --c-shadow-lg:        0 4px 16px oklch(0% 0 0 / 0.45);
+  --c-glass:            oklch(20% 0.012 250);
+  --c-glass-strong:     oklch(22% 0.012 250);
+  --c-glass-border:     oklch(30% 0.012 250);
+  --c-glass-border-strong: oklch(34% 0.012 250);
+  --c-glass-hairline:   oklch(28% 0.01 250);
+  --c-glass-inset:      oklch(25% 0.01 250);
+  --c-hero-gradient:    oklch(72% 0.14 145);
+  --s-nav-bg:           oklch(17% 0.025 255);
+  --s-nav-border:       oklch(24% 0.02 255);
+  --s-tab-idle:         oklch(46% 0.02 255);
+  --s-tab-active:       oklch(92% 0.01 250);
+  --s-bar-bg:           oklch(28% 0.02 250);
+  color-scheme: dark;
 }
 
 /* Dark */
