@@ -2382,10 +2382,21 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           .app-sidebar { display: none !important; }
           .app-main { min-height: 100dvh; }
           main { padding: 16px !important; }
-          header { padding: 12px 16px 10px !important; gap: 12px !important; }
+          /* Compact header: single bar with no overflow */
+          .app-header { padding: 0 !important; }
+          .app-header > div:first-child { padding: 0 12px !important; height: 48px !important; gap: 8px !important; }
+          /* Hide top tab bar and desktop Add button on mobile */
+          .header-tab-nav { display: none !important; }
+          .header-add-btn { display: none !important; }
           .header-search { display: none !important; }
           .home-stats-strip { grid-template-columns: repeat(2, 1fr) !important; }
           .home-two-col { grid-template-columns: 1fr !important; }
+          /* Fixed tab hero: stack ring above stats */
+          .bill-hero-card { grid-template-columns: 1fr !important; gap: 16px !important; padding: 20px !important; justify-items: center; }
+          .bill-hero-card > div:last-child { grid-template-columns: repeat(3, 1fr) !important; width: 100%; gap: 10px !important; }
+          /* Insights: 2x2 metrics band on mobile */
+          .metric-band-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 16px 10px !important; }
+          .metric-band-grid > div { padding-right: 0 !important; margin-right: 0 !important; border-right: none !important; }
           .mobile-nav {
             display: flex !important;
             position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
@@ -2609,7 +2620,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 <span className="material-symbols-outlined" style={{ fontSize: 20, color: COLORS.subtext, fontVariationSettings: "'FILL' 0, 'wght' 300" }}>notifications</span>
                 {billsDueIn7Days > 0 && <span style={{ position: "absolute", top: 3, right: 3, width: 8, height: 8, borderRadius: "50%", background: COLORS.danger, border: "1.5px solid var(--c-surface)" }} />}
               </button>
-              <button onClick={() => setModal("addMenu")} aria-label="Add transaction" style={{ background: COLORS.primary, border: "none", cursor: "pointer", padding: "6px 14px", borderRadius: 8, display: "flex", alignItems: "center", gap: 4, color: "#fff", fontSize: 12, fontWeight: 500, fontFamily: "'Manrope', sans-serif" }}>
+              <button className="header-add-btn" onClick={() => setModal("addMenu")} aria-label="Add transaction" style={{ background: COLORS.primary, border: "none", cursor: "pointer", padding: "6px 14px", borderRadius: 8, display: "flex", alignItems: "center", gap: 4, color: "#fff", fontSize: 12, fontWeight: 500, fontFamily: "'Manrope', sans-serif" }}>
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
                 Add
               </button>
@@ -2619,7 +2630,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
             </div>
           </div>
           {/* Tab nav row */}
-          <nav style={{ display: "flex", padding: "0 28px", borderTop: "1px solid var(--s-nav-border, var(--c-border))" }}>
+          <nav className="header-tab-nav" style={{ display: "flex", padding: "0 28px", borderTop: "1px solid var(--s-nav-border, var(--c-border))" }}>
             {[
               { id: "dashboard",    label: "Home"     },
               { id: "transactions", label: "Plan"     },
