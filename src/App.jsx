@@ -1609,7 +1609,7 @@ Return plain text bullet points only, no headers.` }]
   const viewTotalExpenses = viewExpenses.reduce((s, e) => s + e.amount, 0);
   const viewTotalIncome = viewIncome.reduce((s, i) => s + i.amount, 0);
   // True Available: income minus everything out or committed this month
-  const trueAvailable = viewTotalIncome - viewTotalExpenses - billsActualTotal - billsReservedTotal - savingsExpectedTotal;
+  const trueAvailable = viewTotalIncome - viewTotalExpenses - billsReservedTotal;
   const viewSpentPct = Math.round(pct(viewTotalExpenses, viewTotalIncome || 1));
   const viewCatTotals = CATEGORIES.reduce((acc, c) => ({ ...acc, [c.id]: viewExpenses.filter(e => e.category === c.id).reduce((s, e) => s + e.amount, 0) }), {});
   // Show every category on Overview (even with $0 spent / $0 planned) so users
@@ -2380,10 +2380,12 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         @media (max-width: 767px) {
           .app-layout { flex-direction: column !important; }
           .app-sidebar { display: none !important; }
-          .app-main { height: 100vh; }
+          .app-main { min-height: 100dvh; }
           main { padding: 16px !important; }
           header { padding: 12px 16px 10px !important; gap: 12px !important; }
           .header-search { display: none !important; }
+          .home-stats-strip { grid-template-columns: repeat(2, 1fr) !important; }
+          .home-two-col { grid-template-columns: 1fr !important; }
           .mobile-nav {
             display: flex !important;
             position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
@@ -2579,12 +2581,10 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               {showMonthPicker && (
                 <div style={{ position: "absolute", top: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "var(--c-surface)", border: "1px solid var(--c-border)", borderRadius: 14, boxShadow: "0 8px 32px oklch(0% 0 0 / 0.12)", zIndex: 400, padding: 8, minWidth: 200, maxHeight: 300, overflowY: "auto" }}>
                   {(() => {
-                    const { month0: sm, year: sy } = parseKey(startMonthKey);
-                    const endDate = new Date(); endDate.setMonth(endDate.getMonth() + 3);
+                    const endDate = new Date(2026, 11, 1);
                     const allMonths = [];
-                    let cur = new Date(sy, sm, 1);
+                    let cur = new Date(2026, 0, 1);
                     while (cur <= endDate) { allMonths.push(monthKey(cur.getFullYear(), cur.getMonth())); cur.setMonth(cur.getMonth() + 1); }
-                    allMonths.reverse();
                     return allMonths.map(key => {
                       const { month0, year } = parseKey(key);
                       const isView = key === viewMonthKey;
@@ -2709,12 +2709,12 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               </div>
 
               {/* ── Stats strip ── */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10 }}>
+              <div className="home-stats-strip" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10 }}>
                 {[
                   { label: "Income",         value: viewTotalIncome,       color: COLORS.success },
                   { label: "Fixed Paid",      value: totalFixedPaid,        color: COLORS.text },
                   { label: "Variable Spent",  value: totalVarSpent,         color: totalVarSpent > 0 ? COLORS.warning : COLORS.muted },
-                  { label: "Savings",         value: savingsExpectedTotal,  color: COLORS.text },
+                  { label: "Savings",         value: viewCatTotals["Savings"] || 0,  color: COLORS.text },
                 ].map(chip => (
                   <div key={chip.label} style={{ ...cardStyle, padding: "11px 14px" }}>
                     <p style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em", color: COLORS.muted, marginBottom: 4 }}>{chip.label}</p>
@@ -2724,7 +2724,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               </div>
 
               {/* ── Two-column: Fixed Commitments + Variable Spending ── */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div className="home-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
 
                 {/* Fixed Commitments */}
                 <div style={cardStyle}>
@@ -2778,7 +2778,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           <div style={{ display: "flex", alignItems: "baseline", gap: 3, fontVariantNumeric: "tabular-nums" }}>
                             {remaining !== null
                               ? <p style={{ fontSize: 12, fontWeight: 500, color: barColor }}>{over ? `${fmt(Math.abs(remaining))} over` : `${fmt(remaining)} left`}</p>
-                              : <p style={{ fontSize: 12, color: COLORS.subtext }}>{fmt(c.spent)}</p>}
+                              : <p style={{ fontSize: 12, color: COLORS.subtext }}>{fmt(c.spent)} <span style={{ fontSize: 10 }}>spent</span></p>}
                             {c.budget > 0 && <p style={{ fontSize: 10, color: COLORS.muted }}>/ {fmt(c.budget)}</p>}
                           </div>
                         </div>
