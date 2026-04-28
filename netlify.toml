@@ -3,7 +3,7 @@
   publish = "dist"
   functions = "netlify/functions"
 
-[functions]
+[functions."*"]
   timeout = 26
 
 # Firebase environment variables - set these in the Netlify dashboard
