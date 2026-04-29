@@ -1608,17 +1608,26 @@ Return plain text bullet points only, no headers.` }]
   const viewIncome = income;
   const viewTotalExpenses = viewExpenses.reduce((s, e) => s + e.amount, 0);
   const viewTotalIncome = viewIncome.reduce((s, i) => s + i.amount, 0);
+  // Item-level budgets — needed early for effective per-category budgets
+  const monthItemBudgetsGlobal = itemBudgets[viewMonthKey] || {};
+  // Effective budget per category: sum item-level budgets first; fall back to category-level budget.
+  // This ensures home page and plan page agree on what's "planned" per category.
+  const catEffectiveBudgets = CATEGORIES.reduce((acc, c) => {
+    const catExp = viewExpenses.filter(e => e.category === c.id);
+    const itemSum = catExp.reduce((s, e) => s + (monthItemBudgetsGlobal[`exp-${e.id}`] || 0), 0);
+    acc[c.id] = itemSum > 0 ? itemSum : (viewExpenseBudgets[c.id] || 0);
+    return acc;
+  }, {});
   // ── ZBB (Zero-Based Budget) calculations ──
-  // Fixed commitments = all expenses explicitly marked fixed:true
-  const fixedCommitmentsTotal = viewExpenses.filter(e => e.fixed).reduce((s, e) => s + e.amount, 0);
-  // Variable planned = per-category max(budgeted, actual non-fixed spending)
-  // This ensures we always plan for at least what was already spent
+  // Fixed commitments = bills tracker total (Q1→C): the recurring obligations you've committed to pay
+  const fixedCommitmentsTotal = billsBudgetTotal;
+  // Variable planned = per-category max(effective budget, actual non-fixed spending)
   const varCatActuals = CATEGORIES.reduce((acc, c) => ({
     ...acc,
     [c.id]: viewExpenses.filter(e => !e.fixed && e.category === c.id).reduce((s, e) => s + e.amount, 0)
   }), {});
   const plannedVariableTotal = CATEGORIES.reduce((sum, c) => {
-    return sum + Math.max(viewExpenseBudgets[c.id] || 0, varCatActuals[c.id] || 0);
+    return sum + Math.max(catEffectiveBudgets[c.id] || 0, varCatActuals[c.id] || 0);
   }, 0);
   // True Available (ZBB): targets $0. Positive = unassigned dollars. Negative = overcommitted.
   const cashAvailable = viewTotalIncome - viewTotalExpenses;
@@ -1628,14 +1637,13 @@ Return plain text bullet points only, no headers.` }]
   // Show every category on Overview (even with $0 spent / $0 planned) so users
   // can see the full spending plan at a glance. Sort: planned desc → spent desc.
   const viewCatExpenseCards = Object.entries(viewCatTotals).sort((a, b) => {
-    const pA = viewExpenseBudgets[a[0]] || 0;
-    const pB = viewExpenseBudgets[b[0]] || 0;
+    const pA = catEffectiveBudgets[a[0]] || 0;
+    const pB = catEffectiveBudgets[b[0]] || 0;
     if (pB !== pA) return pB - pA;
     return b[1] - a[1];
   });
-  // ── Budget bar unified totals (must be after viewTotalExpenses/viewTotalIncome) ──
+  // ── Budget bar unified totals ──
   // Planned total: use item-level budgets when available, else category-level
-  const monthItemBudgetsGlobal = itemBudgets[viewMonthKey] || {};
   const budgetBarPlanned = SPENDING_PLAN_GROUPS.reduce((sum, group) => {
     const grpExp = viewExpenses.filter(e => e.category === group.catId);
     const grpItemsSum = grpExp.reduce((s, e) => s + (monthItemBudgetsGlobal[`exp-${e.id}`] || 0), 0);
@@ -2753,7 +2761,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               ? "Fully planned ✓"
               : `${fmt(trueAvailable)} unassigned`;
           const cardStyle = { background: COLORS.surface, borderRadius: 12, padding: "18px 20px", boxShadow: "var(--c-shadow)", border: "1px solid transparent" };
-          const catRows = CATEGORIES.map(c => ({ ...c, spent: viewCatTotals[c.id] || 0, budget: viewExpenseBudgets[c.id] || 0 })).filter(c => c.spent > 0 || c.budget > 0).sort((a, b) => (b.budget || b.spent) - (a.budget || a.spent));
+          const catRows = CATEGORIES.map(c => ({ ...c, spent: viewCatTotals[c.id] || 0, budget: catEffectiveBudgets[c.id] || 0 })).filter(c => c.spent > 0 || c.budget > 0).sort((a, b) => (b.budget || b.spent) - (a.budget || a.spent));
           const billRows = [...bills].sort((a, b) => { const aP = getBillPaid(a, viewMonthKey); const bP = getBillPaid(b, viewMonthKey); if (aP !== bP) return aP ? 1 : -1; return a.dayOfMonth - b.dayOfMonth; });
           return (
             <div style={{ fontSize: 14, color: COLORS.text, display: "flex", flexDirection: "column", gap: 14 }}>
