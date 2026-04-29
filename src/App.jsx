@@ -1610,11 +1610,13 @@ Return plain text bullet points only, no headers.` }]
   const viewTotalIncome = viewIncome.reduce((s, i) => s + i.amount, 0);
   // Item-level budgets — needed early for effective per-category budgets
   const monthItemBudgetsGlobal = itemBudgets[viewMonthKey] || {};
-  // Effective budget per category: sum item-level budgets first; fall back to category-level budget.
-  // This ensures home page and plan page agree on what's "planned" per category.
+  // Effective budget per category: sum item-level budgets for VARIABLE items only (Q2→A).
+  // Fixed-tagged items are captured in billsBudgetTotal (Fixed Commitments) — excluding them
+  // here prevents double-counting between Fixed Committed and Variable Planned.
+  // Falls back to category-level budget if no variable items have individual budgets set.
   const catEffectiveBudgets = CATEGORIES.reduce((acc, c) => {
-    const catExp = viewExpenses.filter(e => e.category === c.id);
-    const itemSum = catExp.reduce((s, e) => s + (monthItemBudgetsGlobal[`exp-${e.id}`] || 0), 0);
+    const varItems = viewExpenses.filter(e => e.category === c.id && !e.fixed);
+    const itemSum = varItems.reduce((s, e) => s + (monthItemBudgetsGlobal[`exp-${e.id}`] || 0), 0);
     acc[c.id] = itemSum > 0 ? itemSum : (viewExpenseBudgets[c.id] || 0);
     return acc;
   }, {});
