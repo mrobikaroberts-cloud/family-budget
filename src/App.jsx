@@ -1608,12 +1608,21 @@ Return plain text bullet points only, no headers.` }]
   const viewIncome = income;
   const viewTotalExpenses = viewExpenses.reduce((s, e) => s + e.amount, 0);
   const viewTotalIncome = viewIncome.reduce((s, i) => s + i.amount, 0);
-  // Fixed expenses already tracked in expenses[] (e.g. mortgage, car payment)
-  const fixedExpensesTotal = viewExpenses.filter(e => e.fixed).reduce((s, e) => s + e.amount, 0);
-  // Avoid double-counting: only reserve bills not already covered by fixed expense entries
-  const effectiveBillsReserved = Math.max(0, billsReservedTotal - fixedExpensesTotal);
-  // True Available: income minus everything out or committed this month
-  const trueAvailable = viewTotalIncome - viewTotalExpenses - effectiveBillsReserved;
+  // ── ZBB (Zero-Based Budget) calculations ──
+  // Fixed commitments = all expenses explicitly marked fixed:true
+  const fixedCommitmentsTotal = viewExpenses.filter(e => e.fixed).reduce((s, e) => s + e.amount, 0);
+  // Variable planned = per-category max(budgeted, actual non-fixed spending)
+  // This ensures we always plan for at least what was already spent
+  const varCatActuals = CATEGORIES.reduce((acc, c) => ({
+    ...acc,
+    [c.id]: viewExpenses.filter(e => !e.fixed && e.category === c.id).reduce((s, e) => s + e.amount, 0)
+  }), {});
+  const plannedVariableTotal = CATEGORIES.reduce((sum, c) => {
+    return sum + Math.max(viewExpenseBudgets[c.id] || 0, varCatActuals[c.id] || 0);
+  }, 0);
+  // True Available (ZBB): targets $0. Positive = unassigned dollars. Negative = overcommitted.
+  const cashAvailable = viewTotalIncome - viewTotalExpenses;
+  const trueAvailable = viewTotalIncome - fixedCommitmentsTotal - plannedVariableTotal;
   const viewSpentPct = Math.round(pct(viewTotalExpenses, viewTotalIncome || 1));
   const viewCatTotals = CATEGORIES.reduce((acc, c) => ({ ...acc, [c.id]: viewExpenses.filter(e => e.category === c.id).reduce((s, e) => s + e.amount, 0) }), {});
   // Show every category on Overview (even with $0 spent / $0 planned) so users
@@ -2724,39 +2733,56 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         {/* ── HOME TAB ── */}
         {tab === "dashboard" && (() => {
           const totalFixedPaid = billsActualTotal;
-          const totalFixedReserved = effectiveBillsReserved; // already deduped against fixed expenses
           // Variable Spent = only non-fixed expenses (groceries, dining, gas, etc.)
           const totalVarSpent = viewExpenses.filter(e => !e.fixed).reduce((s, e) => s + e.amount, 0);
-          // Spent = all actual expense entries this month (fixed + variable, including savings contributions)
-          const spentAndPaid = viewTotalExpenses;
-          const spentPct = viewTotalIncome > 0 ? (spentAndPaid / viewTotalIncome * 100) : 0;
-          const reservedPct = viewTotalIncome > 0 ? Math.min(100 - spentPct, (totalFixedReserved / viewTotalIncome * 100)) : 0;
+          // ZBB bar segment percentages (clamped so they never exceed 100% combined)
+          const fixedPct = viewTotalIncome > 0 ? Math.min(fixedCommitmentsTotal / viewTotalIncome * 100, 100) : 0;
+          const varPct = viewTotalIncome > 0 ? Math.min(plannedVariableTotal / viewTotalIncome * 100, Math.max(0, 100 - fixedPct)) : 0;
+          const availPct = Math.max(0, 100 - fixedPct - varPct);
+          // ZBB color: red = overcommitted, green = near $0 (ideal), amber = unassigned dollars
+          const zbbThreshold = viewTotalIncome * 0.05; // within 5% of income = "on plan"
+          const zbbColor = trueAvailable < 0 ? COLORS.danger
+            : trueAvailable <= zbbThreshold ? COLORS.success
+            : COLORS.warning;
+          const availColor = trueAvailable < 0 ? COLORS.danger
+            : trueAvailable <= zbbThreshold ? "oklch(62% 0.15 145)"
+            : "oklch(72% 0.18 70)";
+          const zbbStatus = trueAvailable < 0
+            ? `Overcommitted by ${fmt(Math.abs(trueAvailable))}`
+            : trueAvailable <= zbbThreshold
+              ? "Fully planned ✓"
+              : `${fmt(trueAvailable)} unassigned`;
           const cardStyle = { background: COLORS.surface, borderRadius: 12, padding: "18px 20px", boxShadow: "var(--c-shadow)", border: "1px solid transparent" };
           const catRows = CATEGORIES.map(c => ({ ...c, spent: viewCatTotals[c.id] || 0, budget: viewExpenseBudgets[c.id] || 0 })).filter(c => c.spent > 0 || c.budget > 0).sort((a, b) => (b.budget || b.spent) - (a.budget || a.spent));
           const billRows = [...bills].sort((a, b) => { const aP = getBillPaid(a, viewMonthKey); const bP = getBillPaid(b, viewMonthKey); if (aP !== bP) return aP ? 1 : -1; return a.dayOfMonth - b.dayOfMonth; });
           return (
             <div style={{ fontSize: 14, color: COLORS.text, display: "flex", flexDirection: "column", gap: 14 }}>
 
-              {/* ── True Available hero ── */}
+              {/* ── True Available hero (ZBB) ── */}
               <div style={{ ...cardStyle, padding: "22px 24px" }}>
                 <p style={{ fontSize: 10, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.1em", color: COLORS.muted, marginBottom: 4 }}>True Available</p>
                 <AnimatedNumber
                   value={trueAvailable}
                   format={v => v >= 0 ? fmt(v) : `−${fmt(Math.abs(v))}`}
-                  style={{ fontSize: 46, fontWeight: 300, color: trueAvailable >= 0 ? COLORS.primary : COLORS.danger, letterSpacing: "-0.04em", lineHeight: 1, display: "block", marginBottom: 16, fontVariantNumeric: "tabular-nums" }}
+                  style={{ fontSize: 46, fontWeight: 300, color: zbbColor, letterSpacing: "-0.04em", lineHeight: 1, display: "block", marginBottom: 6, fontVariantNumeric: "tabular-nums" }}
                 />
+                <p style={{ fontSize: 11, fontWeight: 500, color: zbbColor, marginBottom: 14 }}>{zbbStatus}</p>
                 {viewTotalIncome > 0 && (
                   <>
+                    {/* 3-segment bar: [Fixed Committed] [Variable Planned] [True Available] */}
                     <div style={{ height: 5, borderRadius: 9999, background: "var(--s-bar-bg,var(--c-container))", overflow: "hidden", display: "flex", marginBottom: 10 }}>
-                      <div style={{ width: `${Math.min(spentPct, 100)}%`, background: "oklch(82% 0.01 250)", transition: "width 0.8s cubic-bezier(0.25,1,0.5,1)" }} />
-                      <div style={{ width: `${Math.min(reservedPct, 100)}%`, background: "oklch(72% 0.015 250)", transition: "width 0.8s cubic-bezier(0.25,1,0.5,1)" }} />
-                      <div style={{ flex: 1, background: COLORS.primary }} />
+                      <div style={{ width: `${fixedPct}%`, background: "oklch(52% 0.025 250)", transition: "width 0.8s cubic-bezier(0.25,1,0.5,1)", flexShrink: 0 }} />
+                      <div style={{ width: `${varPct}%`, background: "oklch(68% 0.025 250)", transition: "width 0.8s cubic-bezier(0.25,1,0.5,1)", flexShrink: 0 }} />
+                      {availPct > 0 && (
+                        <div style={{ flex: 1, background: availColor, transition: "background 0.4s ease" }} />
+                      )}
                     </div>
+                    {/* Legend */}
                     <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
                       {[
-                        { label: "Available", color: COLORS.primary, val: fmt(Math.max(0, trueAvailable)) },
-                        ...(totalFixedReserved > 0 ? [{ label: "Reserved", color: "oklch(64% 0.015 250)", val: fmt(totalFixedReserved) }] : []),
-                        { label: "Spent", color: "oklch(75% 0.01 250)", val: fmt(spentAndPaid) },
+                        { label: "Fixed Committed", color: "oklch(52% 0.025 250)", val: fmt(fixedCommitmentsTotal) },
+                        { label: "Variable Planned", color: "oklch(68% 0.025 250)", val: fmt(plannedVariableTotal) },
+                        { label: "True Available", color: zbbColor, val: trueAvailable < 0 ? `−${fmt(Math.abs(trueAvailable))}` : fmt(trueAvailable) },
                       ].map(l => (
                         <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: COLORS.muted }}>
                           <div style={{ width: 7, height: 7, borderRadius: 2, background: l.color, flexShrink: 0 }} />
@@ -2826,11 +2852,12 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   <p style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.1em", color: COLORS.muted, marginBottom: 14 }}>Variable Spending</p>
                   {catRows.length === 0 && <p style={{ fontSize: 12, color: COLORS.muted, textAlign: "center", padding: "16px 0" }}>No expenses yet</p>}
                   {catRows.map(c => {
-                    const remaining = c.budget > 0 ? c.budget - c.spent : null;
-                    const pctUsed = c.budget > 0 ? Math.min(100, (c.spent / c.budget) * 100) : 0;
-                    const over = c.budget > 0 && c.spent > c.budget;
-                    const warn = c.budget > 0 && !over && pctUsed >= 85;
-                    const barColor = over ? COLORS.danger : warn ? COLORS.warning : COLORS.primary;
+                    const hasBudget = c.budget > 0;
+                    const remaining = hasBudget ? c.budget - c.spent : null;
+                    const pctUsed = hasBudget ? Math.min(100, (c.spent / c.budget) * 100) : 100;
+                    const over = hasBudget && c.spent > c.budget;
+                    const warn = hasBudget && !over && pctUsed >= 85;
+                    const barColor = over ? COLORS.danger : warn ? COLORS.warning : hasBudget ? COLORS.primary : "var(--c-container-high, oklch(88% 0.005 250))";
                     return (
                       <div key={c.id} style={{ padding: "8px 0", borderBottom: `1px solid ${COLORS.containerLow}` }}>
                         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 5 }}>
@@ -2839,14 +2866,14 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                             {remaining !== null
                               ? <p style={{ fontSize: 12, fontWeight: 500, color: barColor }}>{over ? `${fmt(Math.abs(remaining))} over` : `${fmt(remaining)} left`}</p>
                               : <p style={{ fontSize: 12, color: COLORS.subtext }}>{fmt(c.spent)} <span style={{ fontSize: 10 }}>spent</span></p>}
-                            {c.budget > 0 && <p style={{ fontSize: 10, color: COLORS.muted }}>/ {fmt(c.budget)}</p>}
+                            {hasBudget
+                              ? <p style={{ fontSize: 10, color: COLORS.muted }}>/ {fmt(c.budget)}</p>
+                              : <p style={{ fontSize: 10, color: COLORS.muted }}>no budget</p>}
                           </div>
                         </div>
-                        {c.budget > 0 && (
-                          <div style={{ height: 4, borderRadius: 9999, background: "var(--s-bar-bg,var(--c-container))", overflow: "hidden" }}>
-                            <div style={{ width: `${pctUsed}%`, height: "100%", background: barColor, borderRadius: 9999, transition: "width 0.8s cubic-bezier(0.25,1,0.5,1)" }} />
-                          </div>
-                        )}
+                        <div style={{ height: 4, borderRadius: 9999, background: "var(--s-bar-bg,var(--c-container))", overflow: "hidden" }}>
+                          <div style={{ width: `${pctUsed}%`, height: "100%", background: barColor, borderRadius: 9999, transition: "width 0.8s cubic-bezier(0.25,1,0.5,1)" }} />
+                        </div>
                       </div>
                     );
                   })}
