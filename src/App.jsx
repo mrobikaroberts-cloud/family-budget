@@ -1610,48 +1610,39 @@ Return plain text bullet points only, no headers.` }]
   const viewTotalIncome = viewIncome.reduce((s, i) => s + i.amount, 0);
   // Item-level budgets — needed early for effective per-category budgets
   const monthItemBudgetsGlobal = itemBudgets[viewMonthKey] || {};
-  // Effective budget per category: sum ALL item-level budgets (fixed or variable), fall back to
-  // category-level budget. The bills tracker (not the fixed flag) is the ZBB "Fixed Committed" source,
-  // so the fixed flag on expense entries is only a plan-page display label, not a ZBB boundary.
+  // Effective budget per category for home page display: item-level budgets first, category fallback
   const catEffectiveBudgets = CATEGORIES.reduce((acc, c) => {
     const catItems = viewExpenses.filter(e => e.category === c.id);
     const itemSum = catItems.reduce((s, e) => s + (monthItemBudgetsGlobal[`exp-${e.id}`] || 0), 0);
     acc[c.id] = itemSum > 0 ? itemSum : (viewExpenseBudgets[c.id] || 0);
     return acc;
   }, {});
-  // ── ZBB (Zero-Based Budget) calculations ──
-  // Fixed commitments = bills tracker total (Q1→C)
+  // ── ZBB calculations ──
+  // Fixed Committed = bills tracker (Q1→C)
   const fixedCommitmentsTotal = billsBudgetTotal;
-  // Variable actuals = ALL expense entries per category (bills tracker handles fixed, not the fixed flag)
-  const varCatActuals = CATEGORIES.reduce((acc, c) => ({
-    ...acc,
-    [c.id]: viewExpenses.filter(e => e.category === c.id).reduce((s, e) => s + e.amount, 0)
-  }), {});
-  const plannedVariableTotal = CATEGORIES.reduce((sum, c) => {
-    return sum + Math.max(catEffectiveBudgets[c.id] || 0, varCatActuals[c.id] || 0);
+  // Variable Planned = Total Planned (plan page) − Fixed Committed
+  // i.e., the sum of expense-category plans (item budgets first, category budget as fallback)
+  const plannedVariableTotal = SPENDING_PLAN_GROUPS.reduce((sum, group) => {
+    const grpExp = viewExpenses.filter(e => e.category === group.catId);
+    const grpItemsSum = grpExp.reduce((s, e) => s + (monthItemBudgetsGlobal[`exp-${e.id}`] || 0), 0);
+    const grpCatBudget = viewExpenseBudgets[group.catId] ?? 0;
+    return sum + (grpItemsSum > 0 ? grpItemsSum : grpCatBudget);
   }, 0);
-  // True Available (ZBB): targets $0. Positive = unassigned dollars. Negative = overcommitted.
+  // True Available = Income − (Fixed Committed + Variable Planned) = Income − Total Planned
   const cashAvailable = viewTotalIncome - viewTotalExpenses;
   const trueAvailable = viewTotalIncome - fixedCommitmentsTotal - plannedVariableTotal;
   const viewSpentPct = Math.round(pct(viewTotalExpenses, viewTotalIncome || 1));
   const viewCatTotals = CATEGORIES.reduce((acc, c) => ({ ...acc, [c.id]: viewExpenses.filter(e => e.category === c.id).reduce((s, e) => s + e.amount, 0) }), {});
-  // Show every category on Overview (even with $0 spent / $0 planned) so users
-  // can see the full spending plan at a glance. Sort: planned desc → spent desc.
+  // Sort categories: planned desc → spent desc
   const viewCatExpenseCards = Object.entries(viewCatTotals).sort((a, b) => {
     const pA = catEffectiveBudgets[a[0]] || 0;
     const pB = catEffectiveBudgets[b[0]] || 0;
     if (pB !== pA) return pB - pA;
     return b[1] - a[1];
   });
-  // ── Budget bar unified totals ──
-  // Planned total: use item-level budgets when available, else category-level
-  const budgetBarPlanned = SPENDING_PLAN_GROUPS.reduce((sum, group) => {
-    const grpExp = viewExpenses.filter(e => e.category === group.catId);
-    const grpItemsSum = grpExp.reduce((s, e) => s + (monthItemBudgetsGlobal[`exp-${e.id}`] || 0), 0);
-    const grpCatBudget = viewExpenseBudgets[group.catId] ?? 0;
-    return sum + (grpItemsSum > 0 ? grpItemsSum : grpCatBudget);
-  }, 0) + billsBudgetTotal; // bills are always planned spending
-  const budgetBarSpent = viewTotalExpenses + billsActualTotal; // paid bills count as spent
+  // ── Budget bar ──
+  const budgetBarPlanned = plannedVariableTotal + billsBudgetTotal; // Total Planned = Variable + Fixed
+  const budgetBarSpent = viewTotalExpenses + billsActualTotal;
   const remainingToBudget = viewTotalIncome - budgetBarPlanned;
   // ── Add forms state ──
   const [newExp, setNewExp] = useState({ label: "", amount: "", category: "Food", date: getDefaultDate(viewMonthKey), fixed: false });
