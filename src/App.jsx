@@ -1610,27 +1610,37 @@ Return plain text bullet points only, no headers.` }]
   const viewTotalIncome = viewIncome.reduce((s, i) => s + i.amount, 0);
   // Item-level budgets — needed early for effective per-category budgets
   const monthItemBudgetsGlobal = itemBudgets[viewMonthKey] || {};
-  // Effective budget per category for home page display: item-level budgets first, category fallback
+  // ── ZBB calculations ──
+  // For each spending plan group, split the planned amount into fixed and variable
+  // using the fixed:true flag on individual expense items.
+  //   Total Planned (group) = item budgets if any set, else category budget
+  //   Fixed Committed (group) = planned amounts for fixed:true items (item budget or actual)
+  //   Variable Planned (group) = Total Planned − Fixed Committed
+  let fixedCommitmentsTotal = 0;
+  let plannedVariableTotal = 0;
+  SPENDING_PLAN_GROUPS.forEach(group => {
+    const allItems = viewExpenses.filter(e => e.category === group.catId);
+    const fixedItems = allItems.filter(e => e.fixed);
+    // Total planned for this group: item budgets if any are set, else category budget
+    const allItemBudgets = allItems.reduce((s, e) => s + (monthItemBudgetsGlobal[`exp-${e.id}`] || 0), 0);
+    const catBudget = viewExpenseBudgets[group.catId] ?? 0;
+    const groupPlanned = allItemBudgets > 0 ? allItemBudgets : catBudget;
+    // Fixed portion: sum of each fixed item's budget (falls back to actual if no item budget set)
+    const groupFixed = fixedItems.reduce((s, e) => s + (monthItemBudgetsGlobal[`exp-${e.id}`] || e.amount), 0);
+    fixedCommitmentsTotal += groupFixed;
+    plannedVariableTotal += Math.max(0, groupPlanned - groupFixed);
+  });
+  const totalPlannedAll = fixedCommitmentsTotal + plannedVariableTotal;
+  // True Available = Income − Total Planned. Targets $0 in a perfect ZBB month.
+  const cashAvailable = viewTotalIncome - viewTotalExpenses;
+  const trueAvailable = viewTotalIncome - totalPlannedAll;
+  // Effective budget per category for home page display
   const catEffectiveBudgets = CATEGORIES.reduce((acc, c) => {
     const catItems = viewExpenses.filter(e => e.category === c.id);
     const itemSum = catItems.reduce((s, e) => s + (monthItemBudgetsGlobal[`exp-${e.id}`] || 0), 0);
     acc[c.id] = itemSum > 0 ? itemSum : (viewExpenseBudgets[c.id] || 0);
     return acc;
   }, {});
-  // ── ZBB calculations ──
-  // Fixed Committed = bills tracker (Q1→C)
-  const fixedCommitmentsTotal = billsBudgetTotal;
-  // Variable Planned = Total Planned (plan page) − Fixed Committed
-  // i.e., the sum of expense-category plans (item budgets first, category budget as fallback)
-  const plannedVariableTotal = SPENDING_PLAN_GROUPS.reduce((sum, group) => {
-    const grpExp = viewExpenses.filter(e => e.category === group.catId);
-    const grpItemsSum = grpExp.reduce((s, e) => s + (monthItemBudgetsGlobal[`exp-${e.id}`] || 0), 0);
-    const grpCatBudget = viewExpenseBudgets[group.catId] ?? 0;
-    return sum + (grpItemsSum > 0 ? grpItemsSum : grpCatBudget);
-  }, 0);
-  // True Available = Income − (Fixed Committed + Variable Planned) = Income − Total Planned
-  const cashAvailable = viewTotalIncome - viewTotalExpenses;
-  const trueAvailable = viewTotalIncome - fixedCommitmentsTotal - plannedVariableTotal;
   const viewSpentPct = Math.round(pct(viewTotalExpenses, viewTotalIncome || 1));
   const viewCatTotals = CATEGORIES.reduce((acc, c) => ({ ...acc, [c.id]: viewExpenses.filter(e => e.category === c.id).reduce((s, e) => s + e.amount, 0) }), {});
   // Sort categories: planned desc → spent desc
@@ -1641,7 +1651,7 @@ Return plain text bullet points only, no headers.` }]
     return b[1] - a[1];
   });
   // ── Budget bar ──
-  const budgetBarPlanned = plannedVariableTotal + billsBudgetTotal; // Total Planned = Variable + Fixed
+  const budgetBarPlanned = totalPlannedAll;
   const budgetBarSpent = viewTotalExpenses + billsActualTotal;
   const remainingToBudget = viewTotalIncome - budgetBarPlanned;
   // ── Add forms state ──
@@ -2733,8 +2743,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         {/* ── HOME TAB ── */}
         {tab === "dashboard" && (() => {
           const totalFixedPaid = billsActualTotal;
-          // Variable Spent = all expense entries (bills tracker is the fixed boundary, not the fixed flag)
-          const totalVarSpent = viewTotalExpenses;
+          // Variable Spent = actual spending on variable-tagged (!fixed) expense items
+          const totalVarSpent = viewExpenses.filter(e => !e.fixed).reduce((s, e) => s + e.amount, 0);
           // ZBB bar segment percentages (clamped so they never exceed 100% combined)
           const fixedPct = viewTotalIncome > 0 ? Math.min(fixedCommitmentsTotal / viewTotalIncome * 100, 100) : 0;
           const varPct = viewTotalIncome > 0 ? Math.min(plannedVariableTotal / viewTotalIncome * 100, Math.max(0, 100 - fixedPct)) : 0;
