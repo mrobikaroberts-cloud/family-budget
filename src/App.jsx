@@ -2330,6 +2330,9 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           header.app-header { transition: none !important; }
         }
 
+        /* Insights metrics band — 4 cols on desktop */
+        .metric-band-grid { grid-template-columns: repeat(4, 1fr); }
+
         /* Scroll */
         .cat-scroll { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; padding-bottom: 8px; }
         .cat-scroll::-webkit-scrollbar { display: none; }
@@ -2394,28 +2397,33 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           /* Fixed tab hero: stack ring above stats */
           .bill-hero-card { grid-template-columns: 1fr !important; gap: 16px !important; padding: 20px !important; justify-items: center; }
           .bill-hero-card > div:last-child { grid-template-columns: repeat(3, 1fr) !important; width: 100%; gap: 10px !important; }
-          /* Insights: 2x2 metrics band on mobile */
-          .metric-band-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 16px 10px !important; }
-          .metric-band-grid > div { padding-right: 0 !important; margin-right: 0 !important; border-right: none !important; }
+          /* Fixed tab: hide calendar toggle, only show list view on mobile */
+          .cal-view-toggle { display: none !important; }
+          .cal-month-view { display: none !important; }
+          /* Compact "Add Fixed Expense" button on mobile — icon + short text */
+          .add-fixed-btn { padding: 8px 12px !important; font-size: 12px !important; border-radius: 9px !important; }
+          .add-fixed-label { display: none !important; }
+          /* Insights: 2x2 metrics band on mobile, hide month pill strip */
+          .insight-month-strip { display: none !important; }
           .mobile-nav {
             display: flex !important;
             position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
-            background: var(--c-glass-strong);
-            backdrop-filter: blur(32px) saturate(180%);
-            -webkit-backdrop-filter: blur(32px) saturate(180%);
-            border-top: 1px solid rgba(255,255,255,0.9);
-            padding: 10px 8px calc(10px + env(safe-area-inset-bottom));
+            background: var(--c-surface);
+            border-top: 1px solid var(--c-border);
+            padding: 8px 4px calc(8px + env(safe-area-inset-bottom));
             gap: 0;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+            box-shadow: 0 -1px 0 var(--c-border);
           }
           .mobile-nav-item {
-            flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
-            padding: 8px 4px; border: none; background: transparent; cursor: pointer;
-            font-family: 'Figtree', sans-serif; font-size: 10px; font-weight: 500; color: #94a3b0;
-            border-radius: 12px; transition: all 0.2s ease;
+            flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+            padding: 4px 2px; border: none; background: transparent; cursor: pointer;
+            font-family: 'Manrope', sans-serif; font-size: 9px; font-weight: 500;
+            color: var(--s-tab-idle, var(--c-muted));
+            border-radius: 10px; transition: color 0.18s ease;
+            letter-spacing: 0.01em;
           }
-          .mobile-nav-item.active { color: #0078a8; }
-          .mobile-nav-item .material-symbols-outlined { font-size: 24px; }
+          .mobile-nav-item.active { color: var(--c-primary); font-weight: 600; }
+          .mobile-nav-item .material-symbols-outlined { font-size: 20px; }
           main { padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important; }
           .mobile-fab { display: flex !important; }
           .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
@@ -2424,10 +2432,10 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           .comparison-strip { flex-wrap: wrap !important; }
           .comparison-strip > * { flex: 1 1 calc(33% - 8px) !important; min-width: 100px; }
 
-          /* Hero metric bands — 3-column 2-row on mobile */
+          /* Insights: 2x2 metrics band on mobile */
           .metric-band-grid {
-            grid-template-columns: repeat(3, 1fr) !important;
-            gap: 18px 10px !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 16px 10px !important;
           }
           .metric-band-grid > div {
             padding-right: 0 !important;
@@ -2447,7 +2455,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           }
           .budget-table-card .sticky-col-header,
           .budget-table-card .budget-row {
-            min-width: 500px;
+            min-width: 700px;
           }
 
           /* Monthly Insights — single column chart rows */
@@ -2590,7 +2598,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 <span className="material-symbols-outlined" style={{ fontSize: 14 }}>expand_more</span>
               </button>
               {showMonthPicker && (
-                <div style={{ position: "absolute", top: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "var(--c-surface)", border: "1px solid var(--c-border)", borderRadius: 14, boxShadow: "0 8px 32px oklch(0% 0 0 / 0.12)", zIndex: 400, padding: 8, minWidth: 200, maxHeight: 300, overflowY: "auto" }}>
+                <div style={{ position: "absolute", top: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "var(--c-surface)", border: "1px solid var(--c-border)", borderRadius: 14, boxShadow: "0 8px 32px oklch(0% 0 0 / 0.12)", zIndex: 1001, padding: 8, minWidth: 200, maxHeight: 300, overflowY: "auto" }}>
                   {(() => {
                     const endDate = new Date(2026, 11, 1);
                     const allMonths = [];
@@ -2650,16 +2658,21 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         <nav className="mobile-nav">
           {[
             { id: "dashboard",    label: "Home",     icon: "home" },
-            { id: "transactions", label: "Plan",     icon: "payments" },
-            { id: "weekly",       label: "Fixed",    icon: "calendar_month" },
-            { id: "insights",     label: "Insights", icon: "bar_chart" },
-            { id: "advisor",      label: "Advisor",  icon: "auto_awesome" },
-          ].map(item => (
-            <button key={item.id} className={`mobile-nav-item${tab === item.id ? " active" : ""}`} onClick={() => navigateToTab(item.id)} style={{ viewTransitionName: tab === item.id ? "active-mobile-pill" : undefined }}>
-              <span className="material-symbols-outlined" style={{ fontVariationSettings: tab === item.id ? "'FILL' 1, 'wght' 500" : "'FILL' 0, 'wght' 300" }}>{item.icon}</span>
-              {item.label}
-            </button>
-          ))}
+            { id: "transactions", label: "Plan",     icon: "receipt_long" },
+            { id: "weekly",       label: "Fixed",    icon: "event_available" },
+            { id: "insights",     label: "Insights", icon: "monitoring" },
+            { id: "advisor",      label: "Advisor",  icon: "chat_bubble" },
+          ].map(item => {
+            const isActive = tab === item.id;
+            return (
+              <button key={item.id} className={`mobile-nav-item${isActive ? " active" : ""}`} onClick={() => navigateToTab(item.id)} style={{ viewTransitionName: isActive ? "active-mobile-pill" : undefined }}>
+                <span className="mobile-nav-icon-wrap" style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 28, borderRadius: 18, background: isActive ? `${COLORS.primary}18` : "transparent", transition: "background 0.2s" }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 20, fontVariationSettings: isActive ? "'FILL' 1, 'wght' 400" : "'FILL' 0, 'wght' 300", color: isActive ? COLORS.primary : "var(--s-tab-idle, var(--c-muted))", transition: "color 0.2s" }}>{item.icon}</span>
+                </span>
+                {item.label}
+              </button>
+            );
+          })}
         </nav>
 
         {/* Add button for mobile */}
@@ -3370,8 +3383,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   <button onClick={() => { navigator.clipboard.writeText(window.location.href); setBillLinkToast(true); setTimeout(() => setBillLinkToast(false), 2000); }} title="Copy link to this month" style={{ background: billLinkToast ? COLORS.success + "18" : COLORS.containerLow, border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 12, fontWeight: FW.semibold, color: billLinkToast ? COLORS.success : COLORS.subtext, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>link</span>{billLinkToast ? "Link copied!" : "Copy link"}
                   </button>
-                  <button onClick={() => setModal("addBill")} style={{ display: "flex", alignItems: "center", gap: 6, background: COLORS.primary, color: "#fff", border: "none", borderRadius: 10, padding: "9px 18px", fontSize: 13, fontWeight: FW.bold, cursor: "pointer" }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>Add Fixed Expense
+                  <button className="add-fixed-btn" onClick={() => setModal("addBill")} style={{ display: "flex", alignItems: "center", gap: 6, background: COLORS.primary, color: "#fff", border: "none", borderRadius: 10, padding: "9px 18px", fontSize: 13, fontWeight: FW.bold, cursor: "pointer" }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span><span className="add-fixed-label">Add Fixed Expense</span>
                   </button>
                 </div>
               </div>
@@ -3426,14 +3439,14 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               <div className="bill-cal-card" style={{ background: "var(--c-surface)", border: "1px solid var(--c-border)", borderRadius: 20, padding: 28, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", marginBottom: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
                   <h3 style={{ fontSize: 18, fontWeight: FW.bold, color: COLORS.text }}>{MONTH_FULL[calMonth]} {calYear}</h3>
-                  <div style={{ display: "flex", gap: 4 }}>
+                  <div className="cal-view-toggle" style={{ display: "flex", gap: 4 }}>
                     {[["Month","month"], ["List","list"]].map(([label, val]) => (
                       <button key={val} onClick={() => setBillCalView(val)} style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: billCalView === val ? COLORS.primary : COLORS.containerLow, color: billCalView === val ? "#fff" : COLORS.subtext, fontSize: 12, fontWeight: FW.semibold, cursor: "pointer" }}>{label}</button>
                     ))}
                   </div>
                 </div>
                 {/* Month view */}
-                {billCalView === "month" && <>
+                {billCalView === "month" && <div className="cal-month-view">
                   <div className="cal-scroll-wrap" style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
                   <div style={{ minWidth: 300 }}>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 2 }}>
@@ -3469,7 +3482,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                   </div>
                   </div>{/* end min-width wrapper */}
                   </div>{/* end cal-scroll-wrap */}
-                </>}
+                </div>}
                 {/* List view — unified grouped list */}
                 {billCalView === "list" && (() => {
                   const nowL = new Date(); nowL.setHours(0,0,0,0);
@@ -3637,7 +3650,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               </div>
 
               {/* ── Month pill strip ─────────────────────────────────────── */}
-              <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none" }}>
+              <div className="insight-month-strip" style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none" }}>
                 {allInsightMonths.map(mk => {
                   const ms = monthStats(mk);
                   const { month0: m0 } = parseKey(mk);
@@ -3693,7 +3706,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       <span style={{ fontFamily: "'Manrope', sans-serif", fontWeight: FW.medium, fontSize: 15, color: COLORS.text, letterSpacing: "-0.01em" }}>{MONTH_FULL[month0]} {year}</span>
                       {isCurrent && <span style={{ fontSize: 11, fontWeight: FW.medium, color: COLORS.primary }}>Current month</span>}
                     </div>
-                    <div className="metric-band-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0 }}>
+                    <div className="metric-band-grid" style={{ display: "grid", gap: 0 }}>
                       {[
                         { label: "Income",       value: s.inc,       fmtFn: fmt,                                                                color: COLORS.success },
                         { label: "Expenses",     value: s.exp,       fmtFn: fmt,                                                                color: COLORS.accentWarm },
