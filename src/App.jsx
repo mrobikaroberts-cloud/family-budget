@@ -1608,8 +1608,12 @@ Return plain text bullet points only, no headers.` }]
   const viewIncome = income;
   const viewTotalExpenses = viewExpenses.reduce((s, e) => s + e.amount, 0);
   const viewTotalIncome = viewIncome.reduce((s, i) => s + i.amount, 0);
+  // Fixed expenses already tracked in expenses[] (e.g. mortgage, car payment)
+  const fixedExpensesTotal = viewExpenses.filter(e => e.fixed).reduce((s, e) => s + e.amount, 0);
+  // Avoid double-counting: only reserve bills not already covered by fixed expense entries
+  const effectiveBillsReserved = Math.max(0, billsReservedTotal - fixedExpensesTotal);
   // True Available: income minus everything out or committed this month
-  const trueAvailable = viewTotalIncome - viewTotalExpenses - billsReservedTotal;
+  const trueAvailable = viewTotalIncome - viewTotalExpenses - effectiveBillsReserved;
   const viewSpentPct = Math.round(pct(viewTotalExpenses, viewTotalIncome || 1));
   const viewCatTotals = CATEGORIES.reduce((acc, c) => ({ ...acc, [c.id]: viewExpenses.filter(e => e.category === c.id).reduce((s, e) => s + e.amount, 0) }), {});
   // Show every category on Overview (even with $0 spent / $0 planned) so users
@@ -2720,9 +2724,11 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         {/* ── HOME TAB ── */}
         {tab === "dashboard" && (() => {
           const totalFixedPaid = billsActualTotal;
-          const totalFixedReserved = billsReservedTotal;
-          const totalVarSpent = viewTotalExpenses;
-          const spentAndPaid = totalVarSpent + totalFixedPaid + savingsExpectedTotal;
+          const totalFixedReserved = effectiveBillsReserved; // already deduped against fixed expenses
+          // Variable Spent = only non-fixed expenses (groceries, dining, gas, etc.)
+          const totalVarSpent = viewExpenses.filter(e => !e.fixed).reduce((s, e) => s + e.amount, 0);
+          // Spent = all actual expense entries this month (fixed + variable, including savings contributions)
+          const spentAndPaid = viewTotalExpenses;
           const spentPct = viewTotalIncome > 0 ? (spentAndPaid / viewTotalIncome * 100) : 0;
           const reservedPct = viewTotalIncome > 0 ? Math.min(100 - spentPct, (totalFixedReserved / viewTotalIncome * 100)) : 0;
           const cardStyle = { background: COLORS.surface, borderRadius: 12, padding: "18px 20px", boxShadow: "var(--c-shadow)", border: "1px solid transparent" };
@@ -2749,7 +2755,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
                       {[
                         { label: "Available", color: COLORS.primary, val: fmt(Math.max(0, trueAvailable)) },
-                        { label: "Fixed Reserved", color: "oklch(64% 0.015 250)", val: fmt(totalFixedReserved) },
+                        ...(totalFixedReserved > 0 ? [{ label: "Reserved", color: "oklch(64% 0.015 250)", val: fmt(totalFixedReserved) }] : []),
                         { label: "Spent", color: "oklch(75% 0.01 250)", val: fmt(spentAndPaid) },
                       ].map(l => (
                         <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: COLORS.muted }}>
