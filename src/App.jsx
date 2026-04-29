@@ -1358,7 +1358,7 @@ export default function App() {
   // Auto-scroll chat to bottom on new messages
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [advisorHistory]);
   // Sync Monthly Insights expanded month when switching to insights tab
-  useEffect(() => { if (tab === "insights") setActiveInsightKey(viewMonthKey); }, [tab]);
+  useEffect(() => { if (tab === "insights") setActiveInsightKey(viewMonthKey); }, [tab, viewMonthKey]);
   useEffect(() => { setShowMonthPicker(false); }, [tab]);
   // ── Hash-based URL routing ──
   const TAB_HASH = { dashboard: "overview", transactions: "family-budget", weekly: "bill-calendar", insights: "monthly-insights", advisor: "ai-assistant" };
@@ -2379,6 +2379,13 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         html.dark .main-scroll::-webkit-scrollbar-thumb { background: rgba(200, 215, 230, 0.18); background-clip: padding-box; }
         html.dark .main-scroll:hover::-webkit-scrollbar-thumb { background: rgba(200, 215, 230, 0.32); background-clip: padding-box; }
 
+        /* Plan table — desktop grid columns */
+        .sticky-col-header, .plan-cat-header, .budget-row { grid-template-columns: 2.2fr 1fr 0.8fr 0.9fr 0.9fr 0.9fr 32px; }
+        /* Year at a Glance — 4-col desktop */
+        .year-glance-grid { grid-template-columns: repeat(4, 1fr); }
+        /* Plan hero stats strip — 3-col desktop */
+        .plan-stats-strip { grid-template-columns: repeat(3, 1fr); }
+
         /* Mobile responsive — stack layout for iPhone/iPad */
         @media (max-width: 767px) {
           .app-layout { flex-direction: column !important; }
@@ -2403,8 +2410,6 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           /* Compact "Add Fixed Expense" button on mobile — icon + short text */
           .add-fixed-btn { padding: 8px 12px !important; font-size: 12px !important; border-radius: 9px !important; }
           .add-fixed-label { display: none !important; }
-          /* Insights: 2x2 metrics band on mobile, hide month pill strip */
-          .insight-month-strip { display: none !important; }
           .mobile-nav {
             display: flex !important;
             position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
@@ -2450,13 +2455,38 @@ If the request doesn't map to a clear category goal, still return JSON with newG
           }
           .budget-table-card {
             padding: 16px !important;
-            overflow-x: auto !important;
-            -webkit-overflow-scrolling: touch !important;
+            overflow-x: hidden !important;
           }
-          .budget-table-card .sticky-col-header,
-          .budget-table-card .budget-row {
-            min-width: 700px;
+          /* Plan table: 3-col layout on mobile (Item | Actual | Left | ×) */
+          .sticky-col-header, .plan-cat-header, .budget-row {
+            grid-template-columns: 2fr 1fr 1fr 32px !important;
+            min-width: unset !important;
           }
+          .plan-col-hide { display: none !important; }
+
+          /* Plan hero card — compact padding */
+          .plan-hero-card { padding: 20px 16px !important; }
+          .plan-stat-val { font-size: 15px !important; }
+          .plan-stats-cell { padding-right: 10px !important; margin-right: 10px !important; }
+
+          /* Year at a Glance — 2×2 on mobile */
+          .year-glance-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 16px 12px !important;
+          }
+          .year-glance-cell { padding-right: 0 !important; margin-right: 0 !important; border-right: none !important; }
+          .year-glance-val { font-size: 17px !important; }
+
+          /* Copy link — icon only on mobile */
+          .bill-copy-label { display: none !important; }
+
+          /* Plan table — compact category header on mobile */
+          .plan-cat-item-cell { min-width: 0; overflow: hidden; }
+          /* Hide count badge and rename/delete buttons — icon identifies the category */
+          .plan-cat-count { display: none !important; }
+          .plan-cat-item-cell .cat-rename-btn { display: none !important; }
+          /* Label fills remaining space and truncates with ellipsis */
+          .plan-cat-label { flex: 1 1 0; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
           /* Monthly Insights — single column chart rows */
           .insights-two-col {
@@ -2902,7 +2932,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 const remaining = viewTotalIncome - totalActual;
                 const remainingColor = remaining >= 0 ? COLORS.success : COLORS.danger;
                 return (
-                  <div style={{ background: "var(--c-surface)", border: "1px solid var(--c-border)", borderRadius: 24, padding: "28px 32px", boxShadow: "0 1px 4px rgba(0,0,0,0.05)", marginBottom: 20 }}>
+                  <div className="plan-hero-card" style={{ background: "var(--c-surface)", border: "1px solid var(--c-border)", borderRadius: 24, padding: "28px 32px", boxShadow: "0 1px 4px rgba(0,0,0,0.05)", marginBottom: 20 }}>
                     {/* Month label + status */}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
                       <span style={{ fontSize: 13, fontWeight: FW.medium, color: COLORS.muted }}>
@@ -2933,15 +2963,15 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     </div>
 
                     {/* Supporting stats strip */}
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 0, marginBottom: 20, paddingBottom: 20, borderBottom: "1px solid var(--c-border)" }}>
+                    <div className="plan-stats-strip" style={{ display: "grid", gap: 0, marginBottom: 20, paddingBottom: 20, borderBottom: "1px solid var(--c-border)" }}>
                       {[
                         { label: "Income",  val: fmt(viewTotalIncome), color: COLORS.success },
                         { label: "Spent",   val: fmt(totalActual),     color: COLORS.accentWarm },
                         { label: "Planned", val: totalPlanned > 0 ? fmt(totalPlanned) : "—", color: COLORS.primary },
                       ].map((m, i) => (
-                        <div key={m.label} style={{ paddingRight: i < 2 ? 20 : 0, marginRight: i < 2 ? 20 : 0, borderRight: i < 2 ? "1px solid var(--c-border)" : "none" }}>
+                        <div key={m.label} className="plan-stats-cell" style={{ paddingRight: i < 2 ? 20 : 0, marginRight: i < 2 ? 20 : 0, borderRight: i < 2 ? "1px solid var(--c-border)" : "none" }}>
                           <p style={{ fontSize: 10, fontWeight: FW.medium, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>{m.label}</p>
-                          <p style={{ fontSize: 18, fontWeight: 300, color: m.color, fontFamily: "'Manrope', var(--font-num)", letterSpacing: "-0.025em", fontVariantNumeric: "tabular-nums" }}>{m.val}</p>
+                          <p className="plan-stat-val" style={{ fontSize: 18, fontWeight: 300, color: m.color, fontFamily: "'Manrope', var(--font-num)", letterSpacing: "-0.025em", fontVariantNumeric: "tabular-nums" }}>{m.val}</p>
                         </div>
                       ))}
                     </div>
@@ -3050,11 +3080,11 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     </div>
                     <button onClick={() => setShowPlaceholders(p => !p)} style={{ fontSize: 11, background: "none", border: `1px solid ${COLORS.border}`, borderRadius: 6, padding: "3px 8px", color: COLORS.muted, cursor: "pointer" }}>{showPlaceholders ? "Hide placeholders" : "Show placeholders"}</button>
                   </div>
-                  <div className="sticky-col-header" style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "10px 12px", background: COLORS.containerLow, borderRadius: 10, marginBottom: 16 }}>
+                  <div className="sticky-col-header" style={{ display: "grid", gap: 8, padding: "10px 12px", background: COLORS.containerLow, borderRadius: 10, marginBottom: 16 }}>
                     <span style={colStyle} onClick={() => toggleSort("label")}>Items <SortArrow field="label" /></span>
-                    <span style={colStyle} onClick={() => toggleSort("category")}>Type</span>
-                    <span style={{ ...colStyle, cursor: "default" }}>Due</span>
-                    <span style={{ ...colStyle, justifyContent: "flex-end" }}>Planned</span>
+                    <span className="plan-col-hide" style={colStyle} onClick={() => toggleSort("category")}>Type</span>
+                    <span className="plan-col-hide" style={{ ...colStyle, cursor: "default" }}>Due</span>
+                    <span className="plan-col-hide" style={{ ...colStyle, justifyContent: "flex-end" }}>Planned</span>
                     <span style={{ ...colStyle, justifyContent: "flex-end" }} onClick={() => toggleSort("amount")}>Actual <SortArrow field="amount" /></span>
                     <span style={{ ...colStyle, cursor: "default", justifyContent: "flex-end" }}>Left</span>
                     <span style={{ ...colStyle, cursor: "default" }}></span>
@@ -3080,7 +3110,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                         {/* Left accent bar — colored by utilization */}
                         <div aria-hidden="true" style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: accentColor, borderRadius: 2, opacity: util === null ? 0 : 1, transition: "background .2s, opacity .2s" }} />
                         {/* Group header — chevron on LEFT next to larger icon */}
-                        <div className="budget-row" onClick={() => {
+                        <div className="plan-cat-header budget-row" onClick={() => {
                           const toggle = () => setCollapsedCategories(p => ({ ...p, [group.catId]: !p[group.catId] }));
                           if (typeof document !== "undefined" && typeof document.startViewTransition === "function" &&
                               !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
@@ -3089,8 +3119,8 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                             t.finished.finally(() => document.documentElement.classList.remove("vt-cat-expand"));
                           } else { toggle(); }
                         }}
-                          style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, alignItems: "center", padding: "10px 12px 10px 14px", background: "var(--c-surface)", borderRadius: 10, cursor: "pointer", marginBottom: isCollapsed ? 0 : 6, border: "1px solid var(--c-border)", transition: "background .15s" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          style={{ display: "grid", gap: 8, alignItems: "center", padding: "10px 12px 10px 14px", background: "var(--c-surface)", borderRadius: 10, cursor: "pointer", marginBottom: isCollapsed ? 0 : 6, border: "1px solid var(--c-border)", transition: "background .15s" }}>
+                          <div className="plan-cat-item-cell" style={{ display: "flex", alignItems: "center", gap: 10 }}>
                             <span className="material-symbols-outlined expand-chevron" style={{ fontSize: 18, color: COLORS.muted, transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)", flexShrink: 0 }}>expand_more</span>
                             <div style={{ width: 36, height: 36, borderRadius: 10, background: CATEGORY_ICON_BG[group.catId] || COLORS.neutral, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                               <span className="material-symbols-outlined" style={{ fontSize: 19, color: CATEGORY_ICON_COLOR[group.catId] || COLORS.subtext }}>{CATEGORY_ICONS[group.catId] || "category"}</span>
@@ -3116,12 +3146,13 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                               />
                             ) : (
                               <span
+                                className="plan-cat-label"
                                 onDoubleClick={e => { e.stopPropagation(); setEditingCategoryLabelId(group.catId); }}
                                 title="Double-click to rename"
                                 style={{ fontSize: 14, fontWeight: FW.bold, color: COLORS.text, cursor: "text" }}
                               >{group.label}</span>
                             )}
-                            {grpExp.length > 0 && <span style={{ fontSize: 11, color: COLORS.muted }}>({grpExp.length})</span>}
+                            {grpExp.length > 0 && <span className="plan-cat-count" style={{ fontSize: 11, color: COLORS.muted }}>({grpExp.length})</span>}
                             {!isEditingLabel && (
                               <button
                                 onClick={e => { e.stopPropagation(); setEditingCategoryLabelId(group.catId); }}
@@ -3149,11 +3180,12 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                               </button>
                             )}
                           </div>
-                          {/* cat column — empty */}
-                          <span />
-                          {/* due column — empty */}
-                          <span />
-                          {/* planned — editable category budget, auto-sum from items shown when available */}
+                          {/* cat column — empty, hidden on mobile */}
+                          <span className="plan-col-hide" />
+                          {/* due column — empty, hidden on mobile */}
+                          <span className="plan-col-hide" />
+                          {/* planned — hidden on mobile, editable category budget */}
+                          <div className="plan-col-hide">
                           {grpItemsPlannedSum > 0
                             ? <span title={`Auto-sum of ${grpExp.length} item budgets${grpPlanned > 0 ? ` (category cap: ${fmt(grpPlanned)})` : ""}`} style={{ fontSize: 13, fontWeight: FW.bold, color: COLORS.subtext, fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: "-0.01em", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4 }}>
                                 {fmt(grpItemsPlannedSum)}
@@ -3163,6 +3195,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                               ? <input autoFocus type="number" placeholder="0" defaultValue={grpPlanned || ""} onClick={e => e.stopPropagation()} onBlur={ev => { const v = parseFloat(ev.target.value) || 0; setViewExpenseBudgets(prev => ({ ...prev, [group.catId]: v })); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); if (ev.key === "Escape") setEditingPlannedKey(null); }} style={{ width:"100%", background:COLORS.containerLow, border:`1px solid ${COLORS.primary}`, borderRadius:6, padding:"3px 6px", fontSize:13, color:COLORS.text, outline:"none" }} />
                               : <span onClick={e => { e.stopPropagation(); setEditingPlannedKey(`cat-${group.catId}`); }} title="Click to edit category budget" style={{ fontSize: 13, fontWeight: FW.bold, color: grpPlanned > 0 ? COLORS.subtext : COLORS.muted, cursor: "text", borderRadius: 4, padding: "2px 4px", fontFamily: grpPlanned > 0 ? "var(--font-num)" : "inherit", fontVariantNumeric: "tabular-nums", letterSpacing: grpPlanned > 0 ? "-0.01em" : "normal", display: "block", textAlign: "right" }}>{viewExpenseBudgets[group.catId] != null ? fmt(grpPlanned) : <span style={{ display:"flex", alignItems:"center", justifyContent: "flex-end", gap:4 }}>—<span className="material-symbols-outlined" style={{ fontSize:13, color: COLORS.primary, opacity: 0.6 }}>edit</span></span>}</span>
                           }
+                          </div>
                           {/* actual */}
                           <span style={{ fontSize: 13, fontWeight: FW.bold, color: utilColor, fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: "-0.01em", textAlign: "right" }}>{grpActual > 0 ? fmt(grpActual) : "—"}</span>
                           {/* variance */}
@@ -3191,14 +3224,16 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                                 return e.date;
                               })();
                               return (
-                              <div key={e.id} className="budget-row" style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "7px 10px", alignItems: "center", borderRadius: 8, background: "var(--c-container-low)", marginBottom: 2, border: "1px solid var(--c-border)" }}>
+                              <div key={e.id} className="budget-row" style={{ display: "grid", gap: 8, padding: "7px 10px", alignItems: "center", borderRadius: 8, background: "var(--c-container-low)", marginBottom: 2, border: "1px solid var(--c-border)" }}>
                                 <EditableText id={e.id} field="label" value={e.label} />
-                                <span style={{ fontSize: 11, fontWeight: FW.semibold, color: e.fixed ? COLORS.subtext : COLORS.muted, background: e.fixed ? COLORS.containerHigh : COLORS.containerLow, borderRadius: 9999, padding: "2px 7px", justifySelf: "start" }}>{e.fixed ? "Fixed" : "Variable"}</span>
-                                <EditableDate id={e.id} field="date" value={displayDate} />
+                                <span className="plan-col-hide" style={{ fontSize: 11, fontWeight: FW.semibold, color: e.fixed ? COLORS.subtext : COLORS.muted, background: e.fixed ? COLORS.containerHigh : COLORS.containerLow, borderRadius: 9999, padding: "2px 7px", justifySelf: "start" }}>{e.fixed ? "Fixed" : "Variable"}</span>
+                                <div className="plan-col-hide"><EditableDate id={e.id} field="date" value={displayDate} /></div>
+                                <div className="plan-col-hide">
                                 {editingPlannedKey === `exp-${e.id}`
                                   ? <input autoFocus type="number" placeholder="0" defaultValue={expPlanned || ""} onBlur={ev => { const v = parseFloat(ev.target.value) || 0; if (v) setMonthItemBudget(`exp-${e.id}`, v); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); if (ev.key === "Escape") setEditingPlannedKey(null); }} style={{ width:"100%", background:COLORS.containerLow, border:`1px solid ${COLORS.primary}`, borderRadius:6, padding:"3px 6px", fontSize:13, color:COLORS.text, outline:"none" }} />
                                   : <span onClick={() => setEditingPlannedKey(`exp-${e.id}`)} title="Click to set planned budget" style={{ fontSize: 13, color: expPlanned ? COLORS.subtext : COLORS.muted, cursor: "text", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, borderRadius:4, padding:"2px 4px", fontFamily: expPlanned ? "var(--font-num)" : "inherit", fontVariantNumeric: "tabular-nums", fontWeight: expPlanned ? FW.semibold : 400, letterSpacing: expPlanned ? "-0.01em" : "normal" }}>{expPlanned ? fmt(expPlanned) : <><span>—</span><span className="material-symbols-outlined" style={{ fontSize:13, color: COLORS.primary, opacity: 0.55 }}>edit</span></>}</span>
                                 }
+                                </div>
                                 <EditableNum id={e.id} field="amount" value={e.amount} />
                                 <span style={{ fontSize: 13, fontWeight: FW.bold, color: expVar === null ? COLORS.muted : expVar >= 0 ? COLORS.success : COLORS.danger, fontFamily: expVar === null ? "inherit" : "var(--font-num)", fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum","ss01"', letterSpacing: expVar === null ? "normal" : "-0.01em", textAlign: "right", display: "block" }}>
                                   {expVar === null ? "—" : expVar > 0 ? `+${fmt(expVar)}` : fmt(expVar)}
@@ -3215,14 +3250,16 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                               const tKey = `tmpl-${item}`;
                               const tmplVar = monthItemBudgets[tKey] ? monthItemBudgets[tKey] : null;
                               return (
-                              <div key={item} className="budget-row" style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "6px 10px", alignItems: "center", borderRadius: 8, opacity: 0.55, marginBottom: 2 }}>
+                              <div key={item} className="budget-row" style={{ display: "grid", gap: 8, padding: "6px 10px", alignItems: "center", borderRadius: 8, opacity: 0.55, marginBottom: 2 }}>
                                 <span style={{ fontSize: 13, color: COLORS.muted, fontStyle: "italic" }}>{item}</span>
-                                <span style={{ fontSize: 11, color: COLORS.muted }}>—</span>
-                                <span style={{ fontSize: 12, color: COLORS.muted }}>—</span>
+                                <span className="plan-col-hide" style={{ fontSize: 11, color: COLORS.muted }}>—</span>
+                                <span className="plan-col-hide" style={{ fontSize: 12, color: COLORS.muted }}>—</span>
+                                <div className="plan-col-hide">
                                 {editingPlannedKey === tKey
                                   ? <input autoFocus type="number" placeholder="Budget amt" onBlur={ev => { const v = parseFloat(ev.target.value) || 0; if (v) setMonthItemBudget(tKey, v); setEditingPlannedKey(null); }} onKeyDown={ev => { if (ev.key === "Enter") ev.target.blur(); if (ev.key === "Escape") setEditingPlannedKey(null); }} style={{ width:"100%", background:COLORS.containerLow, border:`1px solid ${COLORS.primary}`, borderRadius:6, padding:"3px 6px", fontSize:13, color:COLORS.text, outline:"none" }} />
                                   : <span onClick={() => setEditingPlannedKey(tKey)} title="Click to set planned budget" style={{ fontSize: 13, color: monthItemBudgets[tKey] ? COLORS.subtext : COLORS.muted, cursor: "text", display:"block", borderRadius:4, padding:"2px 4px", fontFamily: monthItemBudgets[tKey] ? "var(--font-num)" : "inherit", fontVariantNumeric: "tabular-nums", letterSpacing: monthItemBudgets[tKey] ? "-0.01em" : "normal" }}>{monthItemBudgets[tKey] ? fmt(monthItemBudgets[tKey]) : "—"}</span>
                                 }
+                                </div>
                                 <span style={{ fontSize: 12, color: COLORS.muted }}>—</span>
                                 <span style={{ fontSize: 12, color: COLORS.muted }}>—</span>
                                 <button onClick={() => { setNewExp(p => ({ ...p, label: item, category: group.catId })); setModal("addExpense"); }}
@@ -3276,11 +3313,11 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                           <span style={{ fontSize: 11, color: COLORS.muted }}>({others.length})</span>
                         </div>
                         {others.map(e => (
-                          <div key={e.id} className="budget-row" style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "7px 10px", alignItems: "center", borderRadius: 8, background: "var(--c-container-low)", marginBottom: 2, border: "1px solid var(--c-border)" }}>
+                          <div key={e.id} className="budget-row" style={{ display: "grid", gap: 8, padding: "7px 10px", alignItems: "center", borderRadius: 8, background: "var(--c-container-low)", marginBottom: 2, border: "1px solid var(--c-border)" }}>
                             <EditableText id={e.id} field="label" value={e.label} />
-                            <EditableCat id={e.id} field="category" value={e.category} />
-                            <EditableDate id={e.id} field="date" value={e.date} />
-                            <span style={{ fontSize: 12, color: COLORS.muted }}>—</span>
+                            <div className="plan-col-hide"><EditableCat id={e.id} field="category" value={e.category} /></div>
+                            <div className="plan-col-hide"><EditableDate id={e.id} field="date" value={e.date} /></div>
+                            <span className="plan-col-hide" style={{ fontSize: 12, color: COLORS.muted }}>—</span>
                             <EditableNum id={e.id} field="amount" value={e.amount} />
                             <span style={{ fontSize: 12, color: COLORS.muted }}>—</span>
                             <button onClick={() => deleteExpenseFromView(e.id)} style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 16, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6 }}>×</button>
@@ -3381,7 +3418,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <button onClick={() => { navigator.clipboard.writeText(window.location.href); setBillLinkToast(true); setTimeout(() => setBillLinkToast(false), 2000); }} title="Copy link to this month" style={{ background: billLinkToast ? COLORS.success + "18" : COLORS.containerLow, border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 12, fontWeight: FW.semibold, color: billLinkToast ? COLORS.success : COLORS.subtext, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>link</span>{billLinkToast ? "Link copied!" : "Copy link"}
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>link</span><span className="bill-copy-label">{billLinkToast ? "Link copied!" : "Copy link"}</span>
                   </button>
                   <button className="add-fixed-btn" onClick={() => setModal("addBill")} style={{ display: "flex", alignItems: "center", gap: 6, background: COLORS.primary, color: "#fff", border: "none", borderRadius: 10, padding: "9px 18px", fontSize: 13, fontWeight: FW.bold, cursor: "pointer" }}>
                     <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span><span className="add-fixed-label">Add Fixed Expense</span>
@@ -3636,7 +3673,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
                 <div>
                   <h2 style={{ fontWeight: FW.extrabold, fontSize: 24, color: COLORS.sidebarText, letterSpacing: "-0.03em", marginBottom: 3 }}>Monthly Insights</h2>
-                  <p style={{ color: COLORS.subtext, fontSize: 13 }}>2026 · tap a month to explore</p>
+                  <p style={{ color: COLORS.subtext, fontSize: 13 }}>Use the month picker above to explore</p>
                 </div>
                 <button
                   onClick={() => generateInsight(key)}
@@ -3647,40 +3684,6 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     ? <><div style={{ width: 12, height: 12, border: `2px solid ${COLORS.accentPurple}44`, borderTopColor: COLORS.accentPurple, borderRadius: "50%", animation: "spin 1s linear infinite" }} />Analyzing…</>
                     : <>✦ AI Insights</>}
                 </button>
-              </div>
-
-              {/* ── Month pill strip ─────────────────────────────────────── */}
-              <div className="insight-month-strip" style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none" }}>
-                {allInsightMonths.map(mk => {
-                  const ms = monthStats(mk);
-                  const { month0: m0 } = parseKey(mk);
-                  const isActive = mk === key;
-                  const isToday = mk === todayKey;
-                  const isFuture = mk > todayKey;
-                  return (
-                    <button
-                      key={mk}
-                      onClick={() => setActiveInsightKey(mk)}
-                      style={{
-                        flexShrink: 0,
-                        padding: "7px 16px",
-                        borderRadius: 999,
-                        border: isActive ? `1.5px solid ${COLORS.primary}` : `1.5px solid ${isToday ? COLORS.primary + "55" : "rgba(0,0,0,0.08)"}`,
-                        background: isActive ? COLORS.primary : "var(--c-surface)",
-                        cursor: "pointer",
-                        transition: "all 0.18s cubic-bezier(0.16, 1, 0.3, 1)",
-                        textAlign: "center",
-                      }}
-                    >
-                      <span style={{ fontSize: 12, fontWeight: isActive ? FW.bold : FW.medium, color: isActive ? "#fff" : isToday ? COLORS.primary : COLORS.subtext, letterSpacing: "0.03em" }}>
-                        {MONTH_NAMES[m0]}
-                      </span>
-                      {ms.hasData && !isActive && (
-                        <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: COLORS.primary, marginLeft: 5, verticalAlign: "middle", opacity: 0.5 }} />
-                      )}
-                    </button>
-                  );
-                })}
               </div>
 
               {/* ── AI insight panel ─────────────────────────────────────── */}
@@ -3741,7 +3744,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                       <h4 style={{ fontWeight: FW.bold, fontSize: 13, color: COLORS.text, marginBottom: 4, letterSpacing: "-0.01em" }}>Income vs Expenses — 2026</h4>
                       <p style={{ fontSize: 11, color: COLORS.muted, marginBottom: 16 }}>Click a month on the chart to explore it</p>
                       <ResponsiveContainer width="100%" height={200}>
-                        <ComposedChart data={yearChartData} onClick={d => { if (d?.activeLabel) { const idx = MONTH_NAMES.indexOf(d.activeLabel); if (idx !== -1) setActiveInsightKey(monthKey(2026, idx)); } }} style={{ cursor: "pointer" }}>
+                        <ComposedChart data={yearChartData} onClick={d => { if (d?.activeLabel) { const idx = MONTH_NAMES.indexOf(d.activeLabel); if (idx !== -1) setViewMonthKey(monthKey(2026, idx)); } }} style={{ cursor: "pointer" }}>
                           <defs>
                             <linearGradient id="incGrad" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="5%" stopColor={COLORS.primary} stopOpacity={0.18} />
@@ -3917,16 +3920,16 @@ If the request doesn't map to a clear category goal, still return JSON with newG
                     return (
                       <div style={{ ...glassCard, padding: "18px 22px" }}>
                         <h4 style={{ fontWeight: FW.bold, fontSize: 13, color: COLORS.text, marginBottom: 16, letterSpacing: "-0.01em" }}>Year-at-a-Glance · 2026</h4>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0 }}>
+                        <div className="year-glance-grid" style={{ display: "grid", gap: 0 }}>
                           {[
                             { label: "Total Income",    val: fmt(totalInc),    color: COLORS.success },
                             { label: "Total Expenses",  val: fmt(totalExp),    color: COLORS.accentWarm },
                             { label: "Net Saved",       val: fmt(netSaved),    color: netSaved >= 0 ? COLORS.success : COLORS.danger },
                             { label: "Avg / Month",     val: fmt(avgMonthlyExp), color: COLORS.accentPurple },
                           ].map((stat, i) => (
-                            <div key={stat.label} style={{ paddingRight: i < 3 ? 20 : 0, marginRight: i < 3 ? 20 : 0, borderRight: i < 3 ? "1px solid var(--c-border)" : "none" }}>
+                            <div key={stat.label} className="year-glance-cell" style={{ paddingRight: i < 3 ? 20 : 0, marginRight: i < 3 ? 20 : 0, borderRight: i < 3 ? "1px solid var(--c-border)" : "none" }}>
                               <p style={{ fontSize: 10, fontWeight: FW.bold, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>{stat.label}</p>
-                              <p style={{ fontSize: 22, fontWeight: 300, color: stat.color, fontFamily: "'Manrope', var(--font-num)", letterSpacing: "-0.035em", fontVariantNumeric: "tabular-nums" }}>{stat.val}</p>
+                              <p className="year-glance-val" style={{ fontSize: 22, fontWeight: 300, color: stat.color, fontFamily: "'Manrope', var(--font-num)", letterSpacing: "-0.035em", fontVariantNumeric: "tabular-nums" }}>{stat.val}</p>
                               {monthsWithData > 0 && <p style={{ fontSize: 10, color: COLORS.muted, marginTop: 3 }}>{monthsWithData} months tracked</p>}
                             </div>
                           ))}
