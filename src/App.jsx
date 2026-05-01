@@ -1084,11 +1084,15 @@ export default function App() {
           // Derive income/expenses for the CURRENT month from its snapshot.
           // Never use the top-level income/expenses fields for this — they carry
           // whatever month was last active and would corrupt the current month.
+          // Check curSnap existence (not array length) so intentionally-empty months load correctly.
           const curSnap = data.monthlySnapshots?.[viewMonthKeyRef.current];
-          if (curSnap?.income?.length) setIncome(curSnap.income);
-          else if (data.income) setIncome(data.income); // backward-compat fallback
-          if (curSnap?.expenses?.length) setExpenses(curSnap.expenses);
-          else if (data.expenses) setExpenses(data.expenses);
+          if (curSnap) {
+            setIncome(curSnap.income ?? []);
+            setExpenses(curSnap.expenses ?? []);
+          } else {
+            if (data.income) setIncome(data.income); // backward-compat fallback
+            if (data.expenses) setExpenses(data.expenses);
+          }
           if (data.bills) setBills(data.bills);
           if (data.debts) setDebts(data.debts);
           if (data.savingsItems) setSavingsItems(data.savingsItems);
@@ -1112,8 +1116,10 @@ export default function App() {
           // Sync income/expenses for whichever month is currently viewed, not the stale top-level fields
           if (d.monthlySnapshots) {
             const curSnap = d.monthlySnapshots[viewMonthKeyRef.current];
-            if (curSnap?.income) setIncome(curSnap.income);
-            if (curSnap?.expenses) setExpenses(curSnap.expenses);
+            if (curSnap !== undefined) {
+              setIncome(curSnap.income ?? []);
+              setExpenses(curSnap.expenses ?? []);
+            }
           }
           if (d.bills) setBills(d.bills);
           if (d.debts) setDebts(d.debts);
@@ -1302,6 +1308,7 @@ export default function App() {
   // updates prevMonthRef.current synchronously after loading the new month, so by the time
   // income/expenses change (triggering this effect again), the guard passes correctly.
   useEffect(() => {
+    if (isInitialLoad.current) return; // don't overwrite Firebase data with stale local state during hydration
     if (prevMonthRef.current !== viewMonthKey) return;
     setMonthlySnapshots(prev => ({
       ...prev,
