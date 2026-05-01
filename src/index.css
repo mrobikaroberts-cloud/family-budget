@@ -179,6 +179,7 @@ html.dark {
   color-scheme: dark;
 }
 
+html { scrollbar-gutter: stable; }
 html, body { background: var(--c-bg); color: var(--c-text); }
 
 @layer base {
