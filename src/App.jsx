@@ -2382,6 +2382,7 @@ If the request doesn't map to a clear category goal, still return JSON with newG
         .main-scroll {
           -webkit-overflow-scrolling: touch;
           overscroll-behavior: contain;
+          overflow-anchor: none;
           scrollbar-gutter: stable;
           scroll-padding-top: 16px;
           scrollbar-width: thin;
