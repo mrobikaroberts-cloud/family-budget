@@ -1162,7 +1162,7 @@ export default function App() {
           advisorHistory,
           familyName,
           updatedAt: serverTimestamp(),
-        });
+        }, { merge: true });
         // Timeout after 10 seconds to prevent stuck "Saving…"
         const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Save timed out')), 10000));
         await Promise.race([savePromise, timeout]);
@@ -1204,8 +1204,12 @@ export default function App() {
       const hId = 'household_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
       const code = generateHouseholdCode();
       if (db) {
-        await setDoc(doc(db, 'households', hId), { code, createdAt: serverTimestamp() });
-        await setDoc(doc(db, 'householdCodes', code), { householdId: hId });
+        try {
+          await setDoc(doc(db, 'households', hId), { code, createdAt: serverTimestamp() });
+          await setDoc(doc(db, 'householdCodes', code), { householdId: hId });
+        } catch (firebaseErr) {
+          console.warn('Firebase household creation failed, continuing locally:', firebaseErr.message);
+        }
       }
       localStorage.setItem('familyfinance_household_id', hId);
       localStorage.setItem('familyfinance_household_code', code);
@@ -1252,10 +1256,13 @@ export default function App() {
       // Load data — snapshots first, then derive current month's income/expenses from them
       if (hData.monthlySnapshots) setMonthlySnapshots(hData.monthlySnapshots);
       const jCurSnap = hData.monthlySnapshots?.[viewMonthKeyRef.current];
-      if (jCurSnap?.income?.length) setIncome(jCurSnap.income);
-      else if (hData.income) setIncome(hData.income);
-      if (jCurSnap?.expenses?.length) setExpenses(jCurSnap.expenses);
-      else if (hData.expenses) setExpenses(hData.expenses);
+      if (jCurSnap) {
+        setIncome(jCurSnap.income ?? []);
+        setExpenses(jCurSnap.expenses ?? []);
+      } else {
+        if (hData.income) setIncome(hData.income);
+        if (hData.expenses) setExpenses(hData.expenses);
+      }
       if (hData.bills) setBills(hData.bills);
       if (hData.debts) setDebts(hData.debts);
       if (hData.savingsItems) setSavingsItems(hData.savingsItems);
