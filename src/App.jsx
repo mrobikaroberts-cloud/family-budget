@@ -1138,9 +1138,9 @@ export default function App() {
   useEffect(() => {
     if (!db || !householdId || isInitialLoad.current || firebaseLoading) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
+    isSavingRef.current = true; // block onSnapshot immediately while local changes are pending
     saveTimer.current = setTimeout(async () => {
       setSaveStatus('saving');
-      isSavingRef.current = true; // tell onSnapshot to ignore the echo of this write
       try {
         const savePromise = setDoc(doc(db, 'households', householdId), {
           income,
