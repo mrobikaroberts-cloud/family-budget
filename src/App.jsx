@@ -1326,7 +1326,7 @@ export default function App() {
     }));
     // Load new month data — use ref to get the truly-current snapshot (avoids stale closure)
     const snap = monthlySnapshotsRef.current[viewMonthKey];
-    if (snap?.income?.length > 0 || snap?.expenses?.length > 0) {
+    if (snap != null) {
       setIncome(snap.income || []);
       setExpenses(snap.expenses || []);
     } else {
